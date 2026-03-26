@@ -1,0 +1,92 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS custom properties ─── */
+@layer base {
+  :root {
+    --background: 222 20% 5%;
+    --foreground: 210 40% 95%;
+    --card: 222 20% 8%;
+    --card-foreground: 210 40% 95%;
+    --border: 222 20% 14%;
+    --input: 222 20% 11%;
+    --ring: 217 80% 60%;
+    --primary: 217 80% 60%;
+    --primary-foreground: 222 20% 5%;
+    --muted: 222 20% 13%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 217 80% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --radius: 0.75rem;
+  }
+  * { border-color: hsl(var(--border)); }
+  body { background: #08090e; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+}
+
+/* ─── Gradient mesh background ─── */
+.bg-mesh {
+  background-color: #08090e;
+  background-image:
+    radial-gradient(at 40% 20%, hsla(217, 80%, 40%, 0.18) 0px, transparent 50%),
+    radial-gradient(at 80%  0%, hsla(189, 80%, 56%, 0.12) 0px, transparent 50%),
+    radial-gradient(at  0% 50%, hsla(355, 80%, 40%, 0.10) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, hsla(220, 80%, 64%, 0.12) 0px, transparent 50%),
+    radial-gradient(at  0% 100%,hsla(269, 80%, 60%, 0.12) 0px, transparent 50%);
+}
+
+/* ─── Animated dot grid ─── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(148,163,184,0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  animation: gridScroll 30s linear infinite;
+}
+@keyframes gridScroll {
+  0%   { background-position: 0   0; }
+  100% { background-position: 0 60px; }
+}
+
+/* ─── Glassmorphism card ─── */
+.glass {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ─── Glow utilities ─── */
+.glow-blue  { box-shadow: 0 0 24px rgba(59,130,246,0.20), 0 0 8px rgba(59,130,246,0.10);  }
+.glow-green { box-shadow: 0 0 24px rgba(34,197,94,0.20),  0 0 8px rgba(34,197,94,0.10);   }
+.glow-red   { box-shadow: 0 0 24px rgba(239,68,68,0.20),  0 0 8px rgba(239,68,68,0.10);   }
+.glow-purple{ box-shadow: 0 0 24px rgba(168,85,247,0.20), 0 0 8px rgba(168,85,247,0.10);  }
+
+/* ─── Tab underline highlight ─── */
+.tab-active {
+  background: rgba(59,130,246,0.12);
+  border-bottom: 2px solid #3b82f6;
+}
+
+/* ─── Recharts overrides ─── */
+.recharts-default-tooltip {
+  background: rgba(10, 12, 18, 0.92) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(16px);
+  font-size: 12px !important;
+}
+.recharts-tooltip-label { color: #94a3b8 !important; }
+.recharts-cartesian-axis-tick text { fill: #64748b !important; font-size: 11px; }
+.recharts-cartesian-grid line { stroke: rgba(255,255,255,0.05) !important; }
