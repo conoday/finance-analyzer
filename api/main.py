@@ -14,6 +14,7 @@ Run:
 from __future__ import annotations
 
 import io
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -52,7 +53,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Restrict in production
+    # In production set ALLOWED_ORIGINS=https://your-app.vercel.app on Render.
+    # Locally defaults to allow all.
+    allow_origins=os.environ.get("ALLOWED_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
