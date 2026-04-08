@@ -24,6 +24,11 @@ VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 # Use venv python if available, else fall back to current interpreter
 PYTHON = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
 
+# Lambda deployment note:
+#   Deploy ONLY the backend (requirements.txt) to Lambda.
+#   The frontend must be built (--export) and served from S3/CloudFront;
+#   never include node_modules in a Lambda package.
+
 
 def _stream(proc: subprocess.Popen, prefix: str) -> None:
     """Print subprocess stdout/stderr with a prefix label."""
@@ -69,7 +74,45 @@ def start_frontend() -> subprocess.Popen:
     )
 
 
+def _check_streamlit() -> None:
+    """Abort with a helpful message when streamlit is not installed."""
+    try:
+        import importlib.util
+        if importlib.util.find_spec("streamlit") is None:
+            raise ModuleNotFoundError
+    except ModuleNotFoundError:
+        print(
+            "[run] ERROR: streamlit is not installed.\n"
+            "       Run:  pip install -r requirements-local.txt"
+        )
+        sys.exit(1)
+
+
+def build_frontend_export() -> None:
+    """Run `next build` to produce a static export suitable for S3/CloudFront."""
+    npm = shutil.which("npm")
+    if npm is None:
+        print("[run] ERROR: npm not found. Install Node.js first.")
+        sys.exit(1)
+
+    node_modules = FRONTEND / "node_modules"
+    if not node_modules.exists():
+        print("[run] node_modules not found — running npm install ...")
+        result = subprocess.run([npm, "install"], cwd=FRONTEND)
+        if result.returncode != 0:
+            print("[run] ERROR: npm install failed.")
+            sys.exit(1)
+
+    print("[run] Building static frontend export (next build) ...")
+    result = subprocess.run([npm, "run", "build"], cwd=FRONTEND)
+    if result.returncode != 0:
+        print("[run] ERROR: next build failed. Check frontend errors above.")
+        sys.exit(1)
+    print("[run] Build complete → frontend/.next/  (deploy to S3/CloudFront)")
+
+
 def start_streamlit() -> subprocess.Popen:
+    _check_streamlit()
     ui_path = ROOT / "app" / "ui.py"
     print("[run] Starting Streamlit on http://localhost:8501 ...")
     return subprocess.Popen(
@@ -85,11 +128,16 @@ def start_streamlit() -> subprocess.Popen:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Finance Analyzer launcher")
     parser.add_argument("--api", action="store_true", help="Backend only")
-    parser.add_argument("--ui", action="store_true", help="Frontend only")
-    parser.add_argument("--streamlit", action="store_true", help="Streamlit only")
+    parser.add_argument("--ui", action="store_true", help="Frontend only (dev server)")
+    parser.add_argument("--streamlit", action="store_true", help="Streamlit only (requires requirements-local.txt)")
+    parser.add_argument("--export", action="store_true", help="Build static frontend for S3/CloudFront (Lambda-safe)")
     args = parser.parse_args()
 
     procs: list[subprocess.Popen] = []
+
+    if args.export:
+        build_frontend_export()
+        return
 
     if args.streamlit:
         procs.append(start_streamlit())

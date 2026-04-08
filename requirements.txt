@@ -1,10 +1,9 @@
+# Core API / Lambda requirements — keep this lean (< 500 MB ephemeral storage).
+# For local Streamlit dev, use:  pip install -r requirements-local.txt
 pandas
 numpy
 scikit-learn
-matplotlib
-streamlit
 openpyxl
-plotly
 fastapi
 uvicorn[standard]
 python-multipart

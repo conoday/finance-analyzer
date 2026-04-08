@@ -1,0 +1,6 @@
+# Local / Streamlit dev extras — NOT for Lambda deployment.
+# Install with: pip install -r requirements-local.txt
+-r requirements.txt
+streamlit>=1.35.0
+plotly>=5.22.0
+matplotlib>=3.9.0
