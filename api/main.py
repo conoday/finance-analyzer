@@ -21,6 +21,7 @@ from typing import Any
 
 import pandas as pd
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -60,6 +61,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", response_class=HTMLResponse)
+def home() -> str:
+        """Simple landing page for the root path to avoid 404 on '/'."""
+        return """
+        <html>
+            <head><meta charset="utf-8"><title>Finance Analyzer API</title></head>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial;">
+                <h1>🚀 Finance Analyzer API</h1>
+                <p>Backend is running</p>
+                <p><a href="/docs">Open API Docs (Swagger)</a></p>
+            </body>
+        </html>
+        """
 
 
 # ---------------------------------------------------------------------------
