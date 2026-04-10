@@ -1,6 +1,6 @@
-# Master Tracking Board — Finance Analyzer
+# Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-10 (rev 3)
+> Last updated: 2026-04-10 (rev 4)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun
 > Ini adalah source of truth untuk status semua pekerjaan
 
@@ -170,19 +170,100 @@
 
 ---
 
+## 🗺️ PRODUCT VISION — Free vs Subscription (Finalized 2026-04-10)
+
+### 🎁 FREE tier — "ketagihan dulu, bayar nanti"
+
+| Fitur | Status |
+|---|---|
+| Tambah transaksi manual (income/expense) | ✅ SmartInput done (localStorage) |
+| Kategori otomatis (makan, transport, dll) | ✅ Brand rules done |
+| Metode bayar: Cash, Bank, E-wallet | ✅ Done |
+| Dashboard: saldo total, pengeluaran/pemasukan bulan ini | ✅ Done |
+| Chart pengeluaran per kategori | ✅ SpendingWheel done |
+| History transaksi | ✅ QuickTracker done |
+| Filter: periode (7d/30d/all) | ✅ Done |
+| Login Google | 🔲 Phase 2 |
+| **Limitasi**: max 3 akun, history 3 bulan, tanpa export, tanpa AI | 🔲 Phase 3 enforcement |
+
+### 💎 PRO Personal (target Rp 29K/bln)
+
+| Fitur | Status |
+|---|---|
+| Unlimited akun & unlimited history | 🔲 Phase 3 |
+| Custom kategori | 🔲 Phase 3 |
+| Tag transaksi (ngedate, kerja, dll) | 🔲 Phase 3 |
+| Smart input — natural language parsing | ✅ Done (rule-based) |
+| Export CSV / PDF | ✅ CSV done — PDF 🔲 |
+| Laporan bulanan otomatis | 🔲 Phase 3 |
+| Budget per kategori + notifikasi over budget | 🔲 Phase 3 |
+
+### 🤖 AI Personal Finance (target Rp 59K/bln)
+
+| Fitur | Status |
+|---|---|
+| "Bulan ini boros di makan +30%" | 🔲 Phase AI |
+| Weekend vs weekday pattern detection | 🔲 Phase AI |
+| Smart suggestion ("kurangi kopi → hemat 300rb") | 🔲 Phase AI |
+| Financial persona: saver / spender / impulsive | 🔲 Phase AI |
+| Prediksi sisa uang & cashflow bulan depan | 🔲 Phase AI |
+| Personal AI agent dengan user memory | 🔲 Phase AI+ |
+
+### 🏢 Business / UMKM (Future)
+
+| Fitur | Status |
+|---|---|
+| Multi-user / team wallet | 🔲 Far future |
+| Laporan bisnis | 🔲 Far future |
+
+---
+
+## 🗄️ DATA MODEL TARGET v2
+
+```
+users          → id, email, created_at, plan_type
+accounts       → id, user_id, name, type (bank/ewallet/cash), balance
+transactions   → id, user_id, account_id, amount, type, category,
+                 sub_category, payment_method, note, date, created_at
+tags           → id, name
+transaction_tags → transaction_id, tag_id
+monthly_agg    → user_id, month, total_income, total_expense  [perf]
+ai_profiles    → user_id, spending_pattern, risk_level,
+                 persona_type, last_analysis  [AI data]
+```
+
+---
+
+## 🤖 AI STRATEGY (jangan skip ini)
+
+```
+Step 1 → Collect data (transaksi: waktu, kategori, frekuensi, nominal)
+Step 2 → Feature engineering (avg/day, weekend ratio, top category)
+Step 3 → User profiling rule-based (saver/impulsive/balanced)
+Step 4 → Suggestion engine rule-based dulu (IF makan>30% → warning)
+Step 5 → LLM integration (DeepSeek-V3) → jawab "kenapa uang cepat habis?"
+Step 6 → Personal AI agent per user (memory: kebiasaan, preferensi)
+```
+
+> **Prinsip**: bangun data dulu, baru AI. Value utama = insight, bukan cuma pencatatan.
+
+---
+
 ## 🆕 NEW INITIATIVE — Baru Diputuskan
 
 | Tanggal | Inisiatif | Status |
 |---|---|---|
 | 2026-04-10 | Redesign warm dark palette | ✅ Done |
-| 2026-04-10 | Spending Heatmap (A01) | ✅ Done |
-| 2026-04-10 | WA Share integration (website, bukan bot) | ✅ Done |
-| 2026-04-10 | CSV Export | ✅ Done |
-| 2026-04-10 | QRIS Donasi modal | ✅ Scaffold done, needs qris.png |
+| 2026-04-10 | Spending Heatmap | ✅ Done |
+| 2026-04-10 | WA Share + CSV Export + QRIS modal | ✅ Done |
 | 2026-04-10 | Admin Console scaffold | 🔧 In progress |
 | 2026-04-10 | AI provider analysis → DeepSeek recommended | ✅ Documented |
-| 2026-04-10 | SECRETS.md + .env.example | ✅ Done |
-| 2026-04-10 | WA Bot/Omnichannel | ⏳ Ditunda, fokus web dulu |
+| 2026-04-10 | Light theme UI + encoding bug fixes | ✅ Done (4e98fb0) |
+| 2026-04-10 | QuickTracker period filter + CSV export | ✅ Done (2ca3753) |
+| 2026-04-10 | parseIDR: rebu/miliar/triliun + brand auto-kategorisasi | ✅ Done |
+| 2026-04-10 | Backend fix: infer_datetime_format removed (pandas 2+) | ✅ Done |
+| 2026-04-10 | Product vision finalized: Free/Pro/AI tiers + AI strategy | ✅ Documented |
+| 2026-04-10 | WA Bot/Omnichannel | ⏳ Ditunda |
 
 ---
 
@@ -190,31 +271,31 @@
 
 | Fitur | Alasan Ditunda |
 |---|---|
-| WhatsApp Bot (omnichannel) | Focus web dulu, butuh Meta Business API review (2-4 minggu) |
-| Open Banking API | Regulasi OJK ketat, butuh lisensi |
-| Multi-currency | Scope terlalu lebar untuk MVP |
+| WhatsApp Bot | Focus web dulu, butuh Meta Business API review |
+| Open Banking API | Regulasi OJK, butuh lisensi |
+| Multi-currency | Scope terlalu lebar |
 | Crypto portfolio | Risiko regulasi Indonesia |
 | Investasi reksa dana | Butuh lisensi OJK |
 
 ---
 
-## 📋  DISKUSI & KEPUTUSAN PENTING
+## 📋 DISKUSI & KEPUTUSAN PENTING
 
 | Tanggal | Topik | Keputusan |
 |---|---|---|
-| 2026-04-10 | AI Provider | **DeepSeek-V3** untuk MVP. Hybrid dengan Gemini Flash untuk scale. Kimi boleh dicoba untuk enterprise nanti. |
-| 2026-04-10 | WA Integration | Phase 1: share web link (done). Phase 2 (nanti): WhatsApp Business API webhook bot |
-| 2026-04-10 | Semua fitur free dulu | Tidak ada paywall di sprint ini. Donasi sukarela via QRIS. |
-| 2026-04-10 | Admin console | Repo terpisah? → Subfolder `admin-console/` di repo yang sama, deploy ke Vercel project berbeda |
-| 2026-04-10 | Database | Mulai Supabase free (500MB). Migration path: Supabase Free → Pro $25 → AWS RDS |
+| 2026-04-10 | AI Provider | **DeepSeek-V3** untuk MVP. Hybrid Gemini Flash untuk scale. |
+| 2026-04-10 | Tier strategy | Free powerful→ketagihan, Pro export+budget, AI insight+prediction |
+| 2026-04-10 | AI build order | Data dulu → rule-based → LLM insight → personal agent |
+| 2026-04-10 | Database | Supabase free → Pro $25 → AWS RDS |
+| 2026-04-10 | Admin console | Subfolder `admin-console/` di repo, deploy Vercel project berbeda |
 
 ---
 
 ## 🔑 CREDENTIAL CHECKLIST (user action needed)
 
-- [ ] Taruh `frontend/public/qris.png` — gambar QRIS resmi kamu
 - [ ] Set `NEXT_PUBLIC_API_URL` di Vercel dashboard → `https://finance-analyzer-a82j.onrender.com`
 - [ ] Buat Supabase project → simpan connection string di SECRETS.md
+- [ ] Set Site URL + Redirect URL di Supabase Auth config → `https://finance-analyzer-roan.vercel.app/auth/callback`
 - [ ] Buat Google Cloud OAuth credentials → simpan di SECRETS.md
 - [ ] Daftar DeepSeek → top up $5 → simpan API key di SECRETS.md
 

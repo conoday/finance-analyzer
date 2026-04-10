@@ -1,19 +1,28 @@
 ﻿# Tier System & Feature Gating
 
-## Tier Overview
+## Tier Overview (Updated 2026-04-10)
 
-| Fitur | Free | Pro (Rp 29K/bln) | Business (Rp 99K/bln) |
+| Fitur | Free | Pro (Rp 29K/bln) | AI Personal (Rp 59K/bln) |
 |---|---|---|---|
 | Login & akun | ✅ | ✅ | ✅ |
-| Input manual transaksi | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
-| Import file CSV/XLSX | ✅ Max 5/bulan | ✅ Unlimited | ✅ Unlimited |
-| Analisis keuangan (health, forecast) | ✅ Basic | ✅ Full | ✅ Full |
-| OCR image extraction | ❌ | ✅ | ✅ |
-| Export data (CSV) | ❌ | ✅ | ✅ |
-| Multi akun (bank + e-wallet) | ❌ Max 2 | ✅ Unlimited | ✅ Unlimited |
-| Riwayat data | 3 bulan | 12 bulan | Selamanya |
-| Priority support | ❌ | ❌ | ✅ |
+| Input manual transaksi | ✅ | ✅ | ✅ |
+| Kategori otomatis | ✅ | ✅ | ✅ |
+| Metode bayar (cash/bank/ewallet) | ✅ | ✅ | ✅ |
+| Dashboard (saldo, income, expense) | ✅ | ✅ | ✅ |
+| Chart pengeluaran per kategori | ✅ | ✅ | ✅ |
+| History transaksi | ✅ Max 3 bulan | ✅ Unlimited | ✅ Unlimited |
+| Jumlah akun | ✅ Max 3 | ✅ Unlimited | ✅ Unlimited |
 | Custom kategori | ❌ | ✅ | ✅ |
+| Tag transaksi | ❌ | ✅ | ✅ |
+| Export CSV / PDF | ❌ | ✅ | ✅ |
+| Laporan bulanan otomatis | ❌ | ✅ | ✅ |
+| Budget per kategori + notifikasi | ❌ | ✅ | ✅ |
+| AI Insight ("boros makan +30%") | ❌ | ❌ | ✅ |
+| Smart suggestion engine | ❌ | ❌ | ✅ |
+| Financial persona detection | ❌ | ❌ | ✅ |
+| Prediksi cashflow akhir bulan | ❌ | ❌ | ✅ |
+| Personal AI agent (memory) | ❌ | ❌ | ✅ |
+| OCR foto struk | ❌ | ✅ | ✅ |
 
 ## Quota Enforcement (Backend)
 

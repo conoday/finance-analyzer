@@ -19,44 +19,56 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - Frontend live: https://finance-analyzer-roan.vercel.app
 
 ## Phase 1.5 — Sprint Free Features ✅ DONE (2026-04-10)
-Semua fitur free diaktifkan, redesign, new components:
-- ✅ Warm dark redesign (amber palette, DM Mono font)
-- ✅ Spending Heatmap (GitHub-style kalender)
-- ✅ Savings Rate % KPI card
-- ✅ WA Share (floating panel, teks pre-filled)
-- ✅ CSV Export
-- ✅ QRIS Donasi modal
-- ✅ Tab "Aktivitas" di dashboard
-- ✅ Hero landing page lebih informatif
-- 🔧 Admin Console scaffold (`admin-console/` folder)
-- ⏳ QRIS image: user perlu taruh `frontend/public/qris.png`
+- ✅ Light theme UI (clean, mudah dibaca)
+- ✅ QuickTracker: period filter 7d/30d/all, CSV export, brand auto-kategorisasi
+- ✅ SmartInput: parse rebu/miliar/triliun, brand detection (Starbucks, Indomaret, dll)
+- ✅ Logo thicker strokes
+- ✅ Backend: fix infer_datetime_format (pandas 2+ compat)
+- ✅ Spending Heatmap, WA Share, QRIS Donasi modal
+- ✅ Product vision finalized (Free → Pro → AI tier)
 
 ## Phase 2 — Authentication 🔲 Next Sprint
-- NextAuth.js v5 + Google OAuth
+**Goal**: user bisa login, data tersimpan permanent (bukan localStorage)
+- Google OAuth via Supabase Auth
 - User disimpan di Supabase PostgreSQL
-- Field `tier` (free/pro/business) di tabel users
+- Field `plan_type` (free/pro/ai/business) di tabel users
+- Migrasi localStorage QuickTracker → Supabase `transactions`
 - Estimasi: 2-3 hari
 
 ## Phase 3 — Transaction CRUD + Tier Enforcement 🔲 Planned
+**Goal**: data persistent, tier dikunci
 - CRUD endpoint: POST/GET/PUT/DELETE /transactions
-- Tabel file_imports untuk tracking kuota
-- Middleware quota: Free = max 5 file upload/bulan
-- Frontend: form input manual + file upload
-- Estimasi: 3-5 hari
+- Accounts CRUD (multi-akun: cash, bank, e-wallet)
+- Free tier enforcement: max 3 akun, history 3 bulan
+- Budget per kategori (Pro tier)
+- Tag transaksi (Pro tier)
+- Custom kategori (Pro tier)
+- Estimasi: 5-7 hari
 
-## Phase AI — AI Features 🔲 Planned (setelah Phase 2)
-- Provider: **DeepSeek-V3** (lihat artefak/16_ai_cost_analysis.md)
-- Auto-kategorisasi transaksi
-- Monthly AI insight
-- Rate limiting per tier
-- Estimasi: 4-6 hari
+## Phase AI — AI Features 🔲 Planned (setelah Phase 3)
+**Goal**: insight otomatis, jadi bedanya OprexDuit dari app lain
+- Data collection: simpan `ai_profiles` dari pola transaksi
+- Rule-based suggestion engine (IF spending > 30% → warning)
+- Financial persona detection (saver/impulsive/balanced)
+- DeepSeek-V3 integration untuk natural language insight
+- "Bulan ini boros di makan +30%", prediksi cashflow
+- Personal AI agent dengan memory per user
+- Estimasi: 7-10 hari
 
 ## Phase 4 — Image Extraction (OCR) 🔲 Planned (setelah Phase 3)
 - POST /extract-image
 - pytesseract + per-bank regex (BCA, GoPay, OVO, DANA)
-- User konfirmasi sebelum simpan
-- OCR hanya tersedia untuk Pro dan Business tier
+- Hanya Pro+ tier
 - Estimasi: 4-7 hari
+
+## Phase 5 — Admin Console 🔧 Scaffolded
+- Deploy admin-console ke Vercel (project baru)
+- Real user metrics
+
+## Phase 6 — Payment 🔲 Planned
+- Midtrans integration untuk upgrade tier
+- Webhook /payment/callback
+- Upgrade CTA di frontend
 
 ## Phase 5 — Admin Console 🔧 IN PROGRESS (scaffold done)
 - Scaffold: `admin-console/` di repo ✅
