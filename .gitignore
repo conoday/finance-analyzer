@@ -15,6 +15,10 @@ env/
 .env
 *.env
 
+# Secrets — DO NOT COMMIT
+SECRETS.md
+.secrets
+
 # Models / data
 models/*.pkl
 models/*.joblib
@@ -28,6 +32,12 @@ frontend/.next/
 frontend/out/
 frontend/.env.local
 frontend/.env*.local
+
+# Admin Console
+admin-console/node_modules/
+admin-console/dist/
+admin-console/.env.local
+admin-console/.env*.local
 
 # OS
 .DS_Store
