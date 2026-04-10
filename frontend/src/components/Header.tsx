@@ -51,16 +51,16 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
   const firstName = fullName.split(" ")[0];
 
   return (
-    <header className="sticky top-0 z-50 w-full glass border-b border-white/[0.05]">
+    <header className="sticky top-0 z-50 w-full" style={{ background: "rgba(255,255,255,0.88)", borderBottom: "1px solid rgba(20,184,166,0.12)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <Image src="/logo.svg" alt="OprexDuit" width={32} height={32} className="rounded-xl" />
           <div>
-            <span className="text-sm font-semibold text-slate-100 tracking-tight">
-              Oprex<span className="text-teal-400">Duit</span>
+            <span className="text-sm font-semibold text-slate-800 tracking-tight">
+              Oprex<span className="text-teal-600">Duit</span>
             </span>
-            <p className="hidden sm:block text-[10px] text-slate-500 leading-none mt-0.5">
+            <p className="hidden sm:block text-[10px] text-slate-400 leading-none mt-0.5">
               Ngatur duit, beres.
             </p>
           </div>
@@ -73,7 +73,7 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-100 hover:bg-white/5 transition-all border border-white/[0.06]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all border border-slate-200"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Upload Baru</span>
@@ -97,7 +97,7 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
                 <button
                   onClick={() => setShowMenu((p) => !p)}
                   className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all hover:bg-white/5"
-                  style={{ color: "#94a3b8", border: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{ color: "#64748b", border: "1px solid #e2e8f0" }}
                 >
                   {avatar ? (
                     <Image src={avatar} alt={firstName} width={22} height={22} className="rounded-full" />
@@ -106,7 +106,7 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
                       {firstName.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <span className="hidden sm:inline max-w-[80px] truncate text-slate-300">{firstName}</span>
+                  <span className="hidden sm:inline max-w-[80px] truncate text-slate-700">{firstName}</span>
                   <ChevronDown className="w-3 h-3 text-slate-500" />
                 </button>
                 <AnimatePresence>

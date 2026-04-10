@@ -59,52 +59,83 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.4 }}
-              className="flex flex-col items-center justify-center pt-16 gap-8"
+              className="pt-10 w-full"
             >
-              <div className="text-center space-y-4 max-w-xl">
+              {/* ── Hero row ── */}
+              <div className="flex flex-col items-center text-center gap-2 mb-8">
                 <div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs mb-2"
-                  style={{ color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.20)" }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-1"
+                  style={{ background: "rgba(20,184,166,0.10)", color: "#0f766e", border: "1px solid rgba(20,184,166,0.22)" }}
                 >
                   <Sparkles className="w-3 h-3" />
-                  100% gratis · Data tidak dikirim ke server · Tidak perlu daftar
+                  100% gratis &middot; Data tidak dikirim ke server
                 </div>
-
-                <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-gradient-teal">
-                  OprexDuit
+                <h1 className="text-4xl sm:text-5xl font-bold tracking-tight" style={{ color: "#0f172a" }}>
+                  Oprex<span style={{ color: "#0f766e" }}>Duit</span>
                 </h1>
-                <p className="text-slate-400 text-base max-w-md mx-auto leading-relaxed">
-                  Catat pengeluaran harian, analisis mutasi bank, dan pantau
-                  kesehatan keuanganmu dalam satu tempat.
+                <p className="text-slate-500 text-base max-w-md leading-relaxed">
+                  Catat pengeluaran harian, analisis mutasi bank, dan pantau kesehatan keuanganmu.
                 </p>
-                <div className="flex items-center justify-center gap-3 pt-1 text-xs text-slate-600 flex-wrap">
-                  <span>CSV / Excel / PDF</span>
-                  <span className="text-slate-700">·</span>
-                  <span>BCA · Mandiri · BRI · BNI</span>
-                  <span className="text-slate-700">·</span>
-                  <span>GoPay · OVO · Dana</span>
-                </div>
               </div>
 
-              <UploadZone onFile={analyze} />
+              {/* ── Main layout: 2 column on desktop ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
 
-              {/* Quick tracker — always show manual transactions */}
-              <div className="w-full max-w-lg space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
-                    <BookOpen className="w-4 h-4" />
-                    Catatan Manual
+                {/* ── Left: Upload ── */}
+                <div className="space-y-4">
+                  {/* Upload card */}
+                  <div className="rounded-2xl p-5 space-y-3" style={{ background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(20,184,166,0.12)" }}>
+                        <Plus className="w-4 h-4 text-teal-600" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700">Analisis Mutasi Bank</p>
+                    </div>
+                    <UploadZone onFile={analyze} />
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {["BCA", "Mandiri", "BRI", "BNI", "GoPay", "OVO", "Dana"].map((b) => (
+                        <span key={b} className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "#f1f5f9", color: "#475569" }}>{b}</span>
+                      ))}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setShowSmartInput(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                    style={{ background: "rgba(20,184,166,0.10)", color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.18)" }}
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    Catat Cepat
-                  </button>
+
+                  {/* Preview KPI strip (teaser) */}
+                  <div className="rounded-2xl p-4 space-y-3" style={{ background: "linear-gradient(135deg, rgba(20,184,166,0.09) 0%, rgba(139,92,246,0.06) 100%)", border: "1px solid rgba(20,184,166,0.18)" }}>
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Setelah upload, kamu akan lihat</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Arus Kas Bersih", value: "Rp —", sub: "bulan ini", color: "#0f766e" },
+                        { label: "Total Pengeluaran", value: "Rp —", sub: "per bulan", color: "#e11d48" },
+                        { label: "Savings Rate", value: "—%", sub: "target 20%", color: "#7c3aed" },
+                        { label: "Langganan", value: "Rp —", sub: "estimasi tetap", color: "#0369a1" },
+                      ].map((kpi) => (
+                        <div key={kpi.label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.8)" }}>
+                          <p className="text-[10px] text-slate-500 leading-tight">{kpi.label}</p>
+                          <p className="text-sm font-bold font-mono mt-0.5" style={{ color: kpi.color }}>{kpi.value}</p>
+                          <p className="text-[9px] text-slate-400">{kpi.sub}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <QuickTracker
+
+                {/* ── Right: Quick Tracker ── */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <BookOpen className="w-4 h-4 text-teal-600" />
+                      Catatan Manual
+                    </div>
+                    <button
+                      onClick={() => setShowSmartInput(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      style={{ background: "rgba(20,184,166,0.10)", color: "#0f766e", border: "1px solid rgba(20,184,166,0.22)" }}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Catat Cepat
+                    </button>
+                  </div>
+                  <QuickTracker
                     txs={txs}
                     onAddNew={() => setShowSmartInput(true)}
                     onDelete={deleteOne}
@@ -112,13 +143,14 @@ export default function Home() {
                     isCloud={isCloud}
                     loading={txLoading}
                   />
+                </div>
               </div>
 
               {error && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-red-400 text-sm bg-red-950/40 border border-red-800/50 px-4 py-2 rounded-lg max-w-md text-center"
+                  className="mt-6 text-red-600 text-sm bg-red-50 border border-red-200 px-4 py-2 rounded-lg max-w-md mx-auto text-center"
                 >
                   {error}
                 </motion.p>
@@ -142,7 +174,7 @@ export default function Home() {
                 />
                 <Loader2 className="w-16 h-16 animate-spin" style={{ color: "#14b8a6" }} />
               </div>
-              <p className="text-slate-400 text-lg animate-pulse">Menganalisis transaksi Anda…</p>
+              <p className="text-slate-500 text-lg animate-pulse">Menganalisis transaksi Anda…</p>
             </motion.div>
           )}
 
@@ -157,7 +189,7 @@ export default function Home() {
             >
               {/* Greeting */}
               <div>
-                <h2 className="text-xl font-semibold text-slate-100">
+                <h2 className="text-xl font-semibold text-slate-800">
                   Hei! 👋 Berikut ringkasan keuanganmu.
                 </h2>
                 <p className="text-sm text-slate-500 mt-0.5">{data.summary.date_range}</p>

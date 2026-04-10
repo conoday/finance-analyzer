@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-10 (rev 4)
+> Last updated: 2026-04-10 (rev 5)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun
 > Ini adalah source of truth untuk status semua pekerjaan
 
@@ -13,7 +13,7 @@
 | Frontend | ✅ Live | https://finance-analyzer-roan.vercel.app |
 | Backend API | ✅ Live | https://finance-analyzer-a82j.onrender.com |
 | Database | 🔧 Schema siap | Supabase — jalankan `supabase/schema.sql` |
-| Auth | 🔧 UI siap, skip dulu | Login/Register/Verify/Callback pages dibuat |
+| Auth | ✅ Done | Login, register, verify, callback, useAuth, useTransactions, middleware |
 | Admin Console | 🔧 Scaffolded | admin-console/ di repo, belum deploy |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
 
@@ -62,8 +62,20 @@
 - [x] **UI lighten**: background #060d1a→#0d1829, glass opacity +0.025, borders lebih visible
 - [x] Supabase setup: schema.sql (profiles, categories, transactions, import_batches + RLS)
 - [x] Auth pages: login, register (T&C 5 seksi UU PDP), verify OTP, callback route
-- [x] Route protection via proxy.ts
-- [x] TransactionList, BalanceCard, CategoryBadge components
+- [x] **Phase 2 Auth complete** (commit 14b121c)
+  - Supabase schema.sql: profiles, categories, transactions, import_batches + RLS
+  - Auth pages: login (light theme), register (T&C UU PDP), verify OTP, callback route
+  - `middleware.ts` — route protection (settings/profile/admin protected, `/` public)
+  - `useAuth.ts` — `{ user, loading, signOut }` via `onAuthStateChange`
+  - `useTransactions.ts` — localStorage (guest) → Supabase (cloud), auto-migrate on login
+  - Header auth state: user first name, signOut button, login CTA
+  - Fields `hour_of_day`, `day_of_week`, `method` di tabel transactions
+- [x] **Backend `_clean_amount` fix** — Indonesian number format parsing rewrite
+  - `1.234.567` → 1234567, `50.000` → 50000, `Rp 1.234.567,89` → 1234567.89
+  - 13/13 test cases pass
+- [x] **Header light theme contrast fix** — `rgba(255,255,255,0.88)`, `text-slate-800`, `text-teal-600`
+- [x] **Empty state redesign** — 2-column layout (upload+teaser KPI panel / QuickTracker), clean light colors
+- [x] **Dashboard greeting fix** — `text-slate-100 → text-slate-800`
 
 ### Dokumentasi Artefak (15+2 files)
 - [x] 01-09: Product overview, auth, arch, features, DB, optimization, roadmap, admin, agent planner
@@ -83,40 +95,33 @@
 | 3 | Enable Email provider | Supabase → Auth → Providers → Email | ON, Confirm email ON |
 | 4 | Setup Google OAuth | Google Cloud Console → Credentials | Client ID + Secret → paste ke Supabase |
 | 5 | Set Vercel env vars | Vercel → Project → Settings → Env | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
-| 6 | Taruh QRIS image | ~~`frontend/public/qris.png`~~ **DONE** — `qris.jpeg` committed | ✅ Modal donasi sudah live |
+
 
 ## 🟡 IN PROGRESS
 
 | Task | Who | Notes |
 |---|---|---|
-| Auth flow (ditunda) | — | Pages sudah dibuat, diaktifkan setelah Supabase dikonfigurasi |
+| Phase 3 Sprint — Transaction CRUD + Tier | Agent | Backlog siap, bisa mulai kapan saja |
 | Admin Console scaffold | Agent | Folder `admin-console/` sudah dibuat, belum deploy |
 
 ---
 
 ## 🔲 BACKLOG — Ordered by Priority
 
-### Sprint Berikutnya (Quick Win, Max Impact)
+### Sprint Berikutnya (Phase 3 — DB + Tier Enforcement)
 
 | ID | Fitur | Estimasi | Tier |
 |---|---|---|---|
-| QW-1 | F01: Quick Add Transaction (modal input manual, simpan ke localStorage dulu) | 4 jam | Free |
-| QW-2 | A02: Merchant Leaderboard visual upgrade (rank badges, % share bar) | 2 jam | Free |
-| QW-3 | F06: Smart Search — cari transaksi di client-side | 3 jam | Free |
-| QW-4 | A08: Year-in-Review summary card | 3 jam | Free |
-| QW-5 | Sample Data button lebih prominent di hero | 1 jam | Free |
-| QW-6 | Dark mode toggle (sudah gelap, tambah light mode opsional) | 3 jam | Free |
+| P3-1 | Transaction CRUD endpoints (POST/GET/PUT/DELETE /transactions) | 4 jam | All |
+| P3-2 | Budget per kategori — set monthly cap, progress bar, alert >80% | 3 jam | Pro |
+| P3-3 | Multi-rekening — Cash/BCA/Dana/GoPay di SmartInput | 3 jam | Pro |
+| P3-4 | Free tier enforcement: max 3 akun, history 3 bulan | 2 jam | Free |
+| P3-5 | PDF export laporan bulanan | 3 jam | Pro |
+| P3-6 | Dark/light mode toggle — simpan di localStorage | 2 jam | All |
 
-### Phase 2 — Auth (Prioritas Tinggi)
+### Phase 2 — Auth ✅ DONE
 
-| Task | Estimasi | Dependency |
-|---|---|---|
-| Install next-auth@^5, setup Google OAuth | 2 jam | Google Cloud Console project |
-| Buat `frontend/src/app/api/auth/[...nextauth]/route.ts` | 1 jam | NEXTAUTH_SECRET di Vercel env |
-| Setup Supabase project + run DDL dari artefak/05 | 2 jam | Supabase account |
-| Protect routes dengan middleware.ts | 1 jam | Auth setup done |
-| Update Header: login/logout button | 1 jam | Auth setup done |
-| Backend `POST /auth/verify` endpoint | 2 jam | DATABASE_URL di Render env |
+Semua task sudah selesai. Lihat bagian ✅ DONE di atas.
 
 ### Phase 3 — DB + Tier Enforcement
 
@@ -183,7 +188,7 @@
 | Chart pengeluaran per kategori | ✅ SpendingWheel done |
 | History transaksi | ✅ QuickTracker done |
 | Filter: periode (7d/30d/all) | ✅ Done |
-| Login Google | 🔲 Phase 2 |
+| Login Google | ✅ Done (Phase 2) |
 | **Limitasi**: max 3 akun, history 3 bulan, tanpa export, tanpa AI | 🔲 Phase 3 enforcement |
 
 ### 💎 PRO Personal (target Rp 29K/bln)
@@ -264,6 +269,10 @@ Step 6 → Personal AI agent per user (memory: kebiasaan, preferensi)
 | 2026-04-10 | Backend fix: infer_datetime_format removed (pandas 2+) | ✅ Done |
 | 2026-04-10 | Product vision finalized: Free/Pro/AI tiers + AI strategy | ✅ Documented |
 | 2026-04-10 | WA Bot/Omnichannel | ⏳ Ditunda |
+| 2026-04-10 | **Phase 2 Auth complete** — middleware, useAuth, useTransactions, Header auth state | ✅ Done (14b121c) |
+| 2026-04-10 | **Backend `_clean_amount` fix** — Indonesian number parsing (13/13 tests pass) | ✅ Done |
+| 2026-04-10 | **Header light theme contrast** — white bg, dark text, teal accent | ✅ Done |
+| 2026-04-10 | **Empty state redesign** — 2-col: upload+KPI teaser / QuickTracker | ✅ Done |
 
 ---
 
@@ -298,6 +307,13 @@ Step 6 → Personal AI agent per user (memory: kebiasaan, preferensi)
 - [ ] Set Site URL + Redirect URL di Supabase Auth config → `https://finance-analyzer-roan.vercel.app/auth/callback`
 - [ ] Buat Google Cloud OAuth credentials → simpan di SECRETS.md
 - [ ] Daftar DeepSeek → top up $5 → simpan API key di SECRETS.md
+- [ ] Jalankan ALTER TABLE di Supabase SQL Editor:
+  ```sql
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
+  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
+  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
+  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
+  ```
 
 ---
 

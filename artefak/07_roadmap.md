@@ -1,6 +1,6 @@
 ﻿# Roadmap
 
-> Last updated: 2026-04-10
+> Last updated: 2026-04-10 (rev 5)
 > Lihat tracking detail di `artefak/17_master_tracking.md`
 
 ## Overview
@@ -8,7 +8,7 @@
 ```
 Phase 0 ─── Phase 1 ─── Phase 1.5 ── Phase 2 ─── Phase 3 ─── Phase AI ─── Phase 4 ─── Phase 5 ─── Phase 6
  Docs        Deploy      Sprint 1      Auth         DB+Tier     AI Feat       OCR          Admin       Payment
-  ✅           ✅           ✅           🔲           🔲           🔲           🔲            🔧           🔲
+  ✅           ✅           ✅           ✅           🔲           🔲           🔲            🔧           🔲
 ```
 
 ## Phase 0 — Documentation ✅ DONE
@@ -27,13 +27,18 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - ✅ Spending Heatmap, WA Share, QRIS Donasi modal
 - ✅ Product vision finalized (Free → Pro → AI tier)
 
-## Phase 2 — Authentication 🔲 Next Sprint
+## Phase 2 — Authentication ✅ DONE (commit 14b121c + polish session)
 **Goal**: user bisa login, data tersimpan permanent (bukan localStorage)
-- Google OAuth via Supabase Auth
-- User disimpan di Supabase PostgreSQL
-- Field `plan_type` (free/pro/ai/business) di tabel users
-- Migrasi localStorage QuickTracker → Supabase `transactions`
-- Estimasi: 2-3 hari
+- ✅ Supabase Auth setup (schema.sql: profiles, categories, transactions, import_batches + RLS)
+- ✅ Auth pages: login (light theme), register (T&C UU PDP), verify OTP, callback route
+- ✅ `middleware.ts` proxy — protects /settings, /profile, /admin; `/` tetap publik
+- ✅ `useAuth.ts` hook — `{ user, loading, signOut }` via `onAuthStateChange`
+- ✅ `useTransactions.ts` — localStorage guest → auto-migrasi ke Supabase saat login
+- ✅ Header auth state: user menu (first name), login button, signOut
+- ✅ Backend `_clean_amount` fix — Indonesian dot-thousands format (1.234.567 → 1234567, 50.000 → 50000)
+- ✅ Header light theme contrast fix — `rgba(255,255,255,0.88)` + `text-slate-800`
+- ✅ Empty state redesign — 2-column: upload+teaser KPI / QuickTracker
+- ✅ Dashboard greeting: `text-slate-100 → text-slate-800`
 
 ## Phase 3 — Transaction CRUD + Tier Enforcement 🔲 Planned
 **Goal**: data persistent, tier dikunci

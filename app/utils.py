@@ -163,23 +163,81 @@ def ensure_datetime(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 def _clean_amount(value: object) -> float:
-    """Bersihkan satu nilai amount ke float."""
+    """Bersihkan satu nilai amount ke float.
+
+    Menangani format Indonesia:
+    - 1.234.567     → 1234567   (titik = ribuan, tanpa desimal)
+    - 1.234.567,89  → 1234567.89 (titik ribuan, koma desimal)
+    - 1,234,567     → 1234567   (koma = ribuan, US style)
+    - 1,234,567.89  → 1234567.89 (koma ribuan, titik desimal)
+    - 50.000        → 50000     (titik = ribuan tanpa desimal)
+    - 50,5 / 50.5   → 50.5      (koma/titik desimal, 1-2 digit)
+    """
     if pd.isna(value) or value == "" or value is None:
         return 0.0
     text = str(value).strip()
-    # Hapus simbol mata uang dan spasi
-    text = re.sub(r"[Rp\s$€£IDR]", "", text, flags=re.IGNORECASE)
-    # Deteksi apakah format: 1.234.567,89 atau 1,234,567.89
-    if re.search(r"\d\.\d{3},\d{2}$", text):
-        # Format Indonesia: titik ribuan, koma desimal
-        text = text.replace(".", "").replace(",", ".")
-    elif re.search(r"\d,\d{3}\.\d{2}$", text):
-        # Format US: koma ribuan, titik desimal
+
+    # ── Hapus simbol mata uang (Rp, IDR, $, €, £) dan spasi ──
+    text = re.sub(r"\bRp\.?\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bIDR\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"[$€£\s]", "", text)
+
+    if not text or text in {"-", "+"}:
+        return 0.0
+
+    # Tangani tanda negatif di depan atau belakang
+    negative = text.startswith("-") or text.endswith("-")
+    text = text.strip("-+")
+
+    # ── Deteksi format angka ──
+
+    dot_count   = text.count(".")
+    comma_count = text.count(",")
+
+    if dot_count >= 2:
+        # "1.234.567" atau "1.234.567,89" → titik adalah pemisah ribuan
+        if comma_count == 1:
+            # "1.234.567,89"
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            # "1.234.567"
+            text = text.replace(".", "")
+
+    elif comma_count >= 2:
+        # "1,234,567" atau "1,234,567.89" → koma adalah pemisah ribuan
         text = text.replace(",", "")
-    else:
-        # Fallback: hapus semua titik kecuali yang terakhir
-        text = text.replace(",", "")
+
+    elif dot_count == 1 and comma_count == 1:
+        # Kedua ada — tentukan mana ribuan vs desimal dari posisi
+        dot_pos   = text.index(".")
+        comma_pos = text.index(",")
+        if dot_pos < comma_pos:
+            # "1.234,56" → titik ribuan, koma desimal (Indonesia)
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            # "1,234.56" → koma ribuan, titik desimal (US)
+            text = text.replace(",", "")
+
+    elif dot_count == 1 and comma_count == 0:
+        # "50.000" atau "50.5"?
+        after_dot = text.split(".")[-1]
+        if len(after_dot) == 3 and after_dot.isdigit() and text.replace(".", "").isdigit():
+            # "50.000" → ribuan (bukan desimal)
+            text = text.replace(".", "")
+        # else "50.5" → biarkan, float() akan handle
+
+    elif comma_count == 1 and dot_count == 0:
+        # "50,000" atau "50,5"?
+        after_comma = text.split(",")[-1]
+        if len(after_comma) == 3 and after_comma.isdigit():
+            # "50,000" → ribuan
+            text = text.replace(",", "")
+        else:
+            # "50,5" → desimal
+            text = text.replace(",", ".")
+
     try:
-        return float(text)
+        result = float(text)
+        return -result if negative else result
     except ValueError:
         return 0.0
