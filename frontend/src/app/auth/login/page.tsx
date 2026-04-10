@@ -67,16 +67,16 @@ export default function LoginPage() {
             Oprex<span className="text-teal-400">Duit</span>
           </span>
         </div>
-        <p className="text-slate-400 text-sm">Masuk ke akun kamu</p>
+        <p className="text-slate-500 text-sm">Masuk ke akun kamu</p>
       </div>
 
       {/* Card */}
-      <div className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-sm p-6 space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
         {/* Google */}
         <button
           onClick={handleGoogle}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 rounded-xl border border-white/12 bg-white/5 hover:bg-white/10 text-sm font-medium py-2.5 transition-all disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium py-2.5 transition-all disabled:opacity-60 text-slate-700"
         >
           {googleLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -91,28 +91,28 @@ export default function LoginPage() {
           Masuk dengan Google
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-slate-600">
-          <div className="flex-1 h-px bg-white/8" />
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="flex-1 h-px bg-slate-200" />
           atau
-          <div className="flex-1 h-px bg-white/8" />
+          <div className="flex-1 h-px bg-slate-200" />
         </div>
 
         {/* Email form */}
         <form onSubmit={handleEmailLogin} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-slate-400 font-medium">Email</label>
+            <label className="text-xs text-slate-500 font-medium">Email</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="kamu@email.com"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/30 transition-all"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-all"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-400 font-medium">Password</label>
+            <label className="text-xs text-slate-500 font-medium">Password</label>
             <div className="relative">
               <input
                 type={showPw ? "text" : "password"}
@@ -120,12 +120,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 pr-10 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/30 transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-10 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               >
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -133,7 +133,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-xs text-red-400 bg-red-950/40 border border-red-800/40 rounded-lg px-3 py-2">
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -151,7 +151,7 @@ export default function LoginPage() {
 
       <p className="text-center text-xs text-slate-500">
         Belum punya akun?{" "}
-        <Link href="/auth/register" className="text-teal-400 hover:text-teal-300 font-medium">
+        <Link href="/auth/register" className="text-teal-600 hover:text-teal-500 font-medium">
           Daftar gratis
         </Link>
       </p>

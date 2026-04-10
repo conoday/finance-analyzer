@@ -186,8 +186,6 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
       isIncome: effectiveCategory === "Pendapatan",
       raw,
     };
-    const existing = loadLocal();
-    saveLocal([tx, ...existing]);
     onSaved?.(tx);
     setSaved(true);
     setTimeout(() => {

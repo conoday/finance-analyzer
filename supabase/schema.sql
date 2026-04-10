@@ -165,3 +165,44 @@ CREATE TRIGGER trg_profiles_updated_at
 CREATE TRIGGER trg_transactions_updated_at
   BEFORE UPDATE ON public.transactions
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ─────────────────────────────────────────────
+-- 7. ADDITIONAL COLUMNS (Phase 2+)
+-- ─────────────────────────────────────────────
+
+-- profiles: plan type for tier enforcement
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free'
+    CHECK (plan_type IN ('free', 'pro', 'ai', 'business'));
+
+-- transactions: AI data collection (add from the start, cheap to store)
+ALTER TABLE public.transactions
+  ADD COLUMN IF NOT EXISTS hour_of_day   SMALLINT,  -- 0-23, for spending pattern analysis
+  ADD COLUMN IF NOT EXISTS day_of_week   SMALLINT,  -- 0=Mon, 6=Sun
+  ADD COLUMN IF NOT EXISTS recurring_flag BOOLEAN   NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS confidence_score NUMERIC(4,3),  -- AI parsing confidence 0.000-1.000
+  ADD COLUMN IF NOT EXISTS method        TEXT,      -- Cash | BCA | GoPay | OVO | etc
+  ADD COLUMN IF NOT EXISTS tags          TEXT[];    -- tag array (Phase 3)
+
+-- ─────────────────────────────────────────────
+-- 8. PROFILES: plan_type index
+-- ─────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_profiles_plan_type ON public.profiles (plan_type);
+
+-- ─────────────────────────────────────────────
+-- 9. MONTHLY AGGREGATES (pre-computed, for perf)
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.monthly_agg (
+  id             BIGSERIAL    PRIMARY KEY,
+  user_id        UUID         NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  month          CHAR(7)      NOT NULL,  -- 'YYYY-MM'
+  total_income   NUMERIC(18,2) NOT NULL DEFAULT 0,
+  total_expense  NUMERIC(18,2) NOT NULL DEFAULT 0,
+  top_category   TEXT,
+  UNIQUE (user_id, month)
+);
+
+ALTER TABLE public.monthly_agg ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "monthly_agg: own rows" ON public.monthly_agg
+  FOR ALL USING (auth.uid() = user_id);
+

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { useTransactions } from "@/hooks/useTransactions";
 import { Header } from "@/components/Header";
 import { UploadZone } from "@/components/UploadZone";
 import { BalanceCard } from "@/components/BalanceCard";
@@ -20,7 +21,7 @@ import { SimulatorPanel } from "@/components/SimulatorPanel";
 import { SpendingHeatmap } from "@/components/SpendingHeatmap";
 import { SharePanel, DonasiModal } from "@/components/SharePanel";
 import { QuickTracker } from "@/components/QuickTracker";
-import { Loader2, Plus, Zap, Sparkles, BookOpen } from "lucide-react";
+import { Loader2, Zap, Sparkles, BookOpen, Plus } from "lucide-react";
 
 const TABS = [
   { id: "transaksi",  label: "Transaksi" },
@@ -35,10 +36,10 @@ type TabId = (typeof TABS)[number]["id"];
 
 export default function Home() {
   const { data, status, error, analyze, reset } = useAnalysis();
+  const { txs, loading: txLoading, save, deleteOne, clear, isCloud } = useTransactions();
   const [activeTab, setActiveTab] = useState<TabId>("transaksi");
   const [showDonasi, setShowDonasi] = useState(false);
   const [showSmartInput, setShowSmartInput] = useState(false);
-  const [trackerKey, setTrackerKey] = useState(0); // bump to refresh tracker
 
   return (
     <div className="relative min-h-screen bg-mesh overflow-x-hidden">
@@ -103,7 +104,14 @@ export default function Home() {
                     Catat Cepat
                   </button>
                 </div>
-                <QuickTracker key={trackerKey} onAddNew={() => setShowSmartInput(true)} />
+                <QuickTracker
+                    txs={txs}
+                    onAddNew={() => setShowSmartInput(true)}
+                    onDelete={deleteOne}
+                    onClear={clear}
+                    isCloud={isCloud}
+                    loading={txLoading}
+                  />
               </div>
 
               {error && (
@@ -263,7 +271,7 @@ export default function Home() {
         {showSmartInput && (
           <SmartInput
             onClose={() => setShowSmartInput(false)}
-            onSaved={() => setTrackerKey((k) => k + 1)}
+            onSaved={save}
           />
         )}
       </AnimatePresence>
