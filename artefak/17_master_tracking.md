@@ -54,7 +54,12 @@
 - [x] SmartInput "Catat Cepat" — natural language parse (25rb, 5jt, dll)
 - [x] Bug fix: duplikat kategori di SmartInput (Transport+Transportasi, Tagihan+Utilitas)
 - [x] SmartInput redesign — cleaner form UI, select dropdown kategori, brand icons metode bayar
-- [x] Brand icons via @iconify/react + Simple Icons (GoPay, OVO, Dana, BCA, Mandiri, BRI, BNI, QRIS)
+- [x] Brand icons metode bayar — **text-badge fallback** (Simple Icons tidak punya bank Indonesia: BCA/OVO/Dana/BRI/BNI/Mandiri/QRIS)
+- [x] **OprexDuit rebrand**: logo SVG, header cleanup, Login "Soon" tooltip
+- [x] **QuickTracker**: post-input dashboard, category breakdown, delete per-tx, brand text badges
+- [x] **QRIS modal fix**: qris.jpeg committed, white-bg container, Clipboard API copy + download fallback
+- [x] **ParseInput fix**: ngopi/nongkrong/kopdar/warteg → Makan; 50.000 dot=thousands separator bug fixed
+- [x] **UI lighten**: background #060d1a→#0d1829, glass opacity +0.025, borders lebih visible
 - [x] Supabase setup: schema.sql (profiles, categories, transactions, import_batches + RLS)
 - [x] Auth pages: login, register (T&C 5 seksi UU PDP), verify OTP, callback route
 - [x] Route protection via proxy.ts
@@ -78,7 +83,7 @@
 | 3 | Enable Email provider | Supabase → Auth → Providers → Email | ON, Confirm email ON |
 | 4 | Setup Google OAuth | Google Cloud Console → Credentials | Client ID + Secret → paste ke Supabase |
 | 5 | Set Vercel env vars | Vercel → Project → Settings → Env | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
-| 6 | Taruh QRIS image | `frontend/public/qris.png` | Untuk modal donasi |
+| 6 | Taruh QRIS image | ~~`frontend/public/qris.png`~~ **DONE** — `qris.jpeg` committed | ✅ Modal donasi sudah live |
 
 ## 🟡 IN PROGRESS
 
