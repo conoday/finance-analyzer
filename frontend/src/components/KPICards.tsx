@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Wallet, Hash, CreditCard } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Hash, CreditCard, PiggyBank } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import type { Summary } from "@/types";
 
@@ -22,6 +22,10 @@ const item = {
 export function KPICards({ summary, subTotal }: KPICardsProps) {
   const net = summary.net_cashflow;
   const netPositive = net >= 0;
+  const savingsRate = summary.total_income > 0
+    ? Math.round((net / summary.total_income) * 100)
+    : 0;
+  const savingsPositive = savingsRate >= 0;
 
   const cards = [
     {
@@ -55,6 +59,16 @@ export function KPICards({ summary, subTotal }: KPICardsProps) {
       glow: netPositive ? "glow-blue" : "",
     },
     {
+      label: "Saving Rate",
+      value: `${savingsRate}%`,
+      sub: savingsRate >= 20 ? "🎯 Target 20% tercapai!" : `Kurang ${20 - savingsRate}% dari target`,
+      icon: PiggyBank,
+      color: savingsPositive && savingsRate >= 20 ? "text-amber-400" : savingsPositive ? "text-yellow-400" : "text-orange-400",
+      bg: savingsPositive ? "from-amber-500/10 to-amber-600/5" : "from-orange-500/10 to-orange-600/5",
+      border: savingsPositive ? "border-amber-500/15" : "border-orange-500/15",
+      glow: savingsRate >= 20 ? "glow-amber" : "",
+    },
+    {
       label: "Total Transaksi",
       value: `${summary.tx_count}`,
       sub: `Rata-rata ${formatRupiah(summary.avg_expense, true)}/tx`,
@@ -81,7 +95,7 @@ export function KPICards({ summary, subTotal }: KPICardsProps) {
       variants={container}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
+      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
     >
       {cards.map((c) => (
         <motion.div
