@@ -6,8 +6,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Finance Analyzer — Personal Cash Flow Intelligence",
-  description: "AI-powered personal finance analyzer with spending insights, fraud detection, and cash flow forecasting.",
+  title: "OprexDuit — Ngatur Duit, Beres.",
+  description: "Aplikasi keuangan pribadi cerdas. Catat transaksi, analisis pengeluaran, dan kelola keuangan dengan mudah.",
   icons: { icon: "/favicon.ico" },
 };
 
