@@ -19,7 +19,8 @@ import { StoryCards } from "@/components/StoryCards";
 import { SimulatorPanel } from "@/components/SimulatorPanel";
 import { SpendingHeatmap } from "@/components/SpendingHeatmap";
 import { SharePanel, DonasiModal } from "@/components/SharePanel";
-import { Loader2, Plus, Zap, Sparkles } from "lucide-react";
+import { QuickTracker } from "@/components/QuickTracker";
+import { Loader2, Plus, Zap, Sparkles, BookOpen } from "lucide-react";
 
 const TABS = [
   { id: "transaksi",  label: "Transaksi" },
@@ -37,6 +38,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("transaksi");
   const [showDonasi, setShowDonasi] = useState(false);
   const [showSmartInput, setShowSmartInput] = useState(false);
+  const [trackerKey, setTrackerKey] = useState(0); // bump to refresh tracker
 
   return (
     <div className="relative min-h-screen bg-mesh overflow-x-hidden">
@@ -68,11 +70,11 @@ export default function Home() {
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-gradient-teal">
-                  Finance Analyzer
+                  OprexDuit
                 </h1>
                 <p className="text-slate-400 text-base max-w-md mx-auto leading-relaxed">
-                  Upload mutasi rekening dan dapatkan insight mendalam — skor kesehatan,
-                  prediksi, heatmap, dan laporan siap kirim ke WhatsApp.
+                  Catat pengeluaran harian, analisis mutasi bank, dan pantau
+                  kesehatan keuanganmu dalam satu tempat.
                 </p>
                 <div className="flex items-center justify-center gap-3 pt-1 text-xs text-slate-600 flex-wrap">
                   <span>CSV / Excel / PDF</span>
@@ -85,15 +87,24 @@ export default function Home() {
 
               <UploadZone onFile={analyze} />
 
-              {/* Quick add teaser */}
-              <button
-                onClick={() => setShowSmartInput(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all"
-                style={{ color: "#2dd4bf", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.18)" }}
-              >
-                <Zap className="w-4 h-4" />
-                Atau catat transaksi manual
-              </button>
+              {/* Quick tracker — always show manual transactions */}
+              <div className="w-full max-w-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+                    <BookOpen className="w-4 h-4" />
+                    Catatan Manual
+                  </div>
+                  <button
+                    onClick={() => setShowSmartInput(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ background: "rgba(20,184,166,0.10)", color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.18)" }}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    Catat Cepat
+                  </button>
+                </div>
+                <QuickTracker key={trackerKey} onAddNew={() => setShowSmartInput(true)} />
+              </div>
 
               {error && (
                 <motion.p
@@ -252,7 +263,7 @@ export default function Home() {
         {showSmartInput && (
           <SmartInput
             onClose={() => setShowSmartInput(false)}
-            onSaved={() => {}}
+            onSaved={() => setTrackerKey((k) => k + 1)}
           />
         )}
       </AnimatePresence>

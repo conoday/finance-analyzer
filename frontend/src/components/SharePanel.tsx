@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Download, Heart, X, QrCode, Copy, Check } from "lucide-react";
+import { MessageCircle, Download, Heart, X, Copy, Check } from "lucide-react";
 import type { AnalysisResult } from "@/types";
 import { formatRupiah } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ function buildWAText(data: AnalysisResult): string {
     healthScore !== null ? `🏥 Health Score: *${healthScore}/100* (${data.health_report!.grade})` : null,
     topCat ? `🔝 Pengeluaran terbesar: *${topCat.kategori}* (${topCat.pct.toFixed(1)}%)` : null,
     ``,
-    `_Dianalisis dengan Finance Analyzer_`,
+    `_Dianalisis dengan OprexDuit_`,
     `https://finance-analyzer-roan.vercel.app`,
   ]
     .filter(Boolean)
@@ -70,7 +70,7 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
 
   const copyText = () => {
-    navigator.clipboard.writeText("Finance Analyzer - Donasi via QRIS").then(() => {
+    navigator.clipboard.writeText("OprexDuit - Donasi via QRIS").then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -105,19 +105,14 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="text-xs text-slate-400 leading-relaxed">
-          Finance Analyzer 100% gratis dan open source. Jika tool ini membantu keuanganmu,
-          kamu bisa traktir kopi ☕ via QRIS di bawah ini.
+          OprexDuit 100% gratis. Kalau tools ini membantu ngatur keuanganmu,
+          kamu bisa traktir kopi ☕ lewat QRIS di bawah ini.
         </p>
 
-        {/* QRIS placeholder */}
+        {/* QRIS */}
         <div className="flex flex-col items-center gap-3">
-          <div className="w-48 h-48 rounded-xl border-2 border-dashed border-amber-500/30 flex flex-col items-center justify-center bg-amber-500/5 gap-2">
-            {/* REPLACE: put your QRIS image at public/qris.png then swap this div with: */}
-            {/* <img src="/qris.png" alt="QRIS Donasi" className="w-full h-full object-contain rounded-lg" /> */}
-            <QrCode className="w-12 h-12 text-amber-500/50" />
-            <span className="text-[10px] text-amber-500/60 text-center px-2">
-              Letakkan QRIS kamu<br />di <code className="text-amber-400">public/qris.png</code>
-            </span>
+          <div className="w-52 h-52 rounded-xl overflow-hidden border border-white/10">
+            <img src="/qris.jpeg" alt="QRIS Donasi OprexDuit" className="w-full h-full object-contain" />
           </div>
 
           <button
