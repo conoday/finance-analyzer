@@ -1,33 +1,35 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,400&family=DM+Mono:wght@400;500&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CSS custom properties — warm dark palette ─── */
+/* ─── CSS custom properties — teal / deep navy ─── */
 @layer base {
   :root {
-    --background: 224 18% 8%;
-    --foreground: 220 20% 94%;
-    --card: 224 18% 11%;
-    --card-foreground: 220 20% 94%;
-    --border: 224 16% 18%;
-    --input: 224 18% 14%;
-    --ring: 38 92% 55%;
-    --primary: 38 92% 55%;
-    --primary-foreground: 224 18% 8%;
-    --muted: 224 18% 16%;
-    --muted-foreground: 220 14% 52%;
-    --accent: 38 92% 55%;
-    --accent-foreground: 224 18% 8%;
-    --destructive: 0 72% 51%;
+    --background: 222 47% 6%;
+    --foreground: 210 30% 93%;
+    --card: 222 42% 9%;
+    --card-foreground: 210 30% 93%;
+    --border: 222 28% 16%;
+    --input: 222 38% 12%;
+    --ring: 173 80% 40%;
+    --primary: 173 80% 40%;
+    --primary-foreground: 222 47% 6%;
+    --muted: 222 30% 14%;
+    --muted-foreground: 220 15% 50%;
+    --accent: 265 75% 65%;
+    --accent-foreground: 222 47% 6%;
+    --destructive: 346 83% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success: 150 60% 40%;
-    --radius: 0.875rem;
+    --success: 160 65% 42%;
+    --warning: 38 90% 55%;
+    --radius: 1rem;
   }
   * { border-color: hsl(var(--border)); }
   body {
-    background: #0f1117;
+    background: #060d1a;
     color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: "cv02","cv03","cv04","cv11";
   }
   ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -41,20 +43,20 @@
   font-family: 'DM Mono', 'JetBrains Mono', monospace;
 }
 
-/* ─── Gradient mesh background (warm) ─── */
+/* ─── Gradient mesh background (teal / navy) ─── */
 .bg-mesh {
-  background-color: #0f1117;
+  background-color: #060d1a;
   background-image:
-    radial-gradient(at 20% 10%, hsla(38,  80%, 55%, 0.08) 0px, transparent 55%),
-    radial-gradient(at 80%  5%, hsla(217, 80%, 50%, 0.10) 0px, transparent 55%),
-    radial-gradient(at  5% 60%, hsla(269, 70%, 55%, 0.07) 0px, transparent 55%),
-    radial-gradient(at 90% 55%, hsla(150, 60%, 45%, 0.07) 0px, transparent 55%),
-    radial-gradient(at 45% 95%, hsla(38,  70%, 50%, 0.06) 0px, transparent 55%);
+    radial-gradient(at 20% 10%, hsla(173, 80%, 40%, 0.12) 0px, transparent 55%),
+    radial-gradient(at 80%  5%, hsla(265, 75%, 65%, 0.09) 0px, transparent 55%),
+    radial-gradient(at  5% 60%, hsla(220, 80%, 50%, 0.08) 0px, transparent 55%),
+    radial-gradient(at 90% 55%, hsla(160, 65%, 42%, 0.07) 0px, transparent 55%),
+    radial-gradient(at 45% 95%, hsla(173, 60%, 40%, 0.06) 0px, transparent 55%);
 }
 
 /* ─── Animated dot grid ─── */
 .dot-grid {
-  background-image: radial-gradient(circle, rgba(148,163,184,0.08) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(148,163,184,0.06) 1px, transparent 1px);
   background-size: 28px 28px;
   animation: gridScroll 30s linear infinite;
 }
@@ -63,10 +65,10 @@
   100% { background-position: 0 60px; }
 }
 
-/* ─── Glassmorphism cards ─── */
+/* ─── Glassmorphism ─── */
 .glass {
-  background: rgba(255, 255, 255, 0.032);
-  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -77,26 +79,66 @@
   -webkit-backdrop-filter: blur(24px);
 }
 .glass-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(12px);
 }
 
+/* ─── Balance card — teal glassmorphism hero ─── */
+.balance-card {
+  background: linear-gradient(135deg,
+    rgba(20,184,166,0.14) 0%,
+    rgba(139,92,246,0.09) 50%,
+    rgba(6,182,212,0.07) 100%);
+  border: 1px solid rgba(20,184,166,0.20);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ─── Transaction card ─── */
+.tx-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.055);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.tx-card:hover {
+  background: rgba(20,184,166,0.06);
+  border-color: rgba(20,184,166,0.15);
+  transform: translateX(2px);
+}
+
+/* ─── Smart input overlay ─── */
+.smart-input-overlay {
+  background: rgba(6, 13, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.smart-input-box {
+  background: rgba(13,24,41,0.95);
+  border: 1.5px solid rgba(20,184,166,0.30);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.smart-input-box:focus-within {
+  border-color: rgba(20,184,166,0.60);
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.08), 0 0 24px rgba(20,184,166,0.12);
+}
+
 /* ─── Glow utilities ─── */
+.glow-teal   { box-shadow: 0 0 32px rgba(20,184,166,0.20),  0 0 10px rgba(20,184,166,0.12); }
+.glow-violet { box-shadow: 0 0 32px rgba(139,92,246,0.20),  0 0 10px rgba(139,92,246,0.12); }
 .glow-amber  { box-shadow: 0 0 28px rgba(251,191,36,0.18),  0 0 8px rgba(251,191,36,0.10); }
 .glow-blue   { box-shadow: 0 0 28px rgba(59,130,246,0.18),  0 0 8px rgba(59,130,246,0.10); }
 .glow-green  { box-shadow: 0 0 28px rgba(34,197,94,0.18),   0 0 8px rgba(34,197,94,0.10);  }
 .glow-red    { box-shadow: 0 0 28px rgba(239,68,68,0.18),   0 0 8px rgba(239,68,68,0.10);  }
 .glow-purple { box-shadow: 0 0 28px rgba(168,85,247,0.18),  0 0 8px rgba(168,85,247,0.10); }
 
-/* ─── Tab active state ─── */
-.tab-active {
-  background: rgba(251,191,36,0.10);
-  border-bottom: 2px solid #f59e0b;
-  color: #fbbf24;
-}
-
 /* ─── Gradient text ─── */
+.text-gradient-teal {
+  background: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 40%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 .text-gradient-warm {
   background: linear-gradient(135deg, #fbbf24 0%, #f97316 50%, #fb923c 100%);
   -webkit-background-clip: text;
@@ -121,9 +163,9 @@
 
 /* ─── Recharts overrides ─── */
 .recharts-default-tooltip {
-  background: rgba(15, 17, 23, 0.96) !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
-  border-radius: 10px !important;
+  background: rgba(6, 13, 26, 0.96) !important;
+  border: 1px solid rgba(20,184,166,0.15) !important;
+  border-radius: 12px !important;
   backdrop-filter: blur(16px);
   font-size: 12px !important;
 }
@@ -138,6 +180,13 @@
 }
 .btn-wa { animation: waPulse 2.4s ease-in-out infinite; }
 
+/* ─── FAB pulse (teal) ─── */
+@keyframes tealPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(20,184,166,0.5); }
+  50%       { box-shadow: 0 0 0 10px rgba(20,184,166,0); }
+}
+.btn-fab { animation: tealPulse 2.8s ease-in-out infinite; }
+
 /* ─── Badge ─── */
 .badge {
   display: inline-flex;
@@ -149,6 +198,45 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.badge-amber { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
-.badge-green { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.22); }
-.badge-blue  { background: rgba(99,102,241,0.12); color: #818cf8; border: 1px solid rgba(99,102,241,0.22); }
+.badge-teal   { background: rgba(20,184,166,0.14);  color: #2dd4bf; border: 1px solid rgba(20,184,166,0.25); }
+.badge-violet { background: rgba(139,92,246,0.14);  color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+.badge-amber  { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.badge-green  { background: rgba(34,197,94,0.12);   color: #4ade80; border: 1px solid rgba(34,197,94,0.22); }
+.badge-rose   { background: rgba(244,63,94,0.12);   color: #fb7185; border: 1px solid rgba(244,63,94,0.22); }
+.badge-blue   { background: rgba(99,102,241,0.12);  color: #818cf8; border: 1px solid rgba(99,102,241,0.22); }
+.badge-orange { background: rgba(251,146,60,0.12);  color: #fb923c; border: 1px solid rgba(251,146,60,0.22); }
+
+/* ─── Category pill colors ─── */
+.cat-food       { background: rgba(251,146,60,0.12); color: #fb923c; }
+.cat-transport  { background: rgba(56,189,248,0.12); color: #38bdf8; }
+.cat-shopping   { background: rgba(192,132,252,0.12);color: #c084fc; }
+.cat-bills      { background: rgba(20,184,166,0.12); color: #2dd4bf; }
+.cat-entertain  { background: rgba(244,114,182,0.12);color: #f472b6; }
+.cat-health     { background: rgba(74,222,128,0.12); color: #4ade80; }
+.cat-transfer   { background: rgba(148,163,184,0.12);color: #94a3b8; }
+.cat-income     { background: rgba(16,185,129,0.12); color: #34d399; }
+.cat-other      { background: rgba(100,116,139,0.12);color: #94a3b8; }
+
+/* ─── Income / Expense text colors ─── */
+.income-text  { color: #34d399; }
+.expense-text { color: #fb7185; }
+
+/* ─── Micro interaction: tap scale ─── */
+button:active { transform: scale(0.97); }
+
+/* ─── Tab bar ─── */
+.tab-pill {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.tab-pill:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
+.tab-pill.active {
+  background: rgba(20,184,166,0.14);
+  color: #2dd4bf;
+  border: 1px solid rgba(20,184,166,0.20);
+}

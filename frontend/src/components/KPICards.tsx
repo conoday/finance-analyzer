@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Wallet, Hash, CreditCard, PiggyBank } from "lucide-react";
+import { PiggyBank, Hash, TrendingDown, CreditCard } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import type { Summary } from "@/types";
 
@@ -10,113 +10,72 @@ interface KPICardsProps {
   subTotal: number;
 }
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
-
 export function KPICards({ summary, subTotal }: KPICardsProps) {
-  const net = summary.net_cashflow;
-  const netPositive = net >= 0;
-  const savingsRate = summary.total_income > 0
-    ? Math.round((net / summary.total_income) * 100)
-    : 0;
-  const savingsPositive = savingsRate >= 0;
+  const savingsRate =
+    summary.total_income > 0
+      ? Math.round((summary.net_cashflow / summary.total_income) * 100)
+      : 0;
 
-  const cards = [
+  const metrics = [
     {
-      label: "Total Pemasukan",
-      value: formatRupiah(summary.total_income, true),
-      sub: `${summary.income_count} transaksi`,
-      icon: TrendingUp,
-      color: "text-emerald-400",
-      bg: "from-emerald-500/10 to-emerald-600/5",
-      border: "border-emerald-500/15",
-      glow: "glow-green",
-    },
-    {
-      label: "Total Pengeluaran",
-      value: formatRupiah(summary.total_expense, true),
-      sub: `${summary.expense_count} transaksi`,
-      icon: TrendingDown,
-      color: "text-red-400",
-      bg: "from-red-500/10 to-red-600/5",
-      border: "border-red-500/15",
-      glow: "glow-red",
-    },
-    {
-      label: "Net Cash Flow",
-      value: (netPositive ? "+" : "") + formatRupiah(net, true),
-      sub: summary.date_range,
-      icon: Wallet,
-      color: netPositive ? "text-blue-400" : "text-orange-400",
-      bg: netPositive ? "from-blue-500/10 to-blue-600/5" : "from-orange-500/10 to-orange-600/5",
-      border: netPositive ? "border-blue-500/15" : "border-orange-500/15",
-      glow: netPositive ? "glow-blue" : "",
-    },
-    {
-      label: "Saving Rate",
+      label: "Savings Rate",
       value: `${savingsRate}%`,
-      sub: savingsRate >= 20 ? "🎯 Target 20% tercapai!" : `Kurang ${20 - savingsRate}% dari target`,
+      sub: savingsRate >= 20 ? "🎯 Target tercapai" : `Target 20%`,
       icon: PiggyBank,
-      color: savingsPositive && savingsRate >= 20 ? "text-amber-400" : savingsPositive ? "text-yellow-400" : "text-orange-400",
-      bg: savingsPositive ? "from-amber-500/10 to-amber-600/5" : "from-orange-500/10 to-orange-600/5",
-      border: savingsPositive ? "border-amber-500/15" : "border-orange-500/15",
-      glow: savingsRate >= 20 ? "glow-amber" : "",
+      accent: savingsRate >= 20 ? "#2dd4bf" : savingsRate >= 10 ? "#fbbf24" : "#fb7185",
     },
     {
       label: "Total Transaksi",
       value: `${summary.tx_count}`,
-      sub: `Rata-rata ${formatRupiah(summary.avg_expense, true)}/tx`,
+      sub: summary.date_range,
       icon: Hash,
-      color: "text-purple-400",
-      bg: "from-purple-500/10 to-purple-600/5",
-      border: "border-purple-500/15",
-      glow: "glow-purple",
+      accent: "#818cf8",
     },
     {
-      label: "Biaya Langganan",
+      label: "Rata-rata Pengeluaran",
+      value: formatRupiah(summary.avg_expense, true),
+      sub: "per transaksi",
+      icon: TrendingDown,
+      accent: "#fb923c",
+    },
+    {
+      label: "Langganan/bulan",
       value: formatRupiah(subTotal, true),
-      sub: "estimasi per bulan",
+      sub: "estimasi tetap",
       icon: CreditCard,
-      color: "text-cyan-400",
-      bg: "from-cyan-500/10 to-cyan-600/5",
-      border: "border-cyan-500/15",
-      glow: "",
+      accent: "#38bdf8",
     },
   ];
 
   return (
     <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15, duration: 0.4 }}
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3"
     >
-      {cards.map((c) => (
-        <motion.div
-          key={c.label}
-          variants={item}
-          className={[
-            "glass rounded-xl p-4 border flex flex-col gap-3",
-            c.border,
-          ].join(" ")}
+      {metrics.map((m) => (
+        <div
+          key={m.label}
+          className="glass rounded-xl p-4 flex items-start gap-3"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-medium">{c.label}</span>
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${c.bg} flex items-center justify-center`}>
-              <c.icon className={`w-3.5 h-3.5 ${c.color}`} />
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+            style={{ background: `${m.accent}16`, border: `1px solid ${m.accent}28` }}
+          >
+            <m.icon className="w-4 h-4" style={{ color: m.accent }} />
+          </div>
+          <div className="min-w-0">
+            <div
+              className="text-lg font-bold leading-none font-mono tabular-nums"
+              style={{ color: m.accent }}
+            >
+              {m.value}
             </div>
+            <div className="text-[11px] text-slate-500 mt-1 leading-snug truncate">{m.label}</div>
+            <div className="text-[10px] text-slate-700 mt-0.5 truncate">{m.sub}</div>
           </div>
-          <div>
-            <div className={`text-xl font-bold ${c.color} leading-none`}>{c.value}</div>
-            <div className="text-[11px] text-slate-600 mt-1">{c.sub}</div>
-          </div>
-        </motion.div>
+        </div>
       ))}
     </motion.div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BarChart2, RefreshCw, Github, Heart } from "lucide-react";
+import { Wallet, RefreshCw, Github, Heart } from "lucide-react";
 
 interface HeaderProps {
   hasData: boolean;
@@ -12,15 +12,20 @@ interface HeaderProps {
 export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full glass border-b border-white/[0.05]">
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between" style={{ height: 56 }}>
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center glow-amber">
-            <BarChart2 className="w-4 h-4 text-white" />
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center glow-teal"
+            style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
+          >
+            <Wallet className="w-4 h-4 text-white" />
           </div>
           <div>
             <span className="text-sm font-semibold text-slate-100 tracking-tight">Finance Analyzer</span>
-            <p className="hidden sm:block text-[10px] text-slate-500 leading-none mt-0.5">Personal Cash Flow Intelligence</p>
+            <p className="hidden sm:block text-[10px] text-slate-500 leading-none mt-0.5">
+              Personal Finance Companion
+            </p>
           </div>
         </div>
 
@@ -39,8 +44,8 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
           )}
           <button
             onClick={onDonasi}
-            title="Dukungan donasi"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/8 transition-all border border-amber-500/20"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
+            style={{ color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.20)", background: "rgba(20,184,166,0.06)" }}
           >
             <Heart className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Donasi</span>
@@ -58,4 +63,5 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
     </header>
   );
 }
+
 
