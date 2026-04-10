@@ -68,12 +68,31 @@ function exportCSV(data: AnalysisResult) {
    ───────────────────────────────────────────── */
 export function DonasiModal({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [qrisError, setQrisError] = useState(false);
 
-  const copyText = () => {
-    navigator.clipboard.writeText("OprexDuit - Donasi via QRIS").then(() => {
+  const handleCopyQRIS = async () => {
+    try {
+      const resp = await fetch("/qris.jpeg");
+      const blob = await resp.blob();
+      // Try clipboard image copy (works on Chrome/Edge over HTTPS)
+      if (navigator.clipboard && typeof ClipboardItem !== "undefined") {
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } else {
+        throw new Error("no clipboard API");
+      }
+    } catch {
+      // Fallback: download the image so user can save and share
+      const a = document.createElement("a");
+      a.href = "/qris.jpeg";
+      a.download = "QRIS-OprexDuit.jpeg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   return (
@@ -111,16 +130,31 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
 
         {/* QRIS */}
         <div className="flex flex-col items-center gap-3">
-          <div className="w-52 h-52 rounded-xl overflow-hidden border border-white/10">
-            <img src="/qris.jpeg" alt="QRIS Donasi OprexDuit" className="w-full h-full object-contain" />
+          <div
+            className="w-52 h-52 rounded-xl overflow-hidden border border-white/10 flex items-center justify-center"
+            style={{ background: qrisError ? "#111827" : "#fff" }}
+          >
+            {qrisError ? (
+              <p className="text-xs text-slate-500 text-center px-4">
+                QRIS tidak dapat dimuat.<br />Tap tombol unduh di bawah.
+              </p>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src="/qris.jpeg"
+                alt="QRIS Donasi OprexDuit"
+                className="w-full h-full object-contain"
+                onError={() => setQrisError(true)}
+              />
+            )}
           </div>
 
           <button
-            onClick={copyText}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            onClick={handleCopyQRIS}
+            className="flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition-colors font-medium"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            {copied ? "Tersalin!" : "Salin nama rekening"}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Download className="w-3.5 h-3.5" />}
+            {copied ? "Tersimpan / Tersalin!" : "Salin / Unduh QRIS"}
           </button>
         </div>
 

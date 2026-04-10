@@ -6,12 +6,12 @@
 /* ─── CSS custom properties — teal / deep navy ─── */
 @layer base {
   :root {
-    --background: 222 47% 6%;
+    --background: 222 47% 9%;
     --foreground: 210 30% 93%;
-    --card: 222 42% 9%;
+    --card: 222 42% 12%;
     --card-foreground: 210 30% 93%;
-    --border: 222 28% 16%;
-    --input: 222 38% 12%;
+    --border: 222 28% 20%;
+    --input: 222 38% 15%;
     --ring: 173 80% 40%;
     --primary: 173 80% 40%;
     --primary-foreground: 222 47% 6%;
@@ -27,7 +27,7 @@
   }
   * { border-color: hsl(var(--border)); }
   body {
-    background: #060d1a;
+    background: #0d1829;
     color: hsl(var(--foreground));
     font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: "cv02","cv03","cv04","cv11";
@@ -45,7 +45,7 @@
 
 /* ─── Gradient mesh background (teal / navy) ─── */
 .bg-mesh {
-  background-color: #060d1a;
+  background-color: #0d1829;
   background-image:
     radial-gradient(at 20% 10%, hsla(173, 80%, 40%, 0.12) 0px, transparent 55%),
     radial-gradient(at 80%  5%, hsla(265, 75%, 65%, 0.09) 0px, transparent 55%),
@@ -67,20 +67,20 @@
 
 /* ─── Glassmorphism ─── */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 .glass-strong {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
 .glass-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
   backdrop-filter: blur(12px);
 }
 

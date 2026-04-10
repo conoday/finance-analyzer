@@ -7,20 +7,18 @@ import { useQuickTransactions } from "@/components/SmartInput";
 import type { QuickTransaction } from "@/components/SmartInput";
 import { getCategoryMeta } from "@/components/CategoryBadge";
 import { formatRupiah } from "@/lib/utils";
-import { Icon } from "@iconify/react";
-
-/* ── brand icon mapping for payment method ── */
-const METHOD_ICON: Record<string, { icon: string; color: string }> = {
-  GoPay:   { icon: "simple-icons:gojek",        color: "#00ADB4" },
-  OVO:     { icon: "simple-icons:ovo",           color: "#8B5CF6" },
-  Dana:    { icon: "simple-icons:dana",          color: "#108EE9" },
-  BCA:     { icon: "simple-icons:bca",           color: "#005BAC" },
-  Mandiri: { icon: "simple-icons:bankmandiri",   color: "#F59E0B" },
-  BRI:     { icon: "simple-icons:bankbri",       color: "#00529C" },
-  BNI:     { icon: "simple-icons:bankbni",       color: "#E65100" },
-  QRIS:    { icon: "simple-icons:qris",          color: "#EB001B" },
-  Cash:    { icon: "lucide:banknote",            color: "#4ade80" },
-  Lainnya: { icon: "lucide:credit-card",         color: "#94a3b8" },
+/* ── text-badge mapping for payment method (Simple Icons has no Indonesian brands) ── */
+const METHOD_BADGE: Record<string, { abbr: string; color: string; bg: string }> = {
+  GoPay:   { abbr: "GP",  color: "#00ADB4", bg: "#022c22" },
+  OVO:     { abbr: "OV",  color: "#c4b5fd", bg: "#2e1065" },
+  Dana:    { abbr: "DN",  color: "#60a5fa", bg: "#0c1a6e" },
+  BCA:     { abbr: "BC",  color: "#5aadff", bg: "#0f2352" },
+  Mandiri: { abbr: "MD",  color: "#fbbf24", bg: "#3a1800" },
+  BRI:     { abbr: "BR",  color: "#60a5fa", bg: "#0f1f4a" },
+  BNI:     { abbr: "BN",  color: "#fb923c", bg: "#431407" },
+  QRIS:    { abbr: "QR",  color: "#f87171", bg: "#450a0a" },
+  Cash:    { abbr: "💵",  color: "#4ade80", bg: "#052e16" },
+  Lainnya: { abbr: "??",  color: "#94a3b8", bg: "#1e293b" },
 };
 
 /* ── per-category spend aggregation ── */
@@ -172,7 +170,7 @@ export function QuickTracker({ onAddNew }: Props) {
           <AnimatePresence>
             {txs.map((tx) => {
               const meta    = getCategoryMeta(tx.category);
-              const mIcon   = METHOD_ICON[tx.method] ?? METHOD_ICON["Lainnya"];
+              const mBadge  = METHOD_BADGE[tx.method] ?? METHOD_BADGE["Lainnya"];
               const isDeleting = deletingId === tx.id;
               return (
                 <motion.div
@@ -199,7 +197,7 @@ export function QuickTracker({ onAddNew }: Props) {
                         {new Date(tx.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                       </span>
                       <span className="text-slate-700">·</span>
-                      <Icon icon={mIcon.icon} className="w-2.5 h-2.5" style={{ color: mIcon.color }} />
+                      <span className="text-[8px] font-bold w-3.5 h-3.5 rounded flex items-center justify-center" style={{ background: mBadge.bg, color: mBadge.color }}>{mBadge.abbr}</span>
                       <span className="text-[10px] text-slate-600">{tx.method}</span>
                     </div>
                   </div>

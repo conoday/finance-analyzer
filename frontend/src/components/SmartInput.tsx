@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Zap, Check } from "lucide-react";
-import { Icon } from "@iconify/react";
 import { getCategoryMeta } from "@/components/CategoryBadge";
 import { formatRupiah } from "@/lib/utils";
 
@@ -21,34 +20,51 @@ export interface QuickTransaction {
 }
 
 /* ─── Parse "Ngopi 25rb" → structured ─── */
-function parseInput(raw: string): Partial<QuickTransaction> {
-  const text = raw.trim();
 
-  // Amount extraction: 25rb, 25k, 25.000, 25,000, 25jt, 25m, 1.5jt
-  const amountRe = /([\d.,]+)\s*(rb|k|ribu|jt|juta|m\b)?/i;
-  const amountMatch = text.match(amountRe);
-  let amount = 0;
-  if (amountMatch) {
-    amount = parseFloat(amountMatch[1].replace(/,/g, ".").replace(/\.(?=.*\.)/g, ""));
-    const unit = amountMatch[2]?.toLowerCase();
-    if (unit === "rb" || unit === "k" || unit === "ribu") amount *= 1_000;
-    if (unit === "jt" || unit === "juta") amount *= 1_000_000;
-    if (unit === "m") amount *= 1_000_000;
+/** Robust IDR number parser — handles 50rb, 50ribu, 50.000, 50,000, 1.5jt */
+function parseIDR(raw: string): number {
+  // 1. Number + unit (50rb / 50 ribu / 1.5jt / 2 juta)
+  const withUnit = raw.match(/(\d[\d.,]*)\s*(rb|ribu|k|rbu|jt|juta|m)\b/i);
+  if (withUnit) {
+    const numStr = withUnit[1];
+    const unit   = withUnit[2].toLowerCase();
+    // Parse the numeric part (handle dot as decimal separator: "1.5")
+    const num = parseFloat(numStr.replace(/,/g, ".")) || 0;
+    if (["rb", "ribu", "k", "rbu"].includes(unit)) return Math.round(num * 1_000);
+    if (["jt", "juta"].includes(unit))              return Math.round(num * 1_000_000);
+    if (unit === "m")                                return Math.round(num * 1_000_000);
   }
 
-  // Category detection
-  const lo = text.toLowerCase();
-  let category = "Lainnya";
+  // 2. Plain number — distinguish thousands-sep dot vs decimal dot
+  const plain = raw.match(/\d[\d.,]*/);
+  if (!plain) return 0;
+  const s = plain[0];
+  // "50.000" or "1.234.567" — dots before groups of exactly 3 digits → thousands sep
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) return parseInt(s.replace(/\./g, ""), 10);
+  // "50,000" → thousands sep (comma)
+  if (/^\d{1,3}(,\d{3})+$/.test(s))  return parseInt(s.replace(/,/g, ""), 10);
+  // Regular decimal
+  return parseFloat(s.replace(/,/g, ".")) || 0;
+}
 
+function parseInput(raw: string): Partial<QuickTransaction> {
+  const text = raw.trim();
+  const lo   = text.toLowerCase();
+
+  const amount = parseIDR(text);
+
+  // Category detection — order matters (first match wins)
+  let category = "Lainnya";
   const rules: [RegExp, string][] = [
-    [/(kopi|makan|nasi|bakso|mie|boba|sate|burger|pizza|warung|go.?food|grab.?food|mcd|kfc|sarapan|minum|resto|cafe|dinner|lunch|snack|jajan)/i, "Makan"],
-    [/(gojek|grab|ojek|bensin|parkir|tol|bus|mrt|krl|taxi|ngisi|bbm|pertalite|pertamax|motor|kereta|tiket|pesawat)/i, "Transport"],
-    [/(shopee|tokopedia|lazada|blibli|beli|baju|celana|sepatu|tas|barang|elektronik|laptop|hp|gadget)/i, "Belanja"],
-    [/(listrik|pln|tagihan|pdam|air|internet|telkom|indihome|cicilan|cicil|kpr|wifi|langganan|paket)/i, "Tagihan"],
-    [/(netflix|spotify|nonton|bioskop|film|game|main|disney|youtube|hbo|prime)/i, "Hiburan"],
-    [/(dokter|obat|apotek|rs |rumah sakit|bpjs|vitamin|klinik|check.?up|faskes)/i, "Kesehatan"],
-    [/(transfer|kirim|bca|mandiri|bri|bni|gopay|ovo|dana|qris|bayar|tagih|setor)/i, "Transfer"],
-    [/(gaji|salary|bonus|thr|freelance|client|invoice|upah|proyek|dapat|masuk|terima)/i, "Pendapatan"],
+    [/(ngopi|kopi|makan|nasi|bakso|mie|boba|sate|burger|pizza|warung|gofood|grabfood|go-food|grab-food|mcd|kfc|sarapan|minum|resto|restoran|cafe|dinner|lunch|snack|jajan|nongkrong|kopdar|ayam|seafood|sushi|ramen|martabak|gorengan|es\s|indomie|warteg|kantin)/i, "Makan"],
+    [/(gojek|grab|ojek|bensin|parkir|tol|bus|mrt|krl|taxi|ngisi|bbm|pertalite|pertamax|motor|kereta|tiket|pesawat|transjakarta|commuterline)/i, "Transport"],
+    [/(shopee|tokopedia|lazada|blibli|beli|baju|celana|sepatu|tas|barang|elektronik|laptop|hp\b|gadget|fashion|outfit)/i, "Belanja"],
+    [/(listrik|pln|tagihan|pdam|air\b|internet|telkom|indihome|cicilan|cicil|kpr|wifi|langganan|paket\s|pulsa)/i, "Tagihan"],
+    [/(netflix|spotify|nonton|bioskop|film|game\b|gaming|disney|youtube|hbo|prime\b|viu|vidio)/i, "Hiburan"],
+    [/(dokter|obat|apotek|rs\b|rumah sakit|bpjs|vitamin|klinik|check.?up|faskes|medis)/i, "Kesehatan"],
+    [/(transfer|kirim|bca|mandiri|bri|bni|gopay|ovo|dana|qris|setor|tarik)/i, "Transfer"],
+    [/(gaji|salary|bonus|thr|freelance|client|invoice|upah|proyek|dapat\b|masuk\b|terima|dibayar)/i, "Pendapatan"],
+    [/(saham|investasi|reksadana|reksa|crypto|bitcoin|eth\b|tabungan|deposito)/i, "Investasi"],
   ];
 
   for (const [re, cat] of rules) {
@@ -57,11 +73,12 @@ function parseInput(raw: string): Partial<QuickTransaction> {
 
   const meta = getCategoryMeta(category);
 
-  // Description: remove amount token
+  // Description: strip the matched amount token
   const desc = text
-    .replace(/([\d.,]+\s*(rb|k|ribu|jt|juta|m\b)?)/gi, "")
+    .replace(/(\d[\d.,]*\s*(rb|ribu|k|jt|juta|m)\b)/gi, "")
+    .replace(/\d[\d.,]*/g, "")
     .replace(/\s+/g, " ")
-    .trim() || text;
+    .trim() || text.split(/\d/)[0].trim() || text;
 
   return {
     desc: desc.slice(0, 60),
@@ -85,18 +102,18 @@ function saveLocal(txs: QuickTransaction[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(txs.slice(0, 200)));
 }
 
-/* ─── Payment methods with brand icon + color ─── */
-const METHODS: { label: string; icon: string; color: string }[] = [
-  { label: "Cash",    icon: "lucide:banknote",            color: "#4ade80" },
-  { label: "GoPay",   icon: "simple-icons:gojek",         color: "#00ADB4" },
-  { label: "OVO",     icon: "simple-icons:ovo",           color: "#8B5CF6" },
-  { label: "Dana",    icon: "simple-icons:dana",          color: "#108EE9" },
-  { label: "BCA",     icon: "simple-icons:bca",           color: "#005BAC" },
-  { label: "Mandiri", icon: "simple-icons:bankmandiri",   color: "#F59E0B" },
-  { label: "BRI",     icon: "simple-icons:bankbri",       color: "#00529C" },
-  { label: "BNI",     icon: "simple-icons:bankbni",       color: "#E65100" },
-  { label: "QRIS",    icon: "simple-icons:qris",          color: "#EB001B" },
-  { label: "Lainnya", icon: "lucide:credit-card",         color: "#94a3b8" },
+/* ─── Payment methods — text badges (Simple Icons has no Indonesian brands) ─── */
+const METHODS: { label: string; abbr: string; color: string; bg: string }[] = [
+  { label: "Cash",    abbr: "💵",  color: "#4ade80", bg: "#052e16" },
+  { label: "GoPay",   abbr: "GP",  color: "#00ADB4", bg: "#022c22" },
+  { label: "OVO",     abbr: "OV",  color: "#c4b5fd", bg: "#2e1065" },
+  { label: "Dana",    abbr: "DN",  color: "#60a5fa", bg: "#0c1a6e" },
+  { label: "BCA",     abbr: "BC",  color: "#5aadff", bg: "#0f2352" },
+  { label: "Mandiri", abbr: "MD",  color: "#fbbf24", bg: "#3a1800" },
+  { label: "BRI",     abbr: "BR",  color: "#60a5fa", bg: "#0f1f4a" },
+  { label: "BNI",     abbr: "BN",  color: "#fb923c", bg: "#431407" },
+  { label: "QRIS",    abbr: "QR",  color: "#f87171", bg: "#450a0a" },
+  { label: "Lainnya", abbr: "??",  color: "#94a3b8", bg: "#1e293b" },
 ];
 
 /* ─── Canonical category list (no duplicates) ─── */
@@ -290,15 +307,16 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
                     style={
                       active
-                        ? { background: `${m.color}22`, color: m.color, border: `1px solid ${m.color}55` }
+                        ? { background: `${m.bg}`, color: m.color, border: `1px solid ${m.color}55` }
                         : { background: "#1f2937", color: "#6b7280", border: "1px solid #374151" }
                     }
                   >
-                    <Icon
-                      icon={m.icon}
-                      className="w-3.5 h-3.5 shrink-0"
-                      style={{ color: active ? m.color : "#6b7280" }}
-                    />
+                    <span
+                      className="w-4 h-4 rounded text-[9px] font-bold flex items-center justify-center shrink-0"
+                      style={{ background: active ? m.color + "33" : "#374151", color: active ? m.color : "#6b7280" }}
+                    >
+                      {m.abbr}
+                    </span>
                     {m.label}
                   </button>
                 );
