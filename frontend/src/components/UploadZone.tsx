@@ -30,10 +30,21 @@ export function UploadZone({ onFile }: UploadZoneProps) {
     onDropRejected: () => setDragging(false),
   });
 
+  // Strip all handlers framer-motion redefines with incompatible signatures.
+  // The drop zone still works via onDrop/onDragEnter/onDragLeave/onDragOver
+  // which do NOT conflict with framer-motion.
+  const {
+    onAnimationStart: _a,
+    onDragStart: _ds,
+    onDragEnd: _de,
+    onDrag: _dg,
+    ...safeRootProps
+  } = getRootProps();
+
   return (
     <div className="w-full max-w-xl space-y-4">
       <motion.div
-        {...getRootProps()}
+        {...safeRootProps}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         className={cn(
