@@ -146,7 +146,6 @@ def ensure_datetime(df: pd.DataFrame) -> pd.DataFrame:
 
     df["tanggal"] = pd.to_datetime(
         df["tanggal"],
-        infer_datetime_format=True,
         dayfirst=True,
         errors="coerce",
     )

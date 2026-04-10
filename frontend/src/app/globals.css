@@ -6,19 +6,19 @@
 /* ─── CSS custom properties — teal / deep navy ─── */
 @layer base {
   :root {
-    --background: 215 13% 8%;
-    --foreground: 210 25% 92%;
-    --card: 215 12% 11%;
-    --card-foreground: 210 25% 92%;
-    --border: 215 12% 19%;
-    --input: 215 12% 14%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --input: 214 32% 94%;
     --ring: 173 80% 40%;
     --primary: 173 80% 40%;
-    --primary-foreground: 215 13% 8%;
-    --muted: 215 10% 16%;
-    --muted-foreground: 215 10% 48%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
     --accent: 265 75% 65%;
-    --accent-foreground: 222 47% 6%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 346 83% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 160 65% 42%;
@@ -27,7 +27,7 @@
   }
   * { border-color: hsl(var(--border)); }
   body {
-    background: #0f1117;
+    background: #f8fafc;
     color: hsl(var(--foreground));
     font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: "cv02","cv03","cv04","cv11";
@@ -45,18 +45,18 @@
 
 /* ─── Gradient mesh background (teal / navy) ─── */
 .bg-mesh {
-  background-color: #0f1117;
+  background-color: #f8fafc;
   background-image:
-    radial-gradient(at 20% 10%, hsla(173, 70%, 38%, 0.10) 0px, transparent 55%),
-    radial-gradient(at 80%  5%, hsla(265, 60%, 60%, 0.07) 0px, transparent 55%),
-    radial-gradient(at  5% 60%, hsla(215, 40%, 45%, 0.05) 0px, transparent 55%),
-    radial-gradient(at 90% 55%, hsla(160, 55%, 40%, 0.06) 0px, transparent 55%),
-    radial-gradient(at 45% 95%, hsla(173, 50%, 38%, 0.05) 0px, transparent 55%);
+    radial-gradient(at 20% 10%, hsla(173, 70%, 38%, 0.08) 0px, transparent 55%),
+    radial-gradient(at 80%  5%, hsla(265, 60%, 60%, 0.04) 0px, transparent 55%),
+    radial-gradient(at  5% 60%, hsla(215, 40%, 45%, 0.03) 0px, transparent 55%),
+    radial-gradient(at 90% 55%, hsla(160, 55%, 40%, 0.05) 0px, transparent 55%),
+    radial-gradient(at 45% 95%, hsla(173, 50%, 38%, 0.04) 0px, transparent 55%);
 }
 
 /* ─── Animated dot grid ─── */
 .dot-grid {
-  background-image: radial-gradient(circle, rgba(148,163,184,0.06) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(15,23,42,0.07) 1px, transparent 1px);
   background-size: 28px 28px;
   animation: gridScroll 30s linear infinite;
 }
@@ -67,20 +67,20 @@
 
 /* ─── Glassmorphism ─── */
 .glass {
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.07);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 .glass-strong {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.09);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
 .glass-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: linear-gradient(135deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.75) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(12px);
 }
 
@@ -97,24 +97,24 @@
 
 /* ─── Transaction card ─── */
 .tx-card {
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.055);
+  background: rgba(255, 255, 255, 0.80);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .tx-card:hover {
-  background: rgba(20,184,166,0.06);
-  border-color: rgba(20,184,166,0.15);
+  background: rgba(20,184,166,0.05);
+  border-color: rgba(20,184,166,0.18);
   transform: translateX(2px);
 }
 
 /* ─── Smart input overlay ─── */
 .smart-input-overlay {
-  background: rgba(6, 13, 26, 0.85);
+  background: rgba(248, 250, 252, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 .smart-input-box {
-  background: rgba(13,24,41,0.95);
+  background: rgba(255, 255, 255, 0.98);
   border: 1.5px solid rgba(20,184,166,0.30);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }

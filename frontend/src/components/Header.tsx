@@ -21,24 +21,24 @@ function SoonTooltip({ onClose }: { onClose: () => void }) {
       className="absolute top-full right-0 mt-2 z-50"
     >
       <div
-        className="relative rounded-xl p-3 w-56 shadow-xl text-xs text-slate-300 leading-relaxed"
-        style={{ background: "#1e293b", border: "1px solid #334155" }}
+        className="relative rounded-xl p-3 w-56 shadow-lg text-xs text-slate-600 leading-relaxed"
+        style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}
       >
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 text-slate-600 hover:text-slate-400"
+          className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
         >
           <X className="w-3 h-3" />
         </button>
-        <p className="font-semibold text-slate-100 mb-1">🔐 Login — Segera Hadir</p>
-        <p className="text-slate-400">
+        <p className="font-semibold text-slate-900 mb-1">🔐 Login — Segera Hadir</p>
+        <p className="text-slate-500">
           Simpan riwayat transaksi, akses dari mana saja, dan unlock fitur pro.
           Daftar gratis selamanya!
         </p>
         {/* Arrow */}
         <div
           className="absolute -top-1.5 right-6 w-3 h-3 rotate-45"
-          style={{ background: "#1e293b", borderTop: "1px solid #334155", borderLeft: "1px solid #334155" }}
+          style={{ background: "#ffffff", borderTop: "1px solid #e2e8f0", borderLeft: "1px solid #e2e8f0" }}
         />
       </div>
     </motion.div>
@@ -92,7 +92,7 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
             <button
               onClick={() => setShowSoon((p) => !p)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
-              style={{ color: "#94a3b8", border: "1px solid #1e293b", background: "#0f172a" }}
+              style={{ color: "#475569", border: "1px solid #e2e8f0", background: "#f8fafc" }}
             >
               <LogIn className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Masuk</span>
