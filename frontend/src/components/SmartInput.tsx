@@ -19,52 +19,70 @@ export interface QuickTransaction {
   raw: string;
 }
 
-/* ─── Parse "Ngopi 25rb" → structured ─── */
+/* ─── Parse "Ngopi 25rb" / "50 rebu" / "2 miliar" → structured ─── */
 
-/** Robust IDR number parser — handles 50rb, 50ribu, 50.000, 50,000, 1.5jt */
-function parseIDR(raw: string): number {
-  // 1. Number + unit (50rb / 50 ribu / 1.5jt / 2 juta)
-  const withUnit = raw.match(/(\d[\d.,]*)\s*(rb|ribu|k|rbu|jt|juta|m)\b/i);
-  if (withUnit) {
-    const numStr = withUnit[1];
-    const unit   = withUnit[2].toLowerCase();
-    // Parse the numeric part (handle dot as decimal separator: "1.5")
-    const num = parseFloat(numStr.replace(/,/g, ".")) || 0;
-    if (["rb", "ribu", "k", "rbu"].includes(unit)) return Math.round(num * 1_000);
-    if (["jt", "juta"].includes(unit))              return Math.round(num * 1_000_000);
-    if (unit === "m")                                return Math.round(num * 1_000_000);
-  }
-
-  // 2. Plain number — distinguish thousands-sep dot vs decimal dot
-  const plain = raw.match(/\d[\d.,]*/);
-  if (!plain) return 0;
-  const s = plain[0];
-  // "50.000" or "1.234.567" — dots before groups of exactly 3 digits → thousands sep
+/** Parse number string: "50.000"→50000, "1,5"→1.5, "50,000"→50000 */
+function parseNumStr(s: string): number {
   if (/^\d{1,3}(\.\d{3})+$/.test(s)) return parseInt(s.replace(/\./g, ""), 10);
-  // "50,000" → thousands sep (comma)
   if (/^\d{1,3}(,\d{3})+$/.test(s))  return parseInt(s.replace(/,/g, ""), 10);
-  // Regular decimal
   return parseFloat(s.replace(/,/g, ".")) || 0;
+}
+
+/**
+ * Robust IDR parser:
+ * 50rb | 50 ribu | 50 rebu | 50rbu | 50k
+ * 1.5jt | 2 juta | 500jt
+ * 1 miliar | 2.5 milyar
+ * 3 triliun | 1.2 trilyun
+ * 50.000 | 50,000 | 1.234.567
+ */
+function parseIDR(raw: string): number {
+  const lo = raw.toLowerCase();
+  const m = lo.match(/(\d[\d.,]*)\s*(triliun|trilyun|miliar|milyar|juta|jt|ribu|rebu|rbu|rb|k)\b/);
+  if (m) {
+    const num = parseNumStr(m[1]);
+    const u   = m[2];
+    if (["triliun", "trilyun"].includes(u)) return Math.round(num * 1e12);
+    if (["miliar",  "milyar" ].includes(u)) return Math.round(num * 1e9);
+    if (["juta",    "jt"     ].includes(u)) return Math.round(num * 1e6);
+    /* ribu | rebu | rbu | rb | k */         return Math.round(num * 1e3);
+  }
+  const plain = lo.match(/(\d[\d.,]*)/);
+  if (!plain) return 0;
+  return parseNumStr(plain[1]);
 }
 
 function parseInput(raw: string): Partial<QuickTransaction> {
   const text = raw.trim();
   const lo   = text.toLowerCase();
-
   const amount = parseIDR(text);
 
-  // Category detection — order matters (first match wins)
+  /**
+   * Brand + keyword → category. Order matters (first match wins).
+   * Brands are listed explicitly so user can just type the brand name.
+   */
   let category = "Lainnya";
   const rules: [RegExp, string][] = [
-    [/(ngopi|kopi|makan|nasi|bakso|mie|boba|sate|burger|pizza|warung|gofood|grabfood|go-food|grab-food|mcd|kfc|sarapan|minum|resto|restoran|cafe|dinner|lunch|snack|jajan|nongkrong|kopdar|ayam|seafood|sushi|ramen|martabak|gorengan|es\s|indomie|warteg|kantin)/i, "Makan"],
-    [/(gojek|grab|ojek|bensin|parkir|tol|bus|mrt|krl|taxi|ngisi|bbm|pertalite|pertamax|motor|kereta|tiket|pesawat|transjakarta|commuterline)/i, "Transport"],
-    [/(shopee|tokopedia|lazada|blibli|beli|baju|celana|sepatu|tas|barang|elektronik|laptop|hp\b|gadget|fashion|outfit)/i, "Belanja"],
-    [/(listrik|pln|tagihan|pdam|air\b|internet|telkom|indihome|cicilan|cicil|kpr|wifi|langganan|paket\s|pulsa)/i, "Tagihan"],
-    [/(netflix|spotify|nonton|bioskop|film|game\b|gaming|disney|youtube|hbo|prime\b|viu|vidio)/i, "Hiburan"],
-    [/(dokter|obat|apotek|rs\b|rumah sakit|bpjs|vitamin|klinik|check.?up|faskes|medis)/i, "Kesehatan"],
-    [/(transfer|kirim|bca|mandiri|bri|bni|gopay|ovo|dana|qris|setor|tarik)/i, "Transfer"],
-    [/(gaji|salary|bonus|thr|freelance|client|invoice|upah|proyek|dapat\b|masuk\b|terima|dibayar)/i, "Pendapatan"],
-    [/(saham|investasi|reksadana|reksa|crypto|bitcoin|eth\b|tabungan|deposito)/i, "Investasi"],
+    // ── Makan & Minum
+    [/(starbucks|sbux|kopi.?kenangan|kenangan|chatime|gong.?cha|javis|excelso|j\.?co\b|upnormal|gobar|ngopi|kopi\b|makan|nasi|bakso|mie\b|boba|sate\b|burger|geprek|pizza|warung|gofood|grabfood|shopeefood|go.?food|grab.?food|mcd\b|mcdo|mcdonald|kfc\b|dunkin|sarapan|minum\b|minuman|resto\b|restoran|cafe\b|kafe|dinner|lunch|snack|jajan|nongkrong|kopdar|ayam\b|seafood|sushi|ramen|martabak|gorengan|indomie|warteg|kantin|pecel|padang|es\s)/i, "Makan"],
+    // ── Transport (specific combo first so "grabfood" doesn't land here)
+    [/(grab.?(car|motor|bike|express|taxi)|kendaraan|gojek\b|ojek\b|ojol|bensin|pertalite|pertamax|dexlite|revvo|ngisi\b|bbm\b|parkir|tol\b|busway|transjakarta|commuter|commuterline|krl\b|mrt\b|lrt\b|kereta|damri|tiket\s|pesawat|blue.?bird|maxim|indriver)/i, "Transport"],
+    // ── Belanja (e-commerce + retail)
+    [/(shopee|tokopedia|lazada|blibli|bukalapak|tiktok.?shop|jd\.id|berrybenka|zalora|sociolla|indomaret|alfamart|alfamidi|lawson|circle.?k|familymart|minimarket|supermarket|hypermart|carrefour|transmart|lottemart|beli\b|baju|celana|sepatu|tas\b|barang|elektronik|laptop|hp\b|gadget|fashion|outfit)/i, "Belanja"],
+    // ── Tagihan / Utilitas
+    [/(listrik|pln\b|tagihan|pdam|air\s|internet|telkom|indihome|myindihome|cicilan|cicil|angsuran|kpr\b|kredit\b|wifi|langganan|paket.?data|pulsa|mytelkomsel|myxl|tri\b|axis\b|by\.u|smartfren)/i, "Tagihan"],
+    // ── Hiburan
+    [/(netflix|spotify|youtube.?premium|disney|hbo|prime\b|viu|vidio|mola|genflix|catchplay|bioskop|cinema|nonton|film\b|game\b|gaming|steam|valorant|mobile.?legend|pubg|genshin)/i, "Hiburan"],
+    // ── Kesehatan
+    [/(dokter|obat\b|apotek|rs\b|rumah.?sakit|bpjs|vitamin|klinik|halodoc|alodokter|kimia.?farma|guardian|century|check.?up|faskes|medis|laborat)/i, "Kesehatan"],
+    // ── Transfer (e-wallet/bank used as verb "kirim/setor/tarik")
+    [/(transfer|kirim\b|setor|tarik\b|flip\b|jenius|jago\b|seabank|gopay|ovo\b|dana\b|qris\b|bca\b|mandiri|bri\b|bni\b)/i, "Transfer"],
+    // ── Pendapatan
+    [/(gaji|salary|bonus|thr\b|freelance|client|invoice|upah|proyek|dapat\b|masuk\b|terima\b|dibayar|fee\b|komisi|revenue|profit)/i, "Pendapatan"],
+    // ── Investasi
+    [/(saham|investasi|reksadana|reksa|crypto|bitcoin|eth\b|tabungan|deposito|bibit\b|bareksa|ajaib\b|pluang|indodax|tokocrypto|pintu\b)/i, "Investasi"],
+    // ── Grab generic fallback
+    [/(grab\b)/i, "Transport"],
   ];
 
   for (const [re, cat] of rules) {
@@ -73,10 +91,10 @@ function parseInput(raw: string): Partial<QuickTransaction> {
 
   const meta = getCategoryMeta(category);
 
-  // Description: strip the matched amount token
+  // Strip amount tokens from description
   const desc = text
-    .replace(/(\d[\d.,]*\s*(rb|ribu|k|jt|juta|m)\b)/gi, "")
-    .replace(/\d[\d.,]*/g, "")
+    .replace(/\b(\d[\d.,]*)\s*(triliun|trilyun|miliar|milyar|juta|jt|ribu|rebu|rbu|rb|k)\b/gi, "")
+    .replace(/\b\d[\d.,]+\b/g, "")
     .replace(/\s+/g, " ")
     .trim() || text.split(/\d/)[0].trim() || text;
 

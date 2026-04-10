@@ -6,17 +6,17 @@
 /* ─── CSS custom properties — teal / deep navy ─── */
 @layer base {
   :root {
-    --background: 222 47% 9%;
-    --foreground: 210 30% 93%;
-    --card: 222 42% 12%;
-    --card-foreground: 210 30% 93%;
-    --border: 222 28% 20%;
-    --input: 222 38% 15%;
+    --background: 215 13% 8%;
+    --foreground: 210 25% 92%;
+    --card: 215 12% 11%;
+    --card-foreground: 210 25% 92%;
+    --border: 215 12% 19%;
+    --input: 215 12% 14%;
     --ring: 173 80% 40%;
     --primary: 173 80% 40%;
-    --primary-foreground: 222 47% 6%;
-    --muted: 222 30% 14%;
-    --muted-foreground: 220 15% 50%;
+    --primary-foreground: 215 13% 8%;
+    --muted: 215 10% 16%;
+    --muted-foreground: 215 10% 48%;
     --accent: 265 75% 65%;
     --accent-foreground: 222 47% 6%;
     --destructive: 346 83% 60%;
@@ -27,7 +27,7 @@
   }
   * { border-color: hsl(var(--border)); }
   body {
-    background: #0d1829;
+    background: #0f1117;
     color: hsl(var(--foreground));
     font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: "cv02","cv03","cv04","cv11";
@@ -45,13 +45,13 @@
 
 /* ─── Gradient mesh background (teal / navy) ─── */
 .bg-mesh {
-  background-color: #0d1829;
+  background-color: #0f1117;
   background-image:
-    radial-gradient(at 20% 10%, hsla(173, 80%, 40%, 0.12) 0px, transparent 55%),
-    radial-gradient(at 80%  5%, hsla(265, 75%, 65%, 0.09) 0px, transparent 55%),
-    radial-gradient(at  5% 60%, hsla(220, 80%, 50%, 0.08) 0px, transparent 55%),
-    radial-gradient(at 90% 55%, hsla(160, 65%, 42%, 0.07) 0px, transparent 55%),
-    radial-gradient(at 45% 95%, hsla(173, 60%, 40%, 0.06) 0px, transparent 55%);
+    radial-gradient(at 20% 10%, hsla(173, 70%, 38%, 0.10) 0px, transparent 55%),
+    radial-gradient(at 80%  5%, hsla(265, 60%, 60%, 0.07) 0px, transparent 55%),
+    radial-gradient(at  5% 60%, hsla(215, 40%, 45%, 0.05) 0px, transparent 55%),
+    radial-gradient(at 90% 55%, hsla(160, 55%, 40%, 0.06) 0px, transparent 55%),
+    radial-gradient(at 45% 95%, hsla(173, 50%, 38%, 0.05) 0px, transparent 55%);
 }
 
 /* ─── Animated dot grid ─── */

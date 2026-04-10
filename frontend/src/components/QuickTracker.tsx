@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, TrendingDown, TrendingUp, Zap, ChevronRight } from "lucide-react";
+import { Trash2, TrendingDown, TrendingUp, Zap, ChevronRight, Download, Calendar } from "lucide-react";
 import { useQuickTransactions } from "@/components/SmartInput";
 import type { QuickTransaction } from "@/components/SmartInput";
 import { getCategoryMeta } from "@/components/CategoryBadge";
 import { formatRupiah } from "@/lib/utils";
-/* ── text-badge mapping for payment method (Simple Icons has no Indonesian brands) ── */
+
+/* â”€â”€ text-badge mapping for payment method (Simple Icons has no Indonesian brands) â”€â”€ */
 const METHOD_BADGE: Record<string, { abbr: string; color: string; bg: string }> = {
   GoPay:   { abbr: "GP",  color: "#00ADB4", bg: "#022c22" },
   OVO:     { abbr: "OV",  color: "#c4b5fd", bg: "#2e1065" },
@@ -17,19 +18,50 @@ const METHOD_BADGE: Record<string, { abbr: string; color: string; bg: string }> 
   BRI:     { abbr: "BR",  color: "#60a5fa", bg: "#0f1f4a" },
   BNI:     { abbr: "BN",  color: "#fb923c", bg: "#431407" },
   QRIS:    { abbr: "QR",  color: "#f87171", bg: "#450a0a" },
-  Cash:    { abbr: "💵",  color: "#4ade80", bg: "#052e16" },
+  Cash:    { abbr: "ðŸ’µ",  color: "#4ade80", bg: "#052e16" },
   Lainnya: { abbr: "??",  color: "#94a3b8", bg: "#1e293b" },
 };
 
-/* ── per-category spend aggregation ── */
+type Period = "7d" | "30d" | "all";
+
+/* â”€â”€ filter by period â”€â”€ */
+function filterByPeriod(txs: QuickTransaction[], period: Period): QuickTransaction[] {
+  if (period === "all") return txs;
+  const cutoff = Date.now() - (period === "7d" ? 7 : 30) * 86_400_000;
+  return txs.filter((t) => new Date(t.date).getTime() >= cutoff);
+}
+
+/* â”€â”€ per-category spend aggregation â”€â”€ */
 function aggByCat(txs: QuickTransaction[]) {
   const map: Record<string, number> = {};
   txs.filter((t) => !t.isIncome).forEach((t) => {
     map[t.category] = (map[t.category] ?? 0) + t.amount;
   });
-  return Object.entries(map)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
+}
+
+/* â”€â”€ CSV export â”€â”€ */
+function exportCSV(txs: QuickTransaction[], period: Period) {
+  const header = "Tanggal,Deskripsi,Kategori,Metode,Jumlah,Tipe";
+  const rows = txs.map((t) => [
+    t.date,
+    `"${t.desc.replace(/"/g, '""')}"`,
+    t.category,
+    t.method,
+    t.amount,
+    t.isIncome ? "Pemasukan" : "Pengeluaran",
+  ].join(","));
+  // BOM (\uFEFF) for Excel UTF-8 compatibility
+  const csv = "\uFEFF" + [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `oprexduit-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 interface Props {
@@ -38,11 +70,18 @@ interface Props {
 
 export function QuickTracker({ onAddNew }: Props) {
   const { txs, refresh, clear } = useQuickTransactions();
+  const [period, setPeriod]     = useState<Period>("7d");
   const [confirmClear, setConfirmClear] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId]     = useState<string | null>(null);
 
-  // refresh when component mounts
   useEffect(() => { refresh(); }, [refresh]);
+
+  const filtered = useMemo(() => filterByPeriod(txs, period), [txs, period]);
+
+  const totalIncome  = useMemo(() => filtered.filter((t) => t.isIncome).reduce((s, t) => s + t.amount, 0), [filtered]);
+  const totalExpense = useMemo(() => filtered.filter((t) => !t.isIncome).reduce((s, t) => s + t.amount, 0), [filtered]);
+  const balance      = totalIncome - totalExpense;
+  const topCats      = useMemo(() => aggByCat(filtered), [filtered]);
 
   const deleteOne = useCallback((id: string) => {
     setDeletingId(id);
@@ -54,10 +93,11 @@ export function QuickTracker({ onAddNew }: Props) {
     }, 250);
   }, [txs, refresh]);
 
-  const totalIncome  = txs.filter((t) => t.isIncome).reduce((s, t) => s + t.amount, 0);
-  const totalExpense = txs.filter((t) => !t.isIncome).reduce((s, t) => s + t.amount, 0);
-  const balance      = totalIncome - totalExpense;
-  const topCats      = aggByCat(txs);
+  const PERIOD_OPTS: { key: Period; label: string }[] = [
+    { key: "7d",  label: "7 Hari" },
+    { key: "30d", label: "30 Hari" },
+    { key: "all", label: "Semua" },
+  ];
 
   if (txs.length === 0) {
     return (
@@ -77,38 +117,70 @@ export function QuickTracker({ onAddNew }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* ── Summary strip ── */}
+      {/* â”€â”€ Period filter + Export â”€â”€ */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 p-0.5 rounded-lg" style={{ background: "#161b22", border: "1px solid #30363d" }}>
+          <Calendar className="w-3 h-3 text-slate-600 ml-1.5" />
+          {PERIOD_OPTS.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setPeriod(opt.key)}
+              className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+              style={
+                period === opt.key
+                  ? { background: "#0f766e", color: "#ccfbf1" }
+                  : { color: "#64748b" }
+              }
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => exportCSV(filtered, period)}
+          disabled={filtered.length === 0}
+          title="Export CSV (bisa dibuka di Excel)"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors disabled:opacity-30"
+          style={{ background: "#161b22", color: "#4ade80", border: "1px solid #30363d" }}
+        >
+          <Download className="w-3 h-3" />
+          Export
+        </button>
+      </div>
+
+      {/* â”€â”€ Summary strip â”€â”€ */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Pemasukan",    value: totalIncome,  color: "#34d399", icon: <TrendingUp className="w-3.5 h-3.5" /> },
-          { label: "Pengeluaran",  value: totalExpense, color: "#fb7185", icon: <TrendingDown className="w-3.5 h-3.5" /> },
-          { label: "Saldo",        value: balance,      color: balance >= 0 ? "#34d399" : "#fb7185", icon: null },
+          { label: "Pemasukan",   value: totalIncome,  color: "#34d399", icon: <TrendingUp className="w-3.5 h-3.5" /> },
+          { label: "Pengeluaran", value: totalExpense, color: "#fb7185", icon: <TrendingDown className="w-3.5 h-3.5" /> },
+          { label: "Saldo",       value: balance,      color: balance >= 0 ? "#34d399" : "#fb7185", icon: null },
         ].map((item) => (
           <div
             key={item.label}
             className="rounded-xl px-3 py-3"
-            style={{ background: "#111827", border: "1px solid #1f2937" }}
+            style={{ background: "#161b22", border: "1px solid #30363d" }}
           >
             <p className="text-[10px] text-slate-500 mb-1 flex items-center gap-1">
               {item.icon}{item.label}
             </p>
             <p className="text-sm font-bold font-mono" style={{ color: item.color }}>
-              {item.value >= 0 ? "" : "−"}{formatRupiah(Math.abs(item.value), true)}
+              {item.value >= 0 ? "" : "âˆ’"}{formatRupiah(Math.abs(item.value), true)}
             </p>
           </div>
         ))}
       </div>
 
-      {/* ── Category breakdown ── */}
+      {/* â”€â”€ Category breakdown â”€â”€ */}
       {topCats.length > 0 && (
         <div
           className="rounded-xl px-4 py-3 space-y-2"
-          style={{ background: "#111827", border: "1px solid #1f2937" }}
+          style={{ background: "#161b22", border: "1px solid #30363d" }}
         >
           <p className="text-xs font-medium text-slate-400 mb-2">Pengeluaran per Kategori</p>
           {topCats.map(([cat, amount]) => {
             const meta = getCategoryMeta(cat);
-            const pct = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
+            const pct  = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
             return (
               <div key={cat} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
@@ -129,13 +201,13 @@ export function QuickTracker({ onAddNew }: Props) {
         </div>
       )}
 
-      {/* ── Transaction list ── */}
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ border: "1px solid #1f2937" }}
-      >
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5">
-          <p className="text-xs font-medium text-slate-400">{txs.length} transaksi dicatat</p>
+      {/* â”€â”€ Transaction list â”€â”€ */}
+      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #30363d" }}>
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5" style={{ background: "#161b22" }}>
+          <p className="text-xs font-medium text-slate-400">
+            {filtered.length} transaksi
+            {period !== "all" && <span className="text-slate-600"> Â· {period === "7d" ? "7" : "30"} hari terakhir</span>}
+          </p>
           <div className="flex items-center gap-2">
             <button
               onClick={onAddNew}
@@ -148,6 +220,7 @@ export function QuickTracker({ onAddNew }: Props) {
               <button
                 onClick={() => setConfirmClear(true)}
                 className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors px-1"
+                title="Hapus semua"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -168,9 +241,13 @@ export function QuickTracker({ onAddNew }: Props) {
 
         <div className="max-h-72 overflow-y-auto divide-y divide-white/[0.04]">
           <AnimatePresence>
-            {txs.map((tx) => {
-              const meta    = getCategoryMeta(tx.category);
-              const mBadge  = METHOD_BADGE[tx.method] ?? METHOD_BADGE["Lainnya"];
+            {filtered.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-600" style={{ background: "#161b22" }}>
+                Tidak ada transaksi dalam periode ini.
+              </div>
+            ) : filtered.map((tx) => {
+              const meta      = getCategoryMeta(tx.category);
+              const mBadge    = METHOD_BADGE[tx.method] ?? METHOD_BADGE["Lainnya"];
               const isDeleting = deletingId === tx.id;
               return (
                 <motion.div
@@ -179,36 +256,38 @@ export function QuickTracker({ onAddNew }: Props) {
                   animate={{ opacity: isDeleting ? 0 : 1, x: isDeleting ? 20 : 0 }}
                   transition={{ duration: 0.2 }}
                   className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] group"
-                  style={{ background: "#111827" }}
+                  style={{ background: "#161b22" }}
                 >
-                  {/* Category icon */}
                   <span
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
-                    style={{ background: `${meta.hex}15` }}
+                    style={{ background: `${meta.hex}18` }}
                   >
                     {meta.emoji}
                   </span>
 
-                  {/* Description + meta */}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-slate-200 truncate">{tx.desc}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="text-[10px] text-slate-600">
                         {new Date(tx.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                       </span>
-                      <span className="text-slate-700">·</span>
-                      <span className="text-[8px] font-bold w-3.5 h-3.5 rounded flex items-center justify-center" style={{ background: mBadge.bg, color: mBadge.color }}>{mBadge.abbr}</span>
+                      <span className="text-slate-700">Â·</span>
+                      <span
+                        className="text-[8px] font-bold w-3.5 h-3.5 rounded flex items-center justify-center"
+                        style={{ background: mBadge.bg, color: mBadge.color }}
+                      >
+                        {mBadge.abbr}
+                      </span>
                       <span className="text-[10px] text-slate-600">{tx.method}</span>
                     </div>
                   </div>
 
-                  {/* Amount + delete */}
                   <div className="flex items-center gap-2 shrink-0">
                     <span
                       className="text-xs font-bold font-mono"
                       style={{ color: tx.isIncome ? "#34d399" : "#fb7185" }}
                     >
-                      {tx.isIncome ? "+" : "−"}{formatRupiah(tx.amount, true)}
+                      {tx.isIncome ? "+" : "âˆ’"}{formatRupiah(tx.amount, true)}
                     </span>
                     <button
                       onClick={() => deleteOne(tx.id)}
