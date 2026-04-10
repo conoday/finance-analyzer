@@ -1,6 +1,6 @@
 # Master Tracking Board — Finance Analyzer
 
-> Last updated: 2026-04-10
+> Last updated: 2026-04-10 (rev 3)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun
 > Ini adalah source of truth untuk status semua pekerjaan
 
@@ -12,8 +12,8 @@
 |---|---|---|
 | Frontend | ✅ Live | https://finance-analyzer-roan.vercel.app |
 | Backend API | ✅ Live | https://finance-analyzer-a82j.onrender.com |
-| Database | ❌ Belum setup | Supabase — belum dibuat |
-| Auth | ❌ Belum | NextAuth v5 — belum diimplementasi |
+| Database | 🔧 Schema siap | Supabase — jalankan `supabase/schema.sql` |
+| Auth | 🔧 UI siap, skip dulu | Login/Register/Verify/Callback pages dibuat |
 | Admin Console | 🔧 Scaffolded | admin-console/ di repo, belum deploy |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
 
@@ -50,6 +50,15 @@
 - [x] Tab "Aktivitas" (baru) di dashboard
 - [x] Redesign warm dark palette (#0f1117, amber accent)
 - [x] DM Mono font untuk angka
+- [x] Redesign teal/navy (Sprint 2 — #060d1a bg, #14b8a6 teal)
+- [x] SmartInput "Catat Cepat" — natural language parse (25rb, 5jt, dll)
+- [x] Bug fix: duplikat kategori di SmartInput (Transport+Transportasi, Tagihan+Utilitas)
+- [x] SmartInput redesign — cleaner form UI, select dropdown kategori, brand icons metode bayar
+- [x] Brand icons via @iconify/react + Simple Icons (GoPay, OVO, Dana, BCA, Mandiri, BRI, BNI, QRIS)
+- [x] Supabase setup: schema.sql (profiles, categories, transactions, import_batches + RLS)
+- [x] Auth pages: login, register (T&C 5 seksi UU PDP), verify OTP, callback route
+- [x] Route protection via proxy.ts
+- [x] TransactionList, BalanceCard, CategoryBadge components
 
 ### Dokumentasi Artefak (15+2 files)
 - [x] 01-09: Product overview, auth, arch, features, DB, optimization, roadmap, admin, agent planner
@@ -60,13 +69,23 @@
 
 ---
 
-## 🟡 IN PROGRESS / ONPROGRESS
+## 🟡 BUTUH ACTION DARI KAMU (User)
+
+| # | Task | Di mana | Notes |
+|---|---|---|---|
+| 1 | Run `supabase/schema.sql` | Supabase → SQL Editor | Paste & Run sekali |
+| 2 | Set Site URL + Redirect URL | Supabase → Auth → URL Config | `https://finance-analyzer-roan.vercel.app/auth/callback` |
+| 3 | Enable Email provider | Supabase → Auth → Providers → Email | ON, Confirm email ON |
+| 4 | Setup Google OAuth | Google Cloud Console → Credentials | Client ID + Secret → paste ke Supabase |
+| 5 | Set Vercel env vars | Vercel → Project → Settings → Env | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
+| 6 | Taruh QRIS image | `frontend/public/qris.png` | Untuk modal donasi |
+
+## 🟡 IN PROGRESS
 
 | Task | Who | Notes |
 |---|---|---|
+| Auth flow (ditunda) | — | Pages sudah dibuat, diaktifkan setelah Supabase dikonfigurasi |
 | Admin Console scaffold | Agent | Folder `admin-console/` sudah dibuat, belum deploy |
-| QRIS image | User | Taruh file QRIS resmi di `frontend/public/qris.png` |
-| Vercel env var | User | Set `NEXT_PUBLIC_API_URL` di Vercel dashboard |
 
 ---
 
