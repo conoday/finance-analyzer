@@ -1,9 +1,9 @@
-# render.yaml — Deploy FastAPI backend to Render.com (free tier)
+# render.yaml — Deploy OprexDuit FastAPI backend to Render.com
 # Docs: https://render.com/docs/render-yaml
 
 services:
   - type: web
-    name: finance-analyzer-api
+    name: oprexduit-api
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -12,6 +12,9 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: ALLOWED_ORIGINS
-        # After Vercel gives you a URL (e.g. https://finance-analyzer.vercel.app),
-        # update this value on the Render dashboard.
-        value: "https://finance-analyzer.vercel.app"
+        # Set ke URL Vercel kamu di Render dashboard
+        value: "https://finance-analyzer-roan.vercel.app"
+      # Set nilai berikut di Render dashboard (JANGAN taruh secret di sini):
+      # - key: SUPABASE_URL
+      # - key: SUPABASE_SERVICE_ROLE_KEY
+      # - key: SUPABASE_JWT_SECRET

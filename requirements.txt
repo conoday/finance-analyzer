@@ -7,3 +7,6 @@ openpyxl
 fastapi
 uvicorn[standard]
 python-multipart
+# Supabase integration
+supabase
+python-jose[cryptography]

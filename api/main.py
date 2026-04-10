@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -43,13 +43,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.pipeline import run_pipeline
 from app.simulator import build_category_baseline, savings_impact, simulate_balance
+from app.auth import get_user_id, require_auth
 
 SAMPLE_PATH = Path(__file__).parent.parent / "data" / "sample" / "sample_mutasi.csv"
 
 app = FastAPI(
-    title="Finance Analyzer API",
-    version="1.0.0",
-    description="Personal Finance Analyzer -- local FastAPI backend",
+    title="OprexDuit API",
+    version="2.0.0",
+    description="OprexDuit — personal finance companion backend",
 )
 
 app.add_middleware(
@@ -68,9 +69,9 @@ def home() -> str:
         """Simple landing page for the root path to avoid 404 on '/'."""
         return """
         <html>
-            <head><meta charset="utf-8"><title>Finance Analyzer API</title></head>
+            <head><meta charset="utf-8"><title>OprexDuit API</title></head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial;">
-                <h1>🚀 Finance Analyzer API</h1>
+                <h1>🚀 OprexDuit API</h1>
                 <p>Backend is running</p>
                 <p><a href="/docs">Open API Docs (Swagger)</a></p>
             </body>
@@ -97,7 +98,24 @@ class SimulateRequest(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "finance-analyzer"}
+    return {"status": "ok", "service": "oprexduit"}
+
+
+@app.get("/me")
+def me(user: dict = Depends(require_auth)) -> dict:
+    """Protected endpoint — returns decoded Supabase JWT payload.
+
+    Use this from the frontend to verify the backend accepts the user's token::
+
+        const res = await fetch(`${API_URL}/me`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+    """
+    return {
+        "user_id": user.get("sub"),
+        "email": user.get("email"),
+        "role": user.get("role"),
+    }
 
 
 @app.get("/analyze/sample")
