@@ -1,6 +1,6 @@
 # AI API Cost Analysis — Finance Analyzer
 
-> Last updated: 2026-04-10
+> Last updated: 2026-04-12 (rev 2)
 > Tujuan: memilih AI provider paling cost-efficient untuk fitur AI di app
 
 ---
@@ -182,3 +182,59 @@ def generate_monthly_insight(summary: dict) -> str:
 - [ ] Endpoint `POST /ai/insight` — ringkasan bulanan
 - [ ] Frontend: tampilkan AI insight di tab Overview
 - [ ] Rate limiting per user (Free: 20 AI calls/bulan, Pro: unlimited)
+
+---
+
+## Kimi / GLM via Grupy Reseller — Catatan Penting
+
+> ⚠️ Jika dapat API key dari grupy (komunitas AI Indonesia), ada hal yang perlu diperhatikan
+
+### Kimi (Moonshot AI)
+
+Grupy reseller menggunakan endpoint yang berbeda dari platform resmi:
+
+```python
+# SALAH (official endpoint — akan 401 dengan key dari grupy):
+client = OpenAI(api_key=KIMI_KEY, base_url="https://api.moonshot.cn/v1")
+
+# BENAR (tanya admin grupy untuk endpoint reseller-nya):
+client = OpenAI(api_key=KIMI_KEY, base_url="https://<reseller-endpoint>/v1")
+```
+
+Model yang tersedia via Kimi:
+- `moonshot-v1-8k`
+- `moonshot-v1-32k`
+- `moonshot-v1-128k`
+
+### GLM (Zhipu AI)
+
+```python
+client = OpenAI(
+    api_key=GLM_KEY,
+    base_url="https://open.bigmodel.cn/api/paas/v4/"
+)
+```
+
+Model yang valid untuk dicoba:
+- `glm-4-flash` ← paling murah
+- `glm-4`
+- `glm-4-air`
+- `glm-4-airx`
+- `glm-3-turbo`
+- `chatglm_turbo` ← model lama, mungkin deprecated
+
+Error `1211` = model tidak ditemukan → coba model name lain di list atas.
+
+### Test Script
+
+Gunakan `test_ai_keys.py` di root project:
+```bash
+python test_ai_keys.py
+# Prompts: key → base_url (jika pakai reseller) → provider type
+```
+
+### Rekomendasi
+
+Jika key dari grupy belum berfungsi setelah dicoba endpoint alternatif:
+- **Fallback**: Daftar langsung ke DeepSeek (`platform.deepseek.com`) — paling mudah setup
+- **Free testing**: Google Gemini Flash (`aistudio.google.com`) — 1500 req/hari gratis

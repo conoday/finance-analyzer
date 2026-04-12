@@ -1,121 +1,229 @@
 ﻿# Data Modeling
 
+> Status: ✅ schema.sql v3 sudah dibuat — jalankan di Supabase SQL Editor
+> Last updated: 2026-04-12 (rev 3)
+> File SQL: `supabase/schema.sql`
+
+---
+
 ## Entity Relationship
 
 ```
-users
-  ├──< transactions (user_id FK)
-  │         ├──< bank_metadata (transaction_id FK)
-  │         └──> payment_methods (payment_method_id FK)
-  └── tier / subscription status
+auth.users (Supabase managed)
+  └── profiles (1:1 via trigger)
+        ├──< transactions (user_id FK)
+        │        ├── category TEXT (free text + inferred)
+        │        ├── method TEXT (cash/bca/gopay/dana/ovo/...)
+        │        ├── hour_of_day SMALLINT (untuk AI pattern)
+        │        └── day_of_week SMALLINT (untuk AI pattern)
+        ├──< import_batches (quota tracking)
+        ├──< budgets (monthly cap per category)
+        ├──< transaction_tags (many-to-many)
+        └── ai_profiles (1:1 per user, AI data)
 ```
 
-## Table: users
+---
+
+## Table: profiles (extends Supabase auth.users)
 
 ```sql
-CREATE TABLE users (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email      VARCHAR(255) UNIQUE NOT NULL,
-    name       VARCHAR(255),
-    avatar_url VARCHAR(500),
-    provider   VARCHAR(50)  NOT NULL,
-    role       VARCHAR(20)  NOT NULL DEFAULT 'user',   -- 'user' | 'admin'
-    tier       VARCHAR(20)  NOT NULL DEFAULT 'free',   -- 'free' | 'pro' | 'business'
-    created_at TIMESTAMP    NOT NULL DEFAULT NOW()
+CREATE TABLE public.profiles (
+    id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email       TEXT,
+    full_name   TEXT,
+    avatar_url  TEXT,
+    plan_type   TEXT NOT NULL DEFAULT 'free',  -- 'free' | 'pro' | 'ai' | 'business'
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ALTER (jika schema lama sudah ada):
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
+```
+
+---
+
+## Table: transactions (core)
+
+```sql
+CREATE TABLE public.transactions (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    type           TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+    amount         NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+    date           DATE NOT NULL,
+    category       TEXT,
+    sub_category   TEXT,
+    method         TEXT DEFAULT 'cash',  -- 'cash' | 'bca' | 'mandiri' | 'gopay' | 'dana' | 'ovo' | 'qris' | ...
+    note           TEXT,
+    source         TEXT DEFAULT 'manual', -- 'manual' | 'ocr' | 'csv' | 'wa_bot'
+    hour_of_day    SMALLINT,  -- 0-23 (untuk AI weekday/weekend analysis)
+    day_of_week    SMALLINT,  -- 0=Mon, 6=Sun (untuk AI pattern detection)
+    created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_tx_user_date ON public.transactions(user_id, date DESC);
+CREATE INDEX idx_tx_user_category ON public.transactions(user_id, category);
+
+-- ALTER (jika tabel sudah ada tanpa kolom baru):
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
+```
+
+---
+
+## Table: import_batches (quota tracking)
+
+```sql
+-- Renamed dari file_imports (lebih akurat)
+CREATE TABLE public.import_batches (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    filename    TEXT,
+    period      TEXT NOT NULL,  -- format: '2025-03' (YYYY-MM)
+    row_count   INTEGER,
+    status      TEXT DEFAULT 'done',  -- 'done' | 'error'
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Query quota: SELECT COUNT(*) FROM import_batches WHERE user_id=? AND period='2025-03'
+-- Free tier limit: 5 imports per bulan
+```
+
+---
+
+## Table: budgets (Pro tier)
+
+```sql
+CREATE TABLE public.budgets (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    category    TEXT NOT NULL,
+    month       TEXT NOT NULL,   -- format: '2025-03' (YYYY-MM)
+    amount_cap  NUMERIC(15, 2) NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, category, month)
 );
 ```
 
-## Table: subscriptions
+---
+
+## Table: transaction_tags (Pro tier)
 
 ```sql
-CREATE TABLE subscriptions (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    tier             VARCHAR(20) NOT NULL,
-    status           VARCHAR(20) NOT NULL DEFAULT 'active',  -- 'active' | 'cancelled' | 'expired'
-    started_at       TIMESTAMP NOT NULL DEFAULT NOW(),
-    expires_at       TIMESTAMP,
-    payment_ref      VARCHAR(255),   -- reference dari payment gateway
-    amount_paid      NUMERIC(12, 2),
-    created_at       TIMESTAMP NOT NULL DEFAULT NOW()
+CREATE TABLE public.transaction_tags (
+    transaction_id  UUID NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
+    tag             TEXT NOT NULL,
+    PRIMARY KEY (transaction_id, tag)
+);
+
+-- Contoh tags: 'ngedate', 'business', 'belanja-bulanan', 'darurat'
+```
+
+---
+
+## Table: ai_profiles (AI tier)
+
+```sql
+CREATE TABLE public.ai_profiles (
+    user_id             UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    spending_pattern    JSONB,   -- { avg_daily: 50000, top_category: 'Makan', weekend_ratio: 0.4 }
+    persona_type        TEXT,    -- 'saver' | 'spender' | 'impulsive' | 'balanced'
+    risk_level          TEXT,    -- 'low' | 'medium' | 'high'
+    last_analysis       TIMESTAMP WITH TIME ZONE,
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
 
-## Table: payment_methods
+---
+
+## Table: subscriptions (Payment / Billing)
 
 ```sql
-CREATE TABLE payment_methods (
-    id   SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    type VARCHAR(20)  NOT NULL   -- 'bank' | 'e-wallet' | 'cash'
-);
-
-INSERT INTO payment_methods (name, type) VALUES
-    ('BCA', 'bank'), ('BNI', 'bank'), ('Mandiri', 'bank'), ('BRI', 'bank'),
-    ('GoPay', 'e-wallet'), ('OVO', 'e-wallet'), ('DANA', 'e-wallet'),
-    ('ShopeePay', 'e-wallet'), ('Cash', 'cash');
-```
-
-## Table: transactions
-
-```sql
-CREATE TABLE transactions (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id           UUID    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type              VARCHAR(10) NOT NULL,   -- 'income' | 'expense'
-    amount            NUMERIC(15, 2) NOT NULL,
-    date              DATE    NOT NULL,
-    category          VARCHAR(100),
-    payment_method_id INTEGER REFERENCES payment_methods(id),
-    description       TEXT,
-    source            VARCHAR(20) DEFAULT 'manual',  -- 'manual' | 'ocr' | 'csv'
-    created_at        TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_tx_user_date ON transactions(user_id, date DESC);
-```
-
-## Table: file_imports (Quota Tracking)
-
-```sql
-CREATE TABLE file_imports (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    filename   VARCHAR(255),
-    period     VARCHAR(7) NOT NULL,   -- format: '2025-03' (tahun-bulan)
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- Query quota: SELECT COUNT(*) FROM file_imports WHERE user_id=? AND period='2025-03'
-```
-
-## Table: bank_metadata
-
-```sql
-CREATE TABLE bank_metadata (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    transaction_id   UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-    bank_name        VARCHAR(100),
-    raw_text         TEXT,
-    extracted_fields JSONB,   -- flexible per format bank
-    confidence_score NUMERIC(4,3),
-    created_at       TIMESTAMP NOT NULL DEFAULT NOW()
+CREATE TABLE public.subscriptions (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    plan_type       TEXT NOT NULL,   -- 'pro' | 'ai' | 'business'
+    status          TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'cancelled' | 'expired'
+    started_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at      TIMESTAMP WITH TIME ZONE,
+    payment_ref     TEXT,    -- Midtrans order_id
+    amount_paid     NUMERIC(12, 2),
+    gateway         TEXT DEFAULT 'midtrans',
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
 
-**Contoh extracted_fields:**
-```json
-{
-  "original_amount": "250.000",
-  "merchant_raw": "TOKOPEDIA",
-  "date_raw": "15/03/2025",
-  "transaction_type_raw": "DEBET",
-  "parser_version": "1.0"
-}
+---
+
+## Row Level Security (RLS)
+
+```sql
+-- Enable RLS di semua table
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.import_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transaction_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- Policy: user hanya bisa baca/tulis data sendiri
+CREATE POLICY "Users can manage own data" ON public.transactions
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own profile" ON public.profiles
+    FOR ALL USING (auth.uid() = id);
+
+-- (Ulangi pola yang sama untuk tabel lain)
 ```
+
+---
+
+## Auto-create Profile Trigger
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, avatar_url)
+  VALUES (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'avatar_url'
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+---
+
+## Quick ALTER Migration (untuk schema lama)
+
+```sql
+-- Jalankan ini di Supabase SQL Editor jika tabel sudah ada
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
+```
+
+---
 
 ## Notes
 
-- `file_imports` digunakan untuk enforce kuota Free tier (5 file/bulan)
-- `JSONB` di bank_metadata agar tidak perlu migrasi schema tiap tambah bank baru
-- `source` di transactions untuk audit trail (manual / ocr / csv)
+- `plan_type` di `profiles` adalah source of truth untuk tier enforcement (bukan tabel users terpisah)
+- `method` di `transactions` adalah free-text lowercase: `'cash'`, `'bca'`, `'gopay'`, dll
+- `source` di `transactions`: `'manual'` (SmartInput/QuickTracker), `'csv'` (upload), `'ocr'` (foto struk), `'wa_bot'` (WhatsApp)
+- `import_batches` tracks upload per user per bulan → Free tier cap 5x/bulan
+- `ai_profiles` hanya di-populate saat Phase AI aktif
+- Semua UUID — tidak ada auto-increment integer ID
+

@@ -1,5 +1,9 @@
 ﻿# Payment Gateway — Indonesia
 
+> Status: 🔲 Phase 6 (belum diimplementasi)
+> Last updated: 2026-04-12 (rev 2)
+> Dependencies: Phase 3 (DB + Tier) harus selesai dulu
+
 ## Perbandingan Payment Gateway (per April 2026)
 
 | Provider | MDR Kartu | QRIS | VA Transfer | Biaya Setup | Rekomendasi |
@@ -88,8 +92,10 @@ async def payment_callback(request: Request, db: AsyncSession = Depends(get_db))
         # Extract user_id dari order_id: "sub-{user_id}-{timestamp}"
         user_id = body["order_id"].split("-")[1]
         tier = "pro"  # atau parse dari metadata
+        # Update profiles.plan_type (bukan users.tier)
         await db.execute(
-            update(User).where(User.id == user_id).values(tier=tier)
+            "UPDATE profiles SET plan_type=$1, updated_at=NOW() WHERE id=$2",
+            tier, user_id
         )
         await db.commit()
     

@@ -1,30 +1,40 @@
 ﻿# Tier System & Feature Gating
 
-## Tier Overview (Updated 2026-04-10)
+> Last updated: 2026-04-12 (rev 3)
+> Source of truth untuk tier: `profiles.plan_type` (bukan `users.tier`)
 
-| Fitur | Free | Pro (Rp 29K/bln) | AI Personal (Rp 59K/bln) |
-|---|---|---|---|
-| Login & akun | ✅ | ✅ | ✅ |
-| Input manual transaksi | ✅ | ✅ | ✅ |
-| Kategori otomatis | ✅ | ✅ | ✅ |
-| Metode bayar (cash/bank/ewallet) | ✅ | ✅ | ✅ |
-| Dashboard (saldo, income, expense) | ✅ | ✅ | ✅ |
-| Chart pengeluaran per kategori | ✅ | ✅ | ✅ |
-| History transaksi | ✅ Max 3 bulan | ✅ Unlimited | ✅ Unlimited |
-| Jumlah akun | ✅ Max 3 | ✅ Unlimited | ✅ Unlimited |
-| Custom kategori | ❌ | ✅ | ✅ |
-| Tag transaksi | ❌ | ✅ | ✅ |
-| Export CSV / PDF | ❌ | ✅ | ✅ |
-| Laporan bulanan otomatis | ❌ | ✅ | ✅ |
-| Budget per kategori + notifikasi | ❌ | ✅ | ✅ |
-| AI Insight ("boros makan +30%") | ❌ | ❌ | ✅ |
-| Smart suggestion engine | ❌ | ❌ | ✅ |
-| Financial persona detection | ❌ | ❌ | ✅ |
-| Prediksi cashflow akhir bulan | ❌ | ❌ | ✅ |
-| Personal AI agent (memory) | ❌ | ❌ | ✅ |
-| OCR foto struk | ❌ | ✅ | ✅ |
+## Tier Overview (Updated 2026-04-12)
+
+| Fitur | Free | Pro (Rp 29K/bln) | AI (Rp 59K/bln) | Business (Rp 149K/bln) | Impl Status |
+|---|---|---|---|---|---|
+| Login Google | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| Input manual transaksi (SmartInput) | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| QuickTracker dashboard | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| Kategori otomatis (rule-based) | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| Metode bayar (cash/bank/ewallet) | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| Dashboard KPI + Charts | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| SpendingHeatmap | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| Upload mutasi bank CSV | ✅ Max 5/bln | ✅ Unlimited | ✅ | ✅ | ✅ Done (enforcement 🔲) |
+| History transaksi | ✅ Max 3 bln | ✅ Unlimited | ✅ | ✅ | 🔲 enforcement Phase 3 |
+| Jumlah akun | ✅ Max 3 | ✅ Unlimited | ✅ | ✅ | 🔲 enforcement Phase 3 |
+| Export CSV | ✅ | ✅ | ✅ | ✅ | ✅ Done |
+| Export PDF | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
+| Custom kategori | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
+| Tag transaksi | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
+| Budget per kategori + alert | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
+| Laporan bulanan email | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
+| OCR foto struk | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 4 |
+| AI Insight ("boros makan +30%") | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
+| Smart suggestion engine | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
+| Financial persona detection | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
+| Prediksi cashflow akhir bulan | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
+| Personal AI agent (memory) | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI+ |
+| Multi-user / team wallet | ❌ | ❌ | ❌ | ✅ | 🔲 Far future |
+| API akses | ❌ | ❌ | ❌ | ✅ | 🔲 Far future |
 
 ## Quota Enforcement (Backend)
+
+> Source of truth: `profiles.plan_type` (bukan `users.tier`)
 
 ### Cek Kuota File Upload
 
@@ -32,32 +42,39 @@
 # api/main.py
 from datetime import datetime
 
-async def check_file_quota(user, db):
-    if user.tier != "free":
-        return  # Pro/Business tidak terbatas
+async def check_file_quota(user_id: str, plan_type: str, db):
+    if plan_type != "free":
+        return  # Pro/AI/Business tidak terbatas
     
     current_period = datetime.now().strftime("%Y-%m")
+    # Query import_batches (bukan file_imports)
     count = await db.execute(
-        select(func.count(FileImport.id))
-        .where(FileImport.user_id == user.id)
-        .where(FileImport.period == current_period)
+        "SELECT COUNT(*) FROM import_batches WHERE user_id=$1 AND period=$2",
+        user_id, current_period
     )
-    if count.scalar() >= 5:
+    if count >= 5:
         raise HTTPException(
             status_code=429,
             detail="Batas upload file bulanan tercapai (5/bulan). Upgrade ke Pro untuk unlimited."
         )
 ```
 
-### Cek Akses Fitur OCR
+### Cek Akses Fitur Pro+
 
 ```python
-async def require_pro(current_user = Depends(get_current_user)):
-    if current_user.tier == "free":
+async def require_pro(current_user = Depends(require_auth)):
+    plan = current_user.get("plan_type", "free")
+    if plan == "free":
         raise HTTPException(
             status_code=403,
             detail="Fitur ini hanya tersedia untuk pengguna Pro. Upgrade sekarang."
         )
+    return current_user
+
+async def require_ai_tier(current_user = Depends(require_auth)):
+    plan = current_user.get("plan_type", "free")
+    if plan not in ("ai", "business"):
+        raise HTTPException(status_code=403, detail="Upgrade ke AI tier untuk fitur ini.")
     return current_user
 ```
 
@@ -65,21 +82,38 @@ async def require_pro(current_user = Depends(get_current_user)):
 
 ```typescript
 // hooks/useTier.ts
+import { useAuth } from './useAuth';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
+
 export function useTier() {
-  const { data: session } = useSession();
-  const tier = session?.user?.tier ?? "free";
+  const { user } = useAuth();
+  const [planType, setPlanType] = useState<string>('free');
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase
+      .from('profiles')
+      .select('plan_type')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setPlanType(data?.plan_type ?? 'free'));
+  }, [user]);
+
   return {
-    tier,
-    isPro: tier === "pro" || tier === "business",
-    isBusiness: tier === "business",
-    isFree: tier === "free",
+    planType,
+    isPro: ['pro', 'ai', 'business'].includes(planType),
+    isAI: ['ai', 'business'].includes(planType),
+    isBusiness: planType === 'business',
+    isFree: planType === 'free',
   };
 }
 
 // Di komponen
 const { isPro, isFree } = useTier();
 
-{isFree && fileImportCount >= 5 && (
+{isFree && importCount >= 5 && (
   <Banner>Kuota 5 file/bulan habis. <UpgradeButton /></Banner>
 )}
 
@@ -91,27 +125,27 @@ const { isPro, isFree } = useTier();
 ## Upgrade Flow
 
 ```
-User klik "Upgrade ke Pro"
+User klik "Upgrade ke Pro" (di dashboard atau locked feature)
         ↓
 Frontend POST /subscribe { tier: "pro" }
         ↓
-Backend buat invoice di Midtrans / Xendit
+Backend buat invoice Midtrans Snap
         ↓
-Frontend redirect ke halaman pembayaran
+Frontend redirect ke halaman pembayaran Midtrans
         ↓
-User bayar (transfer / QRIS / kartu)
+User bayar (QRIS / VA Bank / GoPay / OVO / Kartu)
         ↓
-Midtrans / Xendit kirim webhook ke /payment/callback
+Midtrans POST /payment/callback (webhook)
         ↓
-Backend verifikasi signature webhook
+Backend verifikasi HMAC-SHA512 signature
         ↓
-Backend update users.tier = "pro"
+Backend: UPDATE profiles SET plan_type='pro', expires_at=NOW()+30d
         ↓
-User dapat akses fitur Pro
+✅ User langsung dapat akses fitur Pro
 ```
 
 ## Downgrade Logic
 
-- Tidak ada downgrade otomatis (manual oleh admin)
-- Saat subscription expires_at terlewat → tier dikembalikan ke "free" via cron job
-- Data tidak dihapus saat downgrade, hanya dibatasi aksesnya
+- `expires_at` lewat → cron job set `plan_type = 'free'`
+- Data tidak dihapus saat downgrade — hanya akses dibatasi
+- User tetap bisa lihat data lama (UI blur/locked)

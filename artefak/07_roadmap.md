@@ -1,14 +1,14 @@
 ﻿# Roadmap
 
-> Last updated: 2026-04-10 (rev 5)
+> Last updated: 2026-04-12 (rev 6)
 > Lihat tracking detail di `artefak/17_master_tracking.md`
 
 ## Overview
 
 ```
-Phase 0 ─── Phase 1 ─── Phase 1.5 ── Phase 2 ─── Phase 3 ─── Phase AI ─── Phase 4 ─── Phase 5 ─── Phase 6
- Docs        Deploy      Sprint 1      Auth         DB+Tier     AI Feat       OCR          Admin       Payment
-  ✅           ✅           ✅           ✅           🔲           🔲           🔲            🔧           🔲
+Phase 0 ─── Phase 1 ─── Phase 1.5 ── Phase 2 ─── Phase 3 ─── Phase AI ─── Phase 4 ─── Phase 5 ─── Phase 6 ─── Phase WA
+ Docs        Deploy      Sprint 1      Auth         DB+Tier     AI Feat       OCR          Admin       Payment     WhatsApp
+  ✅           ✅           ✅           ✅           🔲           🔲           🔲            🔧           🔲          🔲
 ```
 
 ## Phase 0 — Documentation ✅ DONE

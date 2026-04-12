@@ -1,330 +1,466 @@
-# Master Tracking Board — OprexDuit
+﻿# Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-10 (rev 5)
-> Agent baru: baca file ini PERTAMA sebelum melakukan apapun
-> Ini adalah source of truth untuk status semua pekerjaan
+> Last updated: 2026-04-12 (rev 6)
+> Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
+> Ini adalah source of truth untuk status semua pekerjaan.
+> Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
 
 ---
 
 ## 🔵 STATUS SISTEM (selalu update)
 
-| Komponen | Status | URL / Location |
+| Komponen | Status | URL / Lokasi |
 |---|---|---|
 | Frontend | ✅ Live | https://finance-analyzer-roan.vercel.app |
 | Backend API | ✅ Live | https://finance-analyzer-a82j.onrender.com |
-| Database | 🔧 Schema siap | Supabase — jalankan `supabase/schema.sql` |
-| Auth | ✅ Done | Login, register, verify, callback, useAuth, useTransactions, middleware |
+| Database | ⚠️ Schema siap, env vars belum di-set | Supabase — jalankan `supabase/schema.sql` |
+| Auth | ✅ Kode selesai, butuh Supabase env vars | Login/Register/Verify/Callback pages + hooks |
 | Admin Console | 🔧 Scaffolded | admin-console/ di repo, belum deploy |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
+| Last Commit | ✅ a66ccfc (2026-04-10) | fix(middleware): guard Supabase env vars |
 
 ---
 
-## ✅ DONE — Semua yang sudah selesai
+## ✅ SELESAI — Semua yang sudah diimplementasi
 
-### Infrastruktur
-- [x] FastAPI backend (`api/main.py`) — 5 endpoints
-- [x] Next.js 16 frontend — deployed Vercel
+### Infrastruktur & Deploy
+- [x] FastAPI backend (`api/main.py`) — 5 endpoints + JWT auth guard
+- [x] Next.js 16 frontend — deployed Vercel (auto-deploy dari main)
 - [x] Python pipeline 9 modul — parse CSV/Excel mutasi bank
-- [x] Docker Compose stack (Postgres, backend, frontend)
 - [x] `vercel.json` + `render.yaml` config
-- [x] `requirements.txt` Lambda-safe (streamlit dipisah ke requirements-local.txt)
+- [x] `requirements.txt` Lambda-safe
 - [x] CORS env-based (`ALLOWED_ORIGINS`)
-- [x] Root `/` HTML endpoint di backend
 - [x] `.env.example` template
-- [x] `SECRETS.md` (gitignored) — panduan env vars
+- [x] `SECRETS.md` (gitignored)
 
-### Frontend Features
-- [x] Upload CSV/Excel mutasi bank
-- [x] KPI Cards: Pemasukan, Pengeluaran, Net Cashflow, **Savings Rate** (baru), Tx Count, Langganan
+### Auth & Session (Phase 2 — commit 14b121c)
+- [x] Supabase schema.sql: `profiles`, `categories`, `transactions`, `import_batches` + RLS
+- [x] Auth pages: login (light theme), register (T&C UU PDP), verify OTP, callback route
+- [x] `frontend/middleware.ts` — route protection (settings/profile/admin protected, `/` public)
+- [x] `frontend/src/utils/supabase/{client,server,middleware}.ts`
+- [x] `useAuth.ts` hook — `{ user, loading, signOut }` via `onAuthStateChange`
+- [x] `useTransactions.ts` — localStorage (guest) → Supabase (cloud), auto-migrate on login
+- [x] Header auth state: user first name, signOut, login CTA
+- [x] Backend `app/auth.py` — `require_auth` dependency, JWT verify via `SUPABASE_JWT_SECRET`
+- [x] Backend `app/supabase_client.py` — service-role admin client
+- [x] `GET /me` endpoint — verifikasi token, return user info
+- [x] Guard Supabase env vars di middleware (fix nft.json Vercel error — commit a66ccfc)
+
+### Frontend UI
+- [x] Upload CSV/Excel mutasi bank + analisis session
+- [x] KPI Cards: Pemasukan, Pengeluaran, Net Cashflow, Savings Rate, Tx Count, Langganan
 - [x] Monthly Chart (bar chart income vs expense)
 - [x] Spending Wheel (pie chart kategori)
 - [x] Forecast Chart (time series + ML prediction)
 - [x] Health Gauge (skor kesehatan keuangan)
 - [x] Top Merchants (leaderboard)
 - [x] Subscription List (deteksi langganan)
-- [x] Story Cards (narasi bulanan AI-style)
+- [x] Story Cards (narasi bulanan AI-style, rule-based)
 - [x] Simulator Panel (what-if scenario)
-- [x] **SpendingHeatmap** (baru) — GitHub-style kalender pengeluaran/pemasukan
-- [x] **SharePanel** (baru) — floating bar: WA Share + CSV Export + QRIS Donasi
-- [x] **DonasiModal** (baru) — modal QRIS donasi dengan placeholder qris.png
-- [x] Tab "Aktivitas" (baru) di dashboard
-- [x] Redesign warm dark palette (#0f1117, amber accent)
-- [x] DM Mono font untuk angka
-- [x] Redesign teal/navy (Sprint 2 — #060d1a bg, #14b8a6 teal)
-- [x] SmartInput "Catat Cepat" — natural language parse (25rb, 5jt, dll)
-- [x] Bug fix: duplikat kategori di SmartInput (Transport+Transportasi, Tagihan+Utilitas)
-- [x] SmartInput redesign — cleaner form UI, select dropdown kategori, brand icons metode bayar
-- [x] Brand icons metode bayar — **text-badge fallback** (Simple Icons tidak punya bank Indonesia: BCA/OVO/Dana/BRI/BNI/Mandiri/QRIS)
-- [x] **OprexDuit rebrand**: logo SVG, header cleanup, Login "Soon" tooltip
-- [x] **QuickTracker**: post-input dashboard, category breakdown, delete per-tx, brand text badges
-- [x] **QRIS modal fix**: qris.jpeg committed, white-bg container, Clipboard API copy + download fallback
-- [x] **ParseInput fix**: ngopi/nongkrong/kopdar/warteg → Makan; 50.000 dot=thousands separator bug fixed
-- [x] **UI lighten**: background #060d1a→#0d1829, glass opacity +0.025, borders lebih visible
-- [x] Supabase setup: schema.sql (profiles, categories, transactions, import_batches + RLS)
-- [x] Auth pages: login, register (T&C 5 seksi UU PDP), verify OTP, callback route
-- [x] **Phase 2 Auth complete** (commit 14b121c)
-  - Supabase schema.sql: profiles, categories, transactions, import_batches + RLS
-  - Auth pages: login (light theme), register (T&C UU PDP), verify OTP, callback route
-  - `middleware.ts` — route protection (settings/profile/admin protected, `/` public)
-  - `useAuth.ts` — `{ user, loading, signOut }` via `onAuthStateChange`
-  - `useTransactions.ts` — localStorage (guest) → Supabase (cloud), auto-migrate on login
-  - Header auth state: user first name, signOut button, login CTA
-  - Fields `hour_of_day`, `day_of_week`, `method` di tabel transactions
-- [x] **Backend `_clean_amount` fix** — Indonesian number format parsing rewrite
+- [x] Spending Heatmap (GitHub-style kalender)
+- [x] SharePanel (WA Share + CSV Export + QRIS Donasi)
+- [x] QRIS Donasi modal (qris.jpeg committed)
+- [x] SmartInput "Catat Cepat" — NLP parse (25rb, 5jt, ngopi → Makan)
+- [x] QuickTracker — post-input list, delete per-tx, CSV export, period filter
+- [x] OprexDuit rebrand: logo SVG, header cleanup
+- [x] **Light theme** (current): `#f8fafc` bg, `.glass = rgba(255,255,255,0.75)`
+- [x] Header light theme contrast fix (commit af3c3cb)
+- [x] Empty state redesign — 2-column (upload + KPI teaser / QuickTracker)
+- [x] Dashboard greeting fix (`text-slate-800`)
+- [x] Tab "Aktivitas" di dashboard
+- [x] Brand icons metode bayar (text-badge fallback)
+
+### Backend Bug Fixes
+- [x] `_clean_amount` rewrite (commit af3c3cb) — Indonesian number format
   - `1.234.567` → 1234567, `50.000` → 50000, `Rp 1.234.567,89` → 1234567.89
   - 13/13 test cases pass
-- [x] **Header light theme contrast fix** — `rgba(255,255,255,0.88)`, `text-slate-800`, `text-teal-600`
-- [x] **Empty state redesign** — 2-column layout (upload+teaser KPI panel / QuickTracker), clean light colors
-- [x] **Dashboard greeting fix** — `text-slate-100 → text-slate-800`
+- [x] `infer_datetime_format` removed (pandas 2+ compat)
+- [x] `parseIDR`: rebu/miliar/triliun + brand auto-kategorisasi
 
-### Dokumentasi Artefak (15+2 files)
-- [x] 01-09: Product overview, auth, arch, features, DB, optimization, roadmap, admin, agent planner
-- [x] 10-12: Tier system, payment gateway, DB alternatives
-- [x] 13-15: Feature ideas, redesign plan, mobile apps plan
-- [x] 16: AI cost analysis (DeepSeek vs Gemini vs Kimi)
-- [x] 17: Master tracking (file ini)
+### Dokumentasi Artefak (rev 6)
+- [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking
 
 ---
 
-## 🟡 BUTUH ACTION DARI KAMU (User)
+## ⚠️ BUTUH ACTION DARI KAMU (User)
 
-| # | Task | Di mana | Notes |
+| # | Task | Di mana | Priority |
 |---|---|---|---|
-| 1 | Run `supabase/schema.sql` | Supabase → SQL Editor | Paste & Run sekali |
-| 2 | Set Site URL + Redirect URL | Supabase → Auth → URL Config | `https://finance-analyzer-roan.vercel.app/auth/callback` |
-| 3 | Enable Email provider | Supabase → Auth → Providers → Email | ON, Confirm email ON |
-| 4 | Setup Google OAuth | Google Cloud Console → Credentials | Client ID + Secret → paste ke Supabase |
-| 5 | Set Vercel env vars | Vercel → Project → Settings → Env | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
+| 1 | Run `supabase/schema.sql` | Supabase → SQL Editor | 🔴 Blocker auth |
+| 2 | Set Site URL + Redirect URL | Supabase → Auth → URL Config: `https://finance-analyzer-roan.vercel.app/auth/callback` | 🔴 Blocker auth |
+| 3 | Enable Email provider | Supabase → Auth → Providers → Email → ON, Confirm email ON | 🔴 Blocker auth |
+| 4 | Set Vercel env vars | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 🔴 Blocker auth |
+| 5 | Set Render env vars | `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS` | 🔴 Blocker auth |
+| 6 | Setup Google OAuth | Google Cloud Console → Credentials → Client ID + Secret → Supabase | 🟡 Nice to have |
+| 7 | Jalankan ALTER TABLE | SQL snippet di bawah | 🟡 Untuk AI features |
+| 8 | Daftar Midtrans Sandbox | https://dashboard.midtrans.com → set `MIDTRANS_SERVER_KEY` | 🟠 Phase Payment |
+| 9 | Ganti/rotate API keys AI | Keys Kimi & GLM yang di-share di chat harus di-revoke segera | 🔴 Security |
 
+**SQL ALTER TABLE (jalankan di Supabase SQL Editor):**
+```sql
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
+```
+
+---
 
 ## 🟡 IN PROGRESS
 
-| Task | Who | Notes |
+| Task | Status | Notes |
 |---|---|---|
-| Phase 3 Sprint — Transaction CRUD + Tier | Agent | Backlog siap, bisa mulai kapan saja |
-| Admin Console scaffold | Agent | Folder `admin-console/` sudah dibuat, belum deploy |
+| Supabase env setup | Menunggu user | Auth jalan setelah ini |
+| AI integration (Kimi/GLM) | 🔧 Test script ready | `test_ai_keys.py` — tunggu key baru dari user |
+| Admin Console scaffold | 🔧 Folder ada | `admin-console/` belum deploy |
 
 ---
 
-## 🔲 BACKLOG — Ordered by Priority
+## 🔲 BACKLOG — Phase 3 (Sprint Berikutnya)
 
-### Sprint Berikutnya (Phase 3 — DB + Tier Enforcement)
+| ID | Fitur | Estimasi | Tier | Dependency |
+|---|---|---|---|---|
+| P3-1 | Transaction CRUD endpoints (POST/GET/PUT/DELETE /transactions) | 4 jam | All | Supabase setup |
+| P3-2 | Budget per kategori — set monthly cap, progress bar, alert >80% | 3 jam | Pro | P3-1 |
+| P3-3 | Multi-rekening — Cash/BCA/Dana/GoPay di SmartInput | 3 jam | Pro | P3-1 |
+| P3-4 | Free tier enforcement: max 3 akun, history 3 bulan | 2 jam | Free | P3-1 |
+| P3-5 | PDF export laporan bulanan | 3 jam | Pro | P3-1 |
+| P3-6 | Dark/light mode toggle — simpan di localStorage | 2 jam | All | — |
+| P3-7 | Smart Search transaksi (client-side filter) | 2 jam | Free | P3-1 |
+| P3-8 | Recurring transaction detection & flag | 3 jam | Pro | P3-1 |
 
-| ID | Fitur | Estimasi | Tier |
+## 🔲 BACKLOG — Phase AI
+
+| ID | Fitur | Estimasi | Provider | Dependency |
+|---|---|---|---|---|
+| AI-1 | Smart Kategorisasi — auto-tag dari deskripsi merchant | 3 jam | Kimi/GLM/DeepSeek | API key |
+| AI-2 | Monthly Insight — "boros makan +30%" | 3 jam | Kimi/GLM | P3-1 |
+| AI-3 | Financial Coach Chat — tanya-jawab keuangan | 5 jam | DeepSeek/Kimi | P3-1 + AI-2 |
+| AI-4 | Spending Prediction — prediksi pengeluaran bulan depan | 4 jam | Rule-based + LLM | P3-1 |
+| AI-5 | Financial Persona — saver/impulsive/balanced | 3 jam | Rule-based | AI-2 |
+| AI-6 | Bank Statement Parser AI — PDF → transaksi | 5 jam | DeepSeek R1 | AI key |
+
+## 🔲 BACKLOG — Phase OCR
+
+| ID | Fitur | Estimasi | Notes |
 |---|---|---|---|
-| P3-1 | Transaction CRUD endpoints (POST/GET/PUT/DELETE /transactions) | 4 jam | All |
-| P3-2 | Budget per kategori — set monthly cap, progress bar, alert >80% | 3 jam | Pro |
-| P3-3 | Multi-rekening — Cash/BCA/Dana/GoPay di SmartInput | 3 jam | Pro |
-| P3-4 | Free tier enforcement: max 3 akun, history 3 bulan | 2 jam | Free |
-| P3-5 | PDF export laporan bulanan | 3 jam | Pro |
-| P3-6 | Dark/light mode toggle — simpan di localStorage | 2 jam | All |
+| OCR-1 | `POST /extract-image` endpoint | 4 jam | pytesseract |
+| OCR-2 | BCA/GoPay/OVO/Dana regex parser per bank | 3 jam | Per-bank pattern |
+| OCR-3 | Frontend: upload foto + preview + konfirmasi | 3 jam | Pro tier only |
 
-### Phase 2 — Auth ✅ DONE
+## 🔲 BACKLOG — Phase Payment / Billing
 
-Semua task sudah selesai. Lihat bagian ✅ DONE di atas.
+| ID | Fitur | Estimasi | Notes |
+|---|---|---|---|
+| PAY-1 | Midtrans Snap integration backend | 4 jam | `POST /subscribe` |
+| PAY-2 | Webhook handler `POST /payment/callback` | 2 jam | Signature verify |
+| PAY-3 | Subscription CRUD (create, cancel, renew) | 3 jam | Tabel `subscriptions` |
+| PAY-4 | Cron job: expire subscription lama | 1 jam | Via Supabase scheduled |
+| PAY-5 | Frontend: upgrade CTA + payment flow | 4 jam | Redirect ke Midtrans Snap |
+| PAY-6 | Billing portal: riwayat pembayaran | 3 jam | Pro tier |
 
-### Phase 3 — DB + Tier Enforcement
+## 🔲 BACKLOG — Omnichannel / WhatsApp
 
-| Task | Estimasi | Dependency |
-|---|---|---|
-| Transaction CRUD endpoints | 4 jam | Database Phase 2 |
-| File import quota (table file_imports) | 2 jam | Database Phase 2 |
-| Frontend: form input manual per transaksi | 4 jam | Auth Phase 2 |
+| ID | Fitur | Estimasi | Notes |
+|---|---|---|---|
+| WA-1 | WhatsApp Bot: catat transaksi via WA | 5 jam | Meta WABA / Twilio / Fonnte |
+| WA-2 | WA: tanya ringkasan "berapa pengeluaran bulan ini?" | 4 jam | Butuh AI-2 |
+| WA-3 | WA: kirim laporan bulanan otomatis | 3 jam | Cron + WA send |
+| WA-4 | Email notifikasi: budget alert, laporan bulanan | 3 jam | Resend / Supabase email |
+| WA-5 | Push notif (PWA) | 2 jam | service-worker |
 
-### Phase AI — AI Features
+## 🔲 BACKLOG — Mobile
 
-| Task | Estimasi | Dependency |
-|---|---|---|
-| Setup DeepSeek API key di Render | 30 menit | DEEPSEEK_API_KEY |
-| Buat `backend/services/ai.py` | 3 jam | API key done |
-| Auto-kategorisasi batch saat upload | 2 jam | ai.py done |
-| Monthly AI insight di dashboard | 2 jam | ai.py done |
-| Rate limiting per tier (Free 20x/bulan) | 2 jam | Auth + DB done |
-
-### Phase 4 — OCR (Foto Struk)
-
-| Task | Estimasi | Dependency |
-|---|---|---|
-| Endpoint `POST /extract-image` | 4 jam | pytesseract install |
-| BCA/GoPay/OVO regex parser | 3 jam | Image endpoint done |
-| Frontend: upload foto + preview + konfirmasi | 3 jam | OCR done |
-
-### Phase 5 — Admin Console (Deploy)
-
-| Task | Estimasi | Dependency |
-|---|---|---|
-| Deploy admin-console ke Vercel (project baru) | 1 jam | Scaffold done |
-| Connect ke backend API | 1 jam | Deploy done |
-| Real user data (ganti mock) | 3 jam | Auth + DB done |
-
-### Phase 6 — Payment
-
-| Task | Estimasi | Dependency |
-|---|---|---|
-| Midtrans integration backend | 4 jam | SERVER_KEY env var |
-| `POST /subscribe` + webhook `/payment/callback` | 3 jam | Midtrans setup |
-| Frontend: upgrade CTA + payment flow | 4 jam | Backend done |
-
-### Mobile (Post Phase 6)
-
-| Task | Estimasi | Notes |
-|---|---|---|
-| Setup Expo project `mobile/` | 1 jam | `npx create-expo-app@latest mobile --template tabs` |
-| Shared auth dengan web | 4 jam | Setelah Web Auth done |
-| Lihat artefak/15_mobile_apps_plan.md | — | Detail planning sudah ada |
+| ID | Fitur | Estimasi | Notes |
+|---|---|---|---|
+| MOB-1 | Setup Expo project `mobile/` | 1 jam | `npx create-expo-app@latest` |
+| MOB-2 | Shared auth dengan web | 4 jam | Setelah Web Auth done |
+| MOB-3 | Bottom nav + gesture input | 3 jam | Native feel |
+| MOB-4 | Mobile OCR (kamera langsung) | 4 jam | expo-camera |
 
 ---
 
-## 🗺️ PRODUCT VISION — Free vs Subscription (Finalized 2026-04-10)
+## 🗺️ PRODUCT VISION & PRICING
 
-### 🎁 FREE tier — "ketagihan dulu, bayar nanti"
+### Tier Gratis — "Coba dulu, ketagihan nanti"
+
+Tujuan: user masuk tanpa friction, rasakan value, lalu upgrade sendiri.
 
 | Fitur | Status |
 |---|---|
-| Tambah transaksi manual (income/expense) | ✅ SmartInput done (localStorage) |
-| Kategori otomatis (makan, transport, dll) | ✅ Brand rules done |
+| Input manual transaksi (income/expense) | ✅ Done (SmartInput + QuickTracker) |
+| Kategori otomatis (aturan keyword) | ✅ Done |
 | Metode bayar: Cash, Bank, E-wallet | ✅ Done |
-| Dashboard: saldo total, pengeluaran/pemasukan bulan ini | ✅ Done |
-| Chart pengeluaran per kategori | ✅ SpendingWheel done |
-| History transaksi | ✅ QuickTracker done |
-| Filter: periode (7d/30d/all) | ✅ Done |
-| Login Google | ✅ Done (Phase 2) |
-| **Limitasi**: max 3 akun, history 3 bulan, tanpa export, tanpa AI | 🔲 Phase 3 enforcement |
+| Dashboard: saldo, income, expense bulan ini | ✅ Done |
+| Chart pengeluaran per kategori | ✅ Done (SpendingWheel) |
+| History transaksi — max 3 bulan | ✅ Done UI, 🔲 enforcement backend |
+| Jumlah akun — max 3 | ✅ Done UI, 🔲 enforcement backend |
+| Login Google | ✅ Done (Supabase auth, butuh env vars) |
+| Upload file mutasi bank — max 5/bulan | ✅ Done UI, 🔲 enforcement backend |
+| Spending Heatmap, WA Share, CSV Export | ✅ Done |
 
-### 💎 PRO Personal (target Rp 29K/bln)
+### Tier PRO — Rp 29.000/bulan (~$1.75)
+
+Target: freelancer, karyawan aktif yang butuh kontrol lebih.
 
 | Fitur | Status |
 |---|---|
-| Unlimited akun & unlimited history | 🔲 Phase 3 |
+| Unlimited akun & history | 🔲 Phase 3 |
 | Custom kategori | 🔲 Phase 3 |
-| Tag transaksi (ngedate, kerja, dll) | 🔲 Phase 3 |
-| Smart input — natural language parsing | ✅ Done (rule-based) |
-| Export CSV / PDF | ✅ CSV done — PDF 🔲 |
-| Laporan bulanan otomatis | 🔲 Phase 3 |
-| Budget per kategori + notifikasi over budget | 🔲 Phase 3 |
+| Tag transaksi | 🔲 Phase 3 |
+| Budget per kategori + notifikasi >80% | 🔲 Phase 3 |
+| Laporan bulanan otomatis (PDF) | 🔲 Phase 3 |
+| Export CSV + PDF | ✅ CSV done — PDF 🔲 Phase 3 |
+| OCR foto struk | 🔲 Phase OCR |
+| Recurring transaction detection | 🔲 Phase 3 |
+| Smart Search | 🔲 Phase 3 |
 
-### 🤖 AI Personal Finance (target Rp 59K/bln)
+### Tier AI Personal — Rp 59.000/bulan (~$3.60)
+
+Target: user yang mau insight cerdas, bukan cuma pencatatan.
 
 | Fitur | Status |
 |---|---|
 | "Bulan ini boros di makan +30%" | 🔲 Phase AI |
-| Weekend vs weekday pattern detection | 🔲 Phase AI |
+| Weekend vs weekday pattern | 🔲 Phase AI |
 | Smart suggestion ("kurangi kopi → hemat 300rb") | 🔲 Phase AI |
-| Financial persona: saver / spender / impulsive | 🔲 Phase AI |
-| Prediksi sisa uang & cashflow bulan depan | 🔲 Phase AI |
-| Personal AI agent dengan user memory | 🔲 Phase AI+ |
+| Financial persona: saver/spender/impulsive | 🔲 Phase AI |
+| Prediksi cashflow akhir bulan | 🔲 Phase AI |
+| Smart kategorisasi AI (lebih akurat) | 🔲 Phase AI |
+| Financial Coach Chat | 🔲 Phase AI |
 
-### 🏢 Business / UMKM (Future)
+### Tier Business — Rp 149.000/bulan (Future)
+
+Target: UMKM, tim kecil, pasangan.
 
 | Fitur | Status |
 |---|---|
-| Multi-user / team wallet | 🔲 Far future |
+| Multi-user / shared wallet | 🔲 Far future |
 | Laporan bisnis | 🔲 Far future |
+| API access | 🔲 Far future |
+
+### Scaling Pricing Guide:
+```
+0 → 100 user    : Supabase free (500MB), Render free → $0/bln infra
+100 → 1.000     : Supabase Pro ($25), Render Starter ($7) → $32/bln infra
+1.000 → 10.000  : Supabase Pro + pgBouncer, Render Standard → ~$60/bln infra
+10.000+         : Migrate ke RDS + custom infra → lihat 12_database_alternatives.md
+```
 
 ---
 
-## 🗄️ DATA MODEL TARGET v2
+## 🗄️ DATABASE SCHEMA LENGKAP (Target v3)
+
+Lihat detail di [05_data_modeling.md](05_data_modeling.md).
 
 ```
-users          → id, email, created_at, plan_type
-accounts       → id, user_id, name, type (bank/ewallet/cash), balance
-transactions   → id, user_id, account_id, amount, type, category,
-                 sub_category, payment_method, note, date, created_at
-tags           → id, name
+profiles         → id (FK auth.users), email, name, plan_type, created_at
+accounts         → id, user_id, name, type (bank/ewallet/cash), color, balance
+transactions     → id, user_id, account_id, amount, type, category, sub_category,
+                   payment_method, note, date, source, hour_of_day, day_of_week,
+                   method, created_at
+tags             → id, user_id, name
 transaction_tags → transaction_id, tag_id
-monthly_agg    → user_id, month, total_income, total_expense  [perf]
-ai_profiles    → user_id, spending_pattern, risk_level,
-                 persona_type, last_analysis  [AI data]
+categories       → id, user_id, name, icon, color, budget_limit
+budgets          → id, user_id, category_id, month, limit_amount, spent_amount
+subscriptions    → id, user_id, tier, status, started_at, expires_at, payment_ref
+import_batches   → id, user_id, filename, period, row_count, created_at
+ai_profiles      → user_id, spending_pattern, risk_level, persona_type, last_analysis
 ```
 
 ---
 
-## 🤖 AI STRATEGY (jangan skip ini)
+## 🤖 AI STRATEGY
 
 ```
-Step 1 → Collect data (transaksi: waktu, kategori, frekuensi, nominal)
-Step 2 → Feature engineering (avg/day, weekend ratio, top category)
+Step 1 → Kumpulkan data (transaksi: waktu, kategori, frekuensi, nominal) ← SEKARANG
+Step 2 → Feature engineering (avg/hari, weekend ratio, top category)
 Step 3 → User profiling rule-based (saver/impulsive/balanced)
-Step 4 → Suggestion engine rule-based dulu (IF makan>30% → warning)
-Step 5 → LLM integration (DeepSeek-V3) → jawab "kenapa uang cepat habis?"
+Step 4 → Suggestion engine rule-based (IF makan>30% → warning)
+Step 5 → LLM integration → insight natural language
 Step 6 → Personal AI agent per user (memory: kebiasaan, preferensi)
 ```
 
-> **Prinsip**: bangun data dulu, baru AI. Value utama = insight, bukan cuma pencatatan.
+**AI Providers (pilih berdasarkan ketersediaan key):**
+
+| Priority | Provider | Base URL | Model | Notes |
+|---|---|---|---|---|
+| 1 | **Kimi (Moonshot)** | Tanya admin grupy | moonshot-v1-8k | Key dari grupy, endpoint proxy khusus |
+| 2 | **GLM (Zhipu)** | https://open.bigmodel.cn/api/paas/v4/ | glm-4-flash / glm-4-air | Key dari grupy, test model list |
+| 3 | **DeepSeek** | https://api.deepseek.com | deepseek-chat | Top-up $5, harga termurah |
+| 4 | **Gemini Flash** | Google AI SDK | gemini-2.0-flash | Free tier 1.5K req/hari |
+
+Semua provider kompatibel dengan **OpenAI SDK** (ganti `api_key` + `base_url` saja).
+Implementasi ada di [16_ai_cost_analysis.md](16_ai_cost_analysis.md).
 
 ---
 
-## 🆕 NEW INITIATIVE — Baru Diputuskan
+## 📧 EMAIL & NOTIFIKASI
+
+| Service | Use Case | Provider | Status |
+|---|---|---|---|
+| Email verifikasi akun | Kirim magic link / OTP saat register | **Supabase built-in SMTP** | ✅ Otomatis (tinggal aktifkan) |
+| Email laporan bulanan | Kirim PDF setiap awal bulan | **Resend** (resend.com) | 🔲 Phase 3 |
+| Email budget alert | "Pengeluaran Makan sudah 80%" | Resend | 🔲 Phase 3 |
+| WhatsApp transaksi | Catat via WA chat | Fonnte / Twilio WABA | 🔲 Phase WA |
+| WhatsApp laporan | Kirim otomatis tiap akhir bulan | Fonnte / Twilio WABA | 🔲 Phase WA |
+| Push notif (PWA) | Alert real-time di browser | service-worker + Supabase Realtime | 🔲 Phase 3 |
+
+**Email Verifikasi — sudah built-in Supabase:**
+- Aktifkan di Supabase → Auth → Email templates
+- Template bisa di-customize (nama brand OprexDuit, warna teal)
+- Untuk production: pasang custom SMTP (Resend/SendGrid) agar tidak masuk spam
+
+---
+
+## 💳 BILLING FLOW (FREE → PRO)
+
+```
+User klik "Upgrade ke Pro"
+    ↓
+Frontend POST /subscribe { tier: "pro" }
+    ↓
+Backend buat order Midtrans Snap
+    ↓
+Frontend redirect → halaman pembayaran Midtrans
+    ↓
+User bayar (QRIS / VA Bank / GoPay / OVO / Kartu)
+    ↓
+Midtrans POST /payment/callback (webhook)
+    ↓
+Backend verifikasi HMAC-SHA512 signature
+    ↓
+Backend UPDATE profiles SET plan_type = 'pro', expires_at = NOW() + 30d
+    ↓
+✅ User langsung dapat akses fitur Pro
+```
+
+**Biaya nyata per transaksi Rp 29.000:**
+- Via QRIS: fee 0.7% = Rp 203 → kamu terima Rp 28.797
+- Via VA Bank: fee Rp 4.000 flat → kamu terima Rp 25.000
+- Midtrans tidak ada biaya bulanan — bayar per transaksi saja
+
+Lihat detail kode di [11_payment_gateway.md](11_payment_gateway.md).
+
+---
+
+## 📱 OMNICHANNEL / WHATSAPP
+
+**Pilihan Provider WA:**
+
+| Provider | Harga | Kemudahan | Cocok untuk |
+|---|---|---|---|
+| **Fonnte** | Rp 99K/bulan | ⭐⭐⭐⭐⭐ | MVP Indonesia — paling mudah setup |
+| **Twilio WABA** | $0.005/pesan | ⭐⭐⭐ | Scale — butuh Meta Business verification |
+| **WA Cloud API (Meta)** | Gratis 1000 conv/bln | ⭐⭐ | Gratis tapi proses approval lama |
+| **Wablas** | Rp 75K/bulan | ⭐⭐⭐⭐ | Alternatif Fonnte |
+
+**Flow WhatsApp Bot:**
+```
+User kirim WA ke nomor bot
+    ↓
+"belanja 50rb indomaret"
+    ↓
+Webhook → FastAPI POST /wa/message
+    ↓
+Parse natural language (sama seperti SmartInput)
+    ↓
+Simpan ke Supabase transactions (user_id dari nomor WA)
+    ↓
+Reply: "✅ Dicatat! Belanja Rp 50.000 di Indomaret"
+```
+
+Ini Phase WA — ditunda sampai Phase 3 selesai.
+
+---
+
+## 🆕 INISIATIF & KEPUTUSAN (Changelog)
 
 | Tanggal | Inisiatif | Status |
 |---|---|---|
-| 2026-04-10 | Redesign warm dark palette | ✅ Done |
+| 2026-04-10 | Redesign warm dark → light palette | ✅ Done |
 | 2026-04-10 | Spending Heatmap | ✅ Done |
 | 2026-04-10 | WA Share + CSV Export + QRIS modal | ✅ Done |
 | 2026-04-10 | Admin Console scaffold | 🔧 In progress |
 | 2026-04-10 | AI provider analysis → DeepSeek recommended | ✅ Documented |
-| 2026-04-10 | Light theme UI + encoding bug fixes | ✅ Done (4e98fb0) |
-| 2026-04-10 | QuickTracker period filter + CSV export | ✅ Done (2ca3753) |
+| 2026-04-10 | Light theme + encoding bug fixes (4e98fb0) | ✅ Done |
+| 2026-04-10 | QuickTracker period filter + CSV export (2ca3753) | ✅ Done |
 | 2026-04-10 | parseIDR: rebu/miliar/triliun + brand auto-kategorisasi | ✅ Done |
-| 2026-04-10 | Backend fix: infer_datetime_format removed (pandas 2+) | ✅ Done |
-| 2026-04-10 | Product vision finalized: Free/Pro/AI tiers + AI strategy | ✅ Documented |
-| 2026-04-10 | WA Bot/Omnichannel | ⏳ Ditunda |
-| 2026-04-10 | **Phase 2 Auth complete** — middleware, useAuth, useTransactions, Header auth state | ✅ Done (14b121c) |
-| 2026-04-10 | **Backend `_clean_amount` fix** — Indonesian number parsing (13/13 tests pass) | ✅ Done |
-| 2026-04-10 | **Header light theme contrast** — white bg, dark text, teal accent | ✅ Done |
-| 2026-04-10 | **Empty state redesign** — 2-col: upload+KPI teaser / QuickTracker | ✅ Done |
+| 2026-04-10 | Backend: `infer_datetime_format` removed (pandas 2+) | ✅ Done |
+| 2026-04-10 | Product vision: Free/Pro/AI tiers + AI strategy | ✅ Documented |
+| 2026-04-10 | Phase 2 Auth complete (14b121c) | ✅ Done |
+| 2026-04-10 | Backend `_clean_amount` fix — 13/13 tests (af3c3cb) | ✅ Done |
+| 2026-04-10 | Header light theme contrast fix (af3c3cb) | ✅ Done |
+| 2026-04-10 | Empty state redesign 2-col (af3c3cb) | ✅ Done |
+| 2026-04-10 | Middleware guard Supabase env vars — fix nft.json (a66ccfc) | ✅ Done |
+| 2026-04-10 | test_ai_keys.py — grupy-aware key tester | ✅ Done |
+| 2026-04-12 | Artefak full cleanup & checkpoint (rev 6) | ✅ Done |
 
 ---
 
 ## 🚫 DITUNDA / PARKING LOT
 
-| Fitur | Alasan Ditunda |
+| Fitur | Alasan |
 |---|---|
-| WhatsApp Bot | Focus web dulu, butuh Meta Business API review |
-| Open Banking API | Regulasi OJK, butuh lisensi |
-| Multi-currency | Scope terlalu lebar |
+| WhatsApp Bot | Focus web dulu, setup Meta WABA butuh waktu |
+| Open Banking API | Regulasi OJK, butuh lisensi AFPI |
+| Multi-currency | Scope terlalu lebar untuk MVP |
 | Crypto portfolio | Risiko regulasi Indonesia |
 | Investasi reksa dana | Butuh lisensi OJK |
+| Native Android/iOS | Pakai PWA + Expo nanti — setelah web stabil |
 
 ---
 
-## 📋 DISKUSI & KEPUTUSAN PENTING
+## 📋 KEPUTUSAN TEKNIS PENTING
 
 | Tanggal | Topik | Keputusan |
 |---|---|---|
-| 2026-04-10 | AI Provider | **DeepSeek-V3** untuk MVP. Hybrid Gemini Flash untuk scale. |
-| 2026-04-10 | Tier strategy | Free powerful→ketagihan, Pro export+budget, AI insight+prediction |
+| 2026-04-10 | Database | Supabase free → Pro $25 → AWS RDS (lihat 12_database_alternatives.md) |
+| 2026-04-10 | AI Provider | Kimi (grupy) atau DeepSeek-V3 untuk MVP. Hybrid Gemini Flash untuk scale |
+| 2026-04-10 | Auth | Supabase Auth (bukan NextAuth) — JWT verify di FastAPI via python-jose |
+| 2026-04-10 | Tier strategy | Free = ketagihan, Pro = export+budget, AI = insight+prediction |
 | 2026-04-10 | AI build order | Data dulu → rule-based → LLM insight → personal agent |
-| 2026-04-10 | Database | Supabase free → Pro $25 → AWS RDS |
-| 2026-04-10 | Admin console | Subfolder `admin-console/` di repo, deploy Vercel project berbeda |
+| 2026-04-10 | Payment | Midtrans (MVP) → Xendit (scale) |
+| 2026-04-12 | Email notif | Supabase built-in (verifikasi) + Resend (transactional) |
+| 2026-04-12 | WhatsApp | Fonnte (MVP Indonesia) → Twilio WABA (scale) |
+| 2026-04-12 | Mobile | PWA-first, lalu Expo React Native |
 
 ---
 
-## 🔑 CREDENTIAL CHECKLIST (user action needed)
+## 🔑 CREDENTIAL CHECKLIST
 
-- [ ] Set `NEXT_PUBLIC_API_URL` di Vercel dashboard → `https://finance-analyzer-a82j.onrender.com`
-- [ ] Buat Supabase project → simpan connection string di SECRETS.md
-- [ ] Set Site URL + Redirect URL di Supabase Auth config → `https://finance-analyzer-roan.vercel.app/auth/callback`
-- [ ] Buat Google Cloud OAuth credentials → simpan di SECRETS.md
-- [ ] Daftar DeepSeek → top up $5 → simpan API key di SECRETS.md
-- [ ] Jalankan ALTER TABLE di Supabase SQL Editor:
-  ```sql
-  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
-  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
-  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
-  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
-  ```
+**Supabase (wajib sebelum login bisa jalan):**
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` → Vercel env vars
+- [ ] `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → Vercel env vars
+- [ ] `SUPABASE_JWT_SECRET` → Render env vars
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` → Render env vars (backend admin)
+- [ ] Site URL: `https://finance-analyzer-roan.vercel.app`
+- [ ] Redirect URL: `https://finance-analyzer-roan.vercel.app/auth/callback`
+
+**Lainnya:**
+- [ ] `NEXT_PUBLIC_API_URL=https://finance-analyzer-a82j.onrender.com` → Vercel
+- [ ] `ALLOWED_ORIGINS=https://finance-analyzer-roan.vercel.app` → Render
+- [ ] Google OAuth: Client ID + Secret → Supabase Auth → Google provider
+- [ ] Midtrans: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY` → Render (Phase Payment)
+- [ ] AI key: `KIMI_API_KEY`, `KIMI_BASE_URL` → Render (Phase AI)
+- [ ] AI key: `GLM_API_KEY` → Render (Phase AI)
+- [ ] Resend: `RESEND_API_KEY` → Render (Phase email notif)
+- [ ] Fonnte/Twilio: WA token → Render (Phase WA)
 
 ---
 
-## 📎 FILE REFERENSI PENTING
+## 📎 FILE REFERENSI
 
 | File | Isi |
 |---|---|
 | `artefak/09_prompt_agent_planner.md` | Master prompt untuk agent lanjutkan pekerjaan |
-| `artefak/05_data_modeling.md` | SQL DDL + SQLAlchemy models |
-| `artefak/10_tier_system.md` | Feature gate table per tier |
-| `artefak/11_payment_gateway.md` | Midtrans integration code |
+| `artefak/05_data_modeling.md` | SQL DDL lengkap + schema v3 |
+| `artefak/07_roadmap.md` | Fase & sprint detail |
+| `artefak/10_tier_system.md` | Feature gate per tier + kode enforcement |
+| `artefak/11_payment_gateway.md` | Midtrans integration (kode lengkap) |
 | `artefak/16_ai_cost_analysis.md` | Pilihan AI provider + sample code |
+| `artefak/15_mobile_apps_plan.md` | Expo mobile plan |
 | `SECRETS.md` | Env vars lengkap (GITIGNORED) |
 | `.env.example` | Template env vars |
+| `test_ai_keys.py` | Script test AI API keys (grupy-aware) |
+
