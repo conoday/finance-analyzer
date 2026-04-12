@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/utils/supabase/middleware";
 
 // Routes that require login to access
 const PROTECTED_PATHS = ["/settings", "/profile", "/admin"];
@@ -7,12 +6,11 @@ const PROTECTED_PATHS = ["/settings", "/profile", "/admin"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always refresh Supabase session cookies
-  const response = await updateSession(request);
-
-  // Only enforce auth on explicitly protected paths
+  // Only enforce auth on explicitly protected paths.
+  // Session cookie refresh happens in Server Components via createClient(),
+  // so we don't need @supabase/ssr here (avoids Edge Runtime NFT tracing issues).
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
-  if (!isProtected) return response;
+  if (!isProtected) return NextResponse.next({ request });
 
   const hasSession = request.cookies
     .getAll()
@@ -25,7 +23,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return response;
+  return NextResponse.next({ request });
 }
 
 export const config = {
