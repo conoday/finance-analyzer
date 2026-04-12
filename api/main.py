@@ -188,6 +188,236 @@ def ai_categorize(req: AICategorizeRequest):
         raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
 
 
+# ---------------------------------------------------------------------------
+# Shared Budget Room System
+# ---------------------------------------------------------------------------
+import secrets
+import uuid as _uuid
+from datetime import datetime, timezone
+
+PLAN_LIMITS: dict[str, int] = {
+    "personal":    1,
+    "couple":      2,
+    "family":      4,
+    "group":       8,
+    "team":        16,
+    "business":    50,
+    "corporate":   200,
+    "enterprise":  -1,  # unlimited
+}
+
+PLAN_PRICES: dict[str, dict] = {
+    "personal":  {"label": "Personal",   "price_idr": 0,       "desc": "Untuk 1 orang"},
+    "couple":    {"label": "Couple",     "price_idr": 29000,   "desc": "Untuk berdua — pasangan / sahabat"},
+    "family":    {"label": "Family",     "price_idr": 49000,   "desc": "Hingga 4 anggota keluarga"},
+    "group":     {"label": "Group",      "price_idr": 79000,   "desc": "Hingga 8 orang — komunitas kecil"},
+    "team":      {"label": "Team",       "price_idr": 149000,  "desc": "Hingga 16 orang — tim startup"},
+    "business":  {"label": "Business",   "price_idr": 299000,  "desc": "Hingga 50 anggota"},
+    "corporate": {"label": "Corporate",  "price_idr": 799000,  "desc": "Hingga 200 anggota"},
+    "enterprise":{"label": "Enterprise", "price_idr": -1,      "desc": "Tak terbatas — hubungi kami"},
+}
+
+# In-memory store (resets on restart — fine for demo/free tier)
+_rooms: dict[str, dict] = {}          # room_id  → room object
+_invite_index: dict[str, str] = {}    # invite_code → room_id
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _member_color(idx: int) -> str:
+    palette = ["#14b8a6", "#6366f1", "#f59e0b", "#ec4899",
+               "#22c55e", "#3b82f6", "#f97316", "#8b5cf6"]
+    return palette[idx % len(palette)]
+
+
+class CreateRoomRequest(BaseModel):
+    plan_type: str = "couple"
+    display_name: str
+    member_id: str | None = None  # client-generated UUID; created if omitted
+
+
+class JoinRoomRequest(BaseModel):
+    invite_code: str
+    display_name: str
+    member_id: str | None = None
+
+
+class UpdateSharedBudgetRequest(BaseModel):
+    member_id: str
+    budgets: dict[str, float]          # category → limit (personal)
+    shared_budgets: dict[str, float] | None = None   # only poster can update
+    summary: dict | None = None
+    by_category: list[dict] | None = None
+
+
+@app.get("/plans")
+def list_plans():
+    """Return all plan tiers with limits and price."""
+    return {
+        plan: {**info, "max_members": PLAN_LIMITS[plan]}
+        for plan, info in PLAN_PRICES.items()
+    }
+
+
+@app.post("/rooms/create")
+def create_room(req: CreateRoomRequest):
+    """Create a new shared budget room and return invite code."""
+    plan = req.plan_type.lower()
+    if plan not in PLAN_LIMITS:
+        raise HTTPException(status_code=400, detail=f"Plan tidak dikenal: {plan}")
+
+    room_id = str(_uuid.uuid4())
+    invite_code = secrets.token_urlsafe(6).upper()[:8]
+    while invite_code in _invite_index:
+        invite_code = secrets.token_urlsafe(6).upper()[:8]
+
+    member_id = req.member_id or str(_uuid.uuid4())
+
+    room = {
+        "room_id":       room_id,
+        "invite_code":   invite_code,
+        "plan_type":     plan,
+        "max_members":   PLAN_LIMITS[plan],
+        "created_at":    _now_iso(),
+        "shared_budgets": {},
+        "members": [
+            {
+                "member_id":    member_id,
+                "display_name": req.display_name[:32],
+                "color":        _member_color(0),
+                "budgets":      {},
+                "summary":      None,
+                "by_category":  [],
+                "joined_at":    _now_iso(),
+            }
+        ],
+    }
+    _rooms[room_id] = room
+    _invite_index[invite_code] = room_id
+
+    return {
+        "room_id":     room_id,
+        "invite_code": invite_code,
+        "plan_type":   plan,
+        "member_id":   member_id,
+        "max_members": PLAN_LIMITS[plan],
+        "plan_info":   PLAN_PRICES[plan],
+    }
+
+
+@app.post("/rooms/join")
+def join_room(req: JoinRoomRequest):
+    """Join an existing room with an invite code."""
+    code = req.invite_code.strip().upper()
+    room_id = _invite_index.get(code)
+    if not room_id or room_id not in _rooms:
+        raise HTTPException(status_code=404, detail="Kode undangan tidak ditemukan atau sudah kedaluwarsa")
+
+    room = _rooms[room_id]
+    max_m = room["max_members"]
+    current_count = len(room["members"])
+
+    if max_m != -1 and current_count >= max_m:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Room penuh ({current_count}/{max_m}). Upgrade plan untuk tambah anggota."
+        )
+
+    member_id = req.member_id or str(_uuid.uuid4())
+
+    # Prevent duplicate member_id
+    existing_ids = {m["member_id"] for m in room["members"]}
+    if member_id in existing_ids:
+        # Re-join: just return existing info
+        member = next(m for m in room["members"] if m["member_id"] == member_id)
+        return {"room_id": room_id, "member_id": member_id,
+                "plan_type": room["plan_type"], "already_member": True,
+                "member": member, "room": _safe_room(room)}
+
+    room["members"].append({
+        "member_id":    member_id,
+        "display_name": req.display_name[:32],
+        "color":        _member_color(current_count),
+        "budgets":      {},
+        "summary":      None,
+        "by_category":  [],
+        "joined_at":    _now_iso(),
+    })
+
+    return {
+        "room_id":       room_id,
+        "member_id":     member_id,
+        "plan_type":     room["plan_type"],
+        "already_member": False,
+        "room":          _safe_room(room),
+    }
+
+
+@app.get("/rooms/{room_id}")
+def get_room(room_id: str):
+    """Get full room data including all members' budgets."""
+    room = _rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room tidak ditemukan")
+    return _safe_room(room)
+
+
+@app.put("/rooms/{room_id}/sync")
+def sync_member_data(room_id: str, req: UpdateSharedBudgetRequest):
+    """Member syncs their personal budget + financial summary to room."""
+    room = _rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room tidak ditemukan")
+
+    member = next((m for m in room["members"] if m["member_id"] == req.member_id), None)
+    if not member:
+        raise HTTPException(status_code=404, detail="Member tidak ditemukan di room ini")
+
+    member["budgets"] = req.budgets
+    if req.summary is not None:
+        member["summary"] = req.summary
+    if req.by_category is not None:
+        member["by_category"] = req.by_category
+
+    # First member (creator) can also update shared_budgets
+    if req.shared_budgets is not None and room["members"][0]["member_id"] == req.member_id:
+        room["shared_budgets"] = req.shared_budgets
+
+    return {"ok": True, "room": _safe_room(room)}
+
+
+def _safe_room(room: dict) -> dict:
+    """Return room dict safe for JSON serialization."""
+    return {
+        "room_id":       room["room_id"],
+        "invite_code":   room["invite_code"],
+        "plan_type":     room["plan_type"],
+        "max_members":   room["max_members"],
+        "created_at":    room["created_at"],
+        "member_count":  len(room["members"]),
+        "shared_budgets": room["shared_budgets"],
+        "members": [
+            {
+                "member_id":    m["member_id"],
+                "display_name": m["display_name"],
+                "color":        m["color"],
+                "budgets":      m["budgets"],
+                "summary":      m["summary"],
+                "by_category":  m["by_category"],
+                "joined_at":    m["joined_at"],
+            }
+            for m in room["members"]
+        ],
+        "plan_info": PLAN_PRICES.get(room["plan_type"], {}),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Simulate
+# ---------------------------------------------------------------------------
+
 @app.post("/simulate")
 def simulate(req: SimulateRequest):
     """Run future balance simulation with category adjustments."""

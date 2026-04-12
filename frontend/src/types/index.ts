@@ -78,6 +78,50 @@ export interface HealthReport {
   grade: string;
   headline: string;
   dimensions: HealthDimension[];
+
+  // ---------------------------------------------------------------------------
+  // Shared Budget Room Types
+  // ---------------------------------------------------------------------------
+}
+
+// Plan tier keys
+export type PlanType =
+  | "personal" | "couple" | "family" | "group"
+  | "team" | "business" | "corporate" | "enterprise";
+
+export const PLAN_META: Record<PlanType, { label: string; maxMembers: number; price: number; desc: string; color: string }> = {
+  personal:  { label: "Personal",   maxMembers: 1,   price: 0,      desc: "Untuk 1 orang",               color: "#64748b" },
+  couple:    { label: "Couple",     maxMembers: 2,   price: 29000,  desc: "Berdua — pasangan / sahabat",   color: "#ec4899" },
+  family:    { label: "Family",     maxMembers: 4,   price: 49000,  desc: "Hingga 4 anggota keluarga",     color: "#f59e0b" },
+  group:     { label: "Group",      maxMembers: 8,   price: 79000,  desc: "Komunitas kecil — 8 orang",     color: "#22c55e" },
+  team:      { label: "Team",       maxMembers: 16,  price: 149000, desc: "Tim startup — 16 orang",        color: "#6366f1" },
+  business:  { label: "Business",   maxMembers: 50,  price: 299000, desc: "Hingga 50 anggota",             color: "#3b82f6" },
+  corporate: { label: "Corporate",  maxMembers: 200, price: 799000, desc: "Hingga 200 anggota",            color: "#8b5cf6" },
+  enterprise:{ label: "Enterprise", maxMembers: -1,  price: -1,     desc: "Tak terbatas — hubungi kami",   color: "#14b8a6" },
+};
+
+export interface RoomMember {
+  member_id: string;
+  display_name: string;
+  color: string;
+  budgets: Record<string, number>;      // personal budget limits
+  summary: Record<string, number> | null;
+  by_category: CategoryRow[];
+  joined_at: string;
+}
+
+export interface SharedRoom {
+  room_id: string;
+  invite_code: string;
+  plan_type: PlanType;
+  max_members: number;
+  created_at: string;
+  member_count: number;
+  shared_budgets: Record<string, number>;
+  members: RoomMember[];
+  plan_info: { label: string; price_idr: number; desc: string };
+}
+
   tips: string[];
 }
 

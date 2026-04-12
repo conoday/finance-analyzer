@@ -8,9 +8,35 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Target, PencilLine, Check, X, AlertTriangle, TrendingDown, Plus } from "lucide-react";
+import { Target, PencilLine, Check, X, AlertTriangle, TrendingDown, Plus, BarChart2, PieChartIcon } from "lucide-react";
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend, LabelList,
+} from "recharts";
 import { formatRupiah } from "@/lib/utils";
 import type { CategoryRow } from "@/types";
+
+const CHART_COLORS = [
+  "#14b8a6","#6366f1","#f59e0b","#ec4899",
+  "#22c55e","#3b82f6","#f97316","#8b5cf6",
+  "#06b6d4","#84cc16","#e11d48","#64748b",
+];
+
+function RupiahTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="glass rounded-lg px-3 py-2 text-xs space-y-1 border border-white/10 shadow-xl">
+      {label && <p className="font-semibold text-slate-300 mb-1">{label}</p>}
+      {payload.map((p: any) => (
+        <div key={p.name} className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
+          <span className="text-slate-400">{p.name}:</span>
+          <span className="font-mono font-bold text-slate-200">{formatRupiah(p.value, true)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const LS_KEY = "oprexduit_budgets";
 
@@ -117,6 +143,18 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
   const overBudgetCount = rows.filter(
     (k) => budgets[k] && actualMap[k] && actualMap[k] > budgets[k]
   ).length;
+
+  // Chart data
+  const [activeChart, setActiveChart] = useState<"donut" | "bar">("donut");
+  const donutData = byCategory.slice(0, 8).map((c) => ({ name: c.kategori, value: c.total }));
+  const barData = rows
+    .filter((k) => budgets[k] || actualMap[k])
+    .slice(0, 8)
+    .map((k) => ({
+      name: k.length > 10 ? k.slice(0, 9) + "…" : k,
+      "Aktual": actualMap[k] ?? 0,
+      "Budget": budgets[k] ?? 0,
+    }));
 
   return (
     <motion.div
@@ -334,7 +372,115 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
         </div>
       </div>
 
-      {/* Tips placeholder — dikisi dari AI insight */}
+{/* Charts section */}
+      {(donutData.length > 0 || barData.length > 0) && (
+        <div className="glass rounded-2xl p-5 border border-white/[0.06] space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-300">Visualisasi Budget</h3>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setActiveChart("donut")}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  background: activeChart === "donut" ? "rgba(20,184,166,0.15)" : "transparent",
+                  color: activeChart === "donut" ? "#14b8a6" : "#64748b",
+                  border: activeChart === "donut" ? "1px solid rgba(20,184,166,0.3)" : "1px solid transparent",
+                }}
+              >
+                <PieChartIcon className="w-3 h-3" />
+                Distribusi
+              </button>
+              <button
+                onClick={() => setActiveChart("bar")}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  background: activeChart === "bar" ? "rgba(99,102,241,0.15)" : "transparent",
+                  color: activeChart === "bar" ? "#818cf8" : "#64748b",
+                  border: activeChart === "bar" ? "1px solid rgba(99,102,241,0.3)" : "1px solid transparent",
+                }}
+              >
+                <BarChart2 className="w-3 h-3" />
+                Budget vs Aktual
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {activeChart === "donut" && donutData.length > 0 && (
+              <motion.div
+                key="donut"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-6"
+              >
+                <ResponsiveContainer width={160} height={160}>
+                  <PieChart>
+                    <Pie
+                      data={donutData}
+                      dataKey="value"
+                      cx="50%" cy="50%"
+                      innerRadius={45}
+                      outerRadius={72}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {donutData.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<RupiahTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 grid grid-cols-1 gap-1.5">
+                  {donutData.map((d, i) => {
+                    const pct = totalSpent > 0 ? Math.round((d.value / totalSpent) * 100) : 0;
+                    return (
+                      <div key={d.name} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                        <span className="text-[11px] text-slate-400 flex-1 truncate">{d.name}</span>
+                        <span className="text-[10px] font-mono text-slate-500">{pct}%</span>
+                        <span className="text-[10px] font-mono text-slate-400">{formatRupiah(d.value, true)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {activeChart === "bar" && barData.length > 0 && (
+              <motion.div
+                key="bar"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={barData} barGap={4} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={false} axisLine={false} tickLine={false} width={0} />
+                    <Tooltip content={<RupiahTooltip />} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
+                    <Bar dataKey="Aktual" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Budget" fill="#6366f1" radius={[4, 4, 0, 0]} opacity={0.6} />
+                  </BarChart>
+                </ResponsiveContainer>
+                {barData.some(d => d["Aktual"] > d["Budget"] && d["Budget"] > 0) && (
+                  <p className="text-[10px] text-red-400 mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Batang teal melebihi ungu = over budget
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Tips */}
       <div
         className="rounded-xl p-4 flex items-start gap-3 text-sm"
         style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.15)" }}
@@ -342,7 +488,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
         <TrendingDown className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
         <p className="text-slate-400 leading-relaxed">
           Set limit budget per kategori untuk dapat peringatan saat hampir habis.
-          Budget disimpan di browser — tidak perlu login.
+          Budget disimpan di browser — tidak perlu login. Gunakan tab <strong className="text-slate-300">Shared</strong> untuk berbagi dengan pasangan atau tim.
         </p>
       </div>
     </motion.div>

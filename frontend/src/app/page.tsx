@@ -22,6 +22,7 @@ import { SpendingHeatmap } from "@/components/SpendingHeatmap";
 import { SharePanel, DonasiModal } from "@/components/SharePanel";
 import { QuickTracker } from "@/components/QuickTracker";
 import { BudgetTracker } from "@/components/BudgetTracker";
+import { SharedBudgetRoom } from "@/components/SharedBudgetRoom";
 import { Loader2, Zap, Sparkles, BookOpen, Plus } from "lucide-react";
 
 const TABS = [
@@ -29,6 +30,7 @@ const TABS = [
   { id: "ringkasan",  label: "Ringkasan" },
   { id: "pengeluaran",label: "Pengeluaran" },
   { id: "budget",     label: "Budget" },
+  { id: "shared",     label: "Shared 👥" },
   { id: "forecast",   label: "Forecast" },
   { id: "health",     label: "Health" },
   { id: "simulator",  label: "Simulator" },
@@ -257,6 +259,15 @@ export default function Home() {
                 {activeTab === "budget" && (
                   <TabPanel key="budget">
                     <BudgetTracker byCategory={data.by_category} />
+                  </TabPanel>
+                )}
+
+                {activeTab === "shared" && (
+                  <TabPanel key="shared">
+                    <SharedBudgetRoom
+                      byCategory={data.by_category}
+                      summary={data.summary}
+                    />
                   </TabPanel>
                 )}
 
