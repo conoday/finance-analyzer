@@ -148,6 +148,46 @@ async def analyze_upload(
     return _serialize(result)
 
 
+# ---------------------------------------------------------------------------
+# AI endpoints
+# ---------------------------------------------------------------------------
+
+class AIInsightRequest(BaseModel):
+    summary: dict[str, Any]
+    by_category: list[dict[str, Any]]
+    monthly: list[dict[str, Any]] = []
+
+
+class AICategorizeRequest(BaseModel):
+    description: str
+
+
+@app.post("/ai/insight")
+def ai_insight(req: AIInsightRequest):
+    """Minta insight otomatis dari data keuangan via GLM/DeepSeek/Gemini."""
+    try:
+        from app.ai_service import get_ai_insight
+        return get_ai_insight(req.summary, req.by_category, req.monthly)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+
+@app.post("/ai/categorize")
+def ai_categorize(req: AICategorizeRequest):
+    """Kategorisasi 1 transaksi via AI."""
+    if not req.description or len(req.description.strip()) < 2:
+        raise HTTPException(status_code=422, detail="description terlalu pendek")
+    try:
+        from app.ai_service import ai_categorize
+        return ai_categorize(req.description.strip())
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+
 @app.post("/simulate")
 def simulate(req: SimulateRequest):
     """Run future balance simulation with category adjustments."""
