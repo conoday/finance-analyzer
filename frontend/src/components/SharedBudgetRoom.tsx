@@ -363,14 +363,11 @@ function SharedBudgetTable({ room, isCreator, memberId }: {
     setSaving(true);
     const updated = { ...room.shared_budgets, [cat]: newVal };
     try {
-      await fetch(`${API_URL}/rooms/${room.room_id}/sync`, {
+      // Uses dedicated endpoint — server enforces creator-only guard
+      await fetch(`${API_URL}/rooms/${room.room_id}/shared-budget`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          member_id: memberId,
-          budgets: {},
-          shared_budgets: updated,
-        }),
+        body: JSON.stringify({ member_id: memberId, shared_budgets: updated }),
       });
     } finally {
       setSaving(false);
@@ -593,7 +590,10 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
   }
 
   const me          = room?.members.find(m => m.member_id === memberId);
-  const isCreator   = room?.members[0]?.member_id === memberId;
+  // Use creator_member_id from server (explicit, not index-based)
+  const isCreator   = !!room && (room as any).creator_member_id
+    ? (room as any).creator_member_id === memberId
+    : room?.members[0]?.member_id === memberId;
   const planMeta    = room ? PLAN_META[room.plan_type] : null;
   const totalIncome = room?.members.reduce((s, m) => s + (m.summary?.total_income  ?? 0), 0) ?? 0;
   const totalExp    = room?.members.reduce((s, m) => s + (m.summary?.total_expense ?? 0), 0) ?? 0;
@@ -782,7 +782,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
 
         {/* Sync + actions */}
         <div className="flex items-center gap-2 shrink-0">
-          {(byCategory.length > 0 || summary) && (
+          {(byCategory && byCategory.length > 0) || summary ? (
             <motion.button
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               onClick={handleSyncData}
@@ -798,6 +798,10 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
                syncDone ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
               {syncing ? "Syncing..." : syncDone ? "Tersync!" : "Sync Dataku"}
             </motion.button>
+          ) : (
+            <span className="text-[10px] text-slate-500 italic px-2">
+              Upload file dulu untuk sync data
+            </span>
           )}
           <button onClick={() => fetchRoom(room.room_id)}
             className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-colors">

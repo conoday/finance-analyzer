@@ -159,6 +159,11 @@ export default function Home() {
                   {error}
                 </motion.p>
               )}
+
+              {/* ── Shared Budget Room (accessible before upload) ── */}
+              <div className="mt-8 max-w-5xl mx-auto">
+                <SharedBudgetRoom byCategory={undefined} summary={undefined} />
+              </div>
             </motion.section>
           )}
 

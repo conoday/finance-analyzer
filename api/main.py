@@ -195,6 +195,34 @@ import secrets
 import uuid as _uuid
 from datetime import datetime, timezone
 
+# ── Supabase client (lazy init, falls back to in-memory if not configured) ──
+
+_sb_client: Any | None = None
+_sb_ready: bool = False
+
+
+def _supabase():
+    """Return Supabase client, or None when env vars are absent (dev/test)."""
+    global _sb_client, _sb_ready
+    if not _sb_ready:
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        if url and key:
+            try:
+                from supabase import create_client  # type: ignore
+                _sb_client = create_client(url, key)
+            except Exception as exc:
+                print(f"[rooms] Supabase init failed — using in-memory fallback: {exc}")
+        else:
+            print("[rooms] SUPABASE_URL/KEY not set — using in-memory fallback")
+        _sb_ready = True
+    return _sb_client
+
+
+# ── In-memory fallback (only used when Supabase is unavailable) ──
+_rooms: dict[str, dict] = {}        # room_id  → room object
+_invite_index: dict[str, str] = {}  # invite_code → room_id
+
 PLAN_LIMITS: dict[str, int] = {
     "personal":    1,
     "couple":      2,
@@ -216,11 +244,6 @@ PLAN_PRICES: dict[str, dict] = {
     "corporate": {"label": "Corporate",  "price_idr": 799000,  "desc": "Hingga 200 anggota"},
     "enterprise":{"label": "Enterprise", "price_idr": -1,      "desc": "Tak terbatas — hubungi kami"},
 }
-
-# In-memory store (resets on restart — fine for demo/free tier)
-_rooms: dict[str, dict] = {}          # room_id  → room object
-_invite_index: dict[str, str] = {}    # invite_code → room_id
-
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -246,11 +269,65 @@ class JoinRoomRequest(BaseModel):
 
 class UpdateSharedBudgetRequest(BaseModel):
     member_id: str
-    budgets: dict[str, float]          # category → limit (personal)
-    shared_budgets: dict[str, float] | None = None   # only poster can update
+    budgets: dict[str, float]        # category → limit (personal)
     summary: dict | None = None
     by_category: list[dict] | None = None
 
+
+class SetSharedBudgetRequest(BaseModel):
+    member_id: str                   # must be creator
+    shared_budgets: dict[str, float]
+
+
+# ── Supabase helpers ─────────────────────────────────────────────────────────
+
+def _sb_load_room(room_id: str) -> dict | None:
+    """Load a room + members from Supabase. Returns None if not found."""
+    sb = _supabase()
+    if not sb:
+        return None
+    res = sb.table("rooms").select("*").eq("room_id", room_id).maybe_single().execute()
+    if not res.data:
+        return None
+    row = res.data
+    members_res = (
+        sb.table("room_members")
+        .select("*")
+        .eq("room_id", room_id)
+        .order("joined_at")
+        .execute()
+    )
+    row["members"] = members_res.data or []
+    return row
+
+
+def _sb_find_room_by_invite(invite_code: str) -> dict | None:
+    """Look up room by invite code from Supabase."""
+    sb = _supabase()
+    if not sb:
+        return None
+    res = (
+        sb.table("rooms")
+        .select("*")
+        .eq("invite_code", invite_code)
+        .maybe_single()
+        .execute()
+    )
+    if not res.data:
+        return None
+    row = res.data
+    members_res = (
+        sb.table("room_members")
+        .select("*")
+        .eq("room_id", row["room_id"])
+        .order("joined_at")
+        .execute()
+    )
+    row["members"] = members_res.data or []
+    return row
+
+
+# ── Route handlers ────────────────────────────────────────────────────────────
 
 @app.get("/plans")
 def list_plans():
@@ -268,34 +345,62 @@ def create_room(req: CreateRoomRequest):
     if plan not in PLAN_LIMITS:
         raise HTTPException(status_code=400, detail=f"Plan tidak dikenal: {plan}")
 
-    room_id = str(_uuid.uuid4())
-    invite_code = secrets.token_urlsafe(6).upper()[:8]
-    while invite_code in _invite_index:
-        invite_code = secrets.token_urlsafe(6).upper()[:8]
-
+    room_id  = str(_uuid.uuid4())
     member_id = req.member_id or str(_uuid.uuid4())
+    created  = _now_iso()
 
-    room = {
-        "room_id":       room_id,
-        "invite_code":   invite_code,
-        "plan_type":     plan,
-        "max_members":   PLAN_LIMITS[plan],
-        "created_at":    _now_iso(),
-        "shared_budgets": {},
-        "members": [
-            {
-                "member_id":    member_id,
-                "display_name": req.display_name[:32],
-                "color":        _member_color(0),
-                "budgets":      {},
-                "summary":      None,
-                "by_category":  [],
-                "joined_at":    _now_iso(),
-            }
-        ],
+    # Guarantee unique invite code
+    invite_code = secrets.token_urlsafe(6).upper()[:8]
+    sb = _supabase()
+    if sb:
+        while sb.table("rooms").select("room_id").eq("invite_code", invite_code).execute().data:
+            invite_code = secrets.token_urlsafe(6).upper()[:8]
+    else:
+        while invite_code in _invite_index:
+            invite_code = secrets.token_urlsafe(6).upper()[:8]
+
+    member = {
+        "member_id":    member_id,
+        "display_name": req.display_name[:32],
+        "color":        _member_color(0),
+        "budgets":      {},
+        "summary":      None,
+        "by_category":  [],
+        "joined_at":    created,
     }
-    _rooms[room_id] = room
-    _invite_index[invite_code] = room_id
+
+    if sb:
+        sb.table("rooms").insert({
+            "room_id":           room_id,
+            "invite_code":       invite_code,
+            "plan_type":         plan,
+            "max_members":       PLAN_LIMITS[plan],
+            "creator_member_id": member_id,
+            "shared_budgets":    {},
+            "created_at":        created,
+        }).execute()
+        sb.table("room_members").insert({
+            "room_id":      room_id,
+            "member_id":    member_id,
+            "display_name": req.display_name[:32],
+            "color":        _member_color(0),
+            "budgets":      {},
+            "summary":      None,
+            "by_category":  [],
+            "joined_at":    created,
+        }).execute()
+    else:
+        _rooms[room_id] = {
+            "room_id":           room_id,
+            "invite_code":       invite_code,
+            "plan_type":         plan,
+            "max_members":       PLAN_LIMITS[plan],
+            "creator_member_id": member_id,
+            "created_at":        created,
+            "shared_budgets":    {},
+            "members":           [member],
+        }
+        _invite_index[invite_code] = room_id
 
     return {
         "room_id":     room_id,
@@ -311,54 +416,71 @@ def create_room(req: CreateRoomRequest):
 def join_room(req: JoinRoomRequest):
     """Join an existing room with an invite code."""
     code = req.invite_code.strip().upper()
-    room_id = _invite_index.get(code)
-    if not room_id or room_id not in _rooms:
+    sb = _supabase()
+
+    room = _sb_find_room_by_invite(code) if sb else None
+    if not sb:
+        room_id = _invite_index.get(code)
+        if room_id:
+            room = _rooms.get(room_id)
+
+    if not room:
         raise HTTPException(status_code=404, detail="Kode undangan tidak ditemukan atau sudah kedaluwarsa")
 
-    room = _rooms[room_id]
-    max_m = room["max_members"]
-    current_count = len(room["members"])
+    room_id   = room["room_id"]
+    max_m     = room["max_members"]
+    members   = room.get("members", [])
+    count     = len(members)
 
-    if max_m != -1 and current_count >= max_m:
+    if max_m != -1 and count >= max_m:
         raise HTTPException(
             status_code=403,
-            detail=f"Room penuh ({current_count}/{max_m}). Upgrade plan untuk tambah anggota."
+            detail=f"Room penuh ({count}/{max_m}). Upgrade plan untuk tambah anggota."
         )
 
     member_id = req.member_id or str(_uuid.uuid4())
+    existing_ids = {m["member_id"] for m in members}
 
-    # Prevent duplicate member_id
-    existing_ids = {m["member_id"] for m in room["members"]}
     if member_id in existing_ids:
-        # Re-join: just return existing info
-        member = next(m for m in room["members"] if m["member_id"] == member_id)
-        return {"room_id": room_id, "member_id": member_id,
-                "plan_type": room["plan_type"], "already_member": True,
-                "member": member, "room": _safe_room(room)}
+        member = next(m for m in members if m["member_id"] == member_id)
+        return {
+            "room_id": room_id, "member_id": member_id,
+            "plan_type": room["plan_type"], "already_member": True,
+            "member": member, "room": _safe_room(room),
+        }
 
-    room["members"].append({
+    new_member = {
+        "room_id":      room_id,
         "member_id":    member_id,
         "display_name": req.display_name[:32],
-        "color":        _member_color(current_count),
+        "color":        _member_color(count),
         "budgets":      {},
         "summary":      None,
         "by_category":  [],
         "joined_at":    _now_iso(),
-    })
+    }
+
+    if sb:
+        sb.table("room_members").insert(new_member).execute()
+        # Reload room to include new member
+        room = _sb_load_room(room_id) or room
+    else:
+        room["members"].append(new_member)
 
     return {
-        "room_id":       room_id,
-        "member_id":     member_id,
-        "plan_type":     room["plan_type"],
+        "room_id":        room_id,
+        "member_id":      member_id,
+        "plan_type":      room["plan_type"],
         "already_member": False,
-        "room":          _safe_room(room),
+        "room":           _safe_room(room),
     }
 
 
 @app.get("/rooms/{room_id}")
 def get_room(room_id: str):
     """Get full room data including all members' budgets."""
-    room = _rooms.get(room_id)
+    sb = _supabase()
+    room = _sb_load_room(room_id) if sb else _rooms.get(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room tidak ditemukan")
     return _safe_room(room)
@@ -367,48 +489,80 @@ def get_room(room_id: str):
 @app.put("/rooms/{room_id}/sync")
 def sync_member_data(room_id: str, req: UpdateSharedBudgetRequest):
     """Member syncs their personal budget + financial summary to room."""
-    room = _rooms.get(room_id)
+    sb = _supabase()
+    room = _sb_load_room(room_id) if sb else _rooms.get(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room tidak ditemukan")
 
-    member = next((m for m in room["members"] if m["member_id"] == req.member_id), None)
+    members = room.get("members", [])
+    member = next((m for m in members if m["member_id"] == req.member_id), None)
     if not member:
         raise HTTPException(status_code=404, detail="Member tidak ditemukan di room ini")
 
-    member["budgets"] = req.budgets
-    if req.summary is not None:
-        member["summary"] = req.summary
-    if req.by_category is not None:
-        member["by_category"] = req.by_category
+    if sb:
+        update_payload: dict = {"budgets": req.budgets}
+        if req.summary is not None:
+            update_payload["summary"] = req.summary
+        if req.by_category is not None:
+            update_payload["by_category"] = req.by_category
+        sb.table("room_members").update(update_payload).eq("room_id", room_id).eq("member_id", req.member_id).execute()
+        room = _sb_load_room(room_id) or room
+    else:
+        member["budgets"] = req.budgets
+        if req.summary is not None:
+            member["summary"] = req.summary
+        if req.by_category is not None:
+            member["by_category"] = req.by_category
 
-    # First member (creator) can also update shared_budgets
-    if req.shared_budgets is not None and room["members"][0]["member_id"] == req.member_id:
-        room["shared_budgets"] = req.shared_budgets
+    return {"ok": True, "room": _safe_room(room)}
+
+
+@app.put("/rooms/{room_id}/shared-budget")
+def update_shared_budget(room_id: str, req: SetSharedBudgetRequest):
+    """Update shared budget limits — creator only (server-side enforced)."""
+    sb = _supabase()
+    room = _sb_load_room(room_id) if sb else _rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room tidak ditemukan")
+
+    # Server-side creator guard — not just UI
+    creator_id = room.get("creator_member_id") or (room.get("members", [{}])[0].get("member_id"))
+    if req.member_id != creator_id:
+        raise HTTPException(status_code=403, detail="Hanya pembuat room yang bisa mengubah shared budget")
+
+    if sb:
+        sb.table("rooms").update({"shared_budgets": req.shared_budgets}).eq("room_id", room_id).execute()
+        room = _sb_load_room(room_id) or room
+    else:
+        _rooms[room_id]["shared_budgets"] = req.shared_budgets
+        room = _rooms[room_id]
 
     return {"ok": True, "room": _safe_room(room)}
 
 
 def _safe_room(room: dict) -> dict:
     """Return room dict safe for JSON serialization."""
+    members = room.get("members", [])
     return {
-        "room_id":       room["room_id"],
-        "invite_code":   room["invite_code"],
-        "plan_type":     room["plan_type"],
-        "max_members":   room["max_members"],
-        "created_at":    room["created_at"],
-        "member_count":  len(room["members"]),
-        "shared_budgets": room["shared_budgets"],
+        "room_id":        room["room_id"],
+        "invite_code":    room["invite_code"],
+        "plan_type":      room["plan_type"],
+        "max_members":    room["max_members"],
+        "created_at":     room["created_at"],
+        "member_count":   len(members),
+        "shared_budgets": room.get("shared_budgets", {}),
+        "creator_member_id": room.get("creator_member_id"),
         "members": [
             {
                 "member_id":    m["member_id"],
                 "display_name": m["display_name"],
                 "color":        m["color"],
-                "budgets":      m["budgets"],
-                "summary":      m["summary"],
-                "by_category":  m["by_category"],
+                "budgets":      m.get("budgets") or {},
+                "summary":      m.get("summary"),
+                "by_category":  m.get("by_category") or [],
                 "joined_at":    m["joined_at"],
             }
-            for m in room["members"]
+            for m in members
         ],
         "plan_info": PLAN_PRICES.get(room["plan_type"], {}),
     }
