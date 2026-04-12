@@ -122,9 +122,6 @@ export interface SharedRoom {
   plan_info: { label: string; price_idr: number; desc: string };
 }
 
-  tips: string[];
-}
-
 export interface MonthlyStory {
   periode: string;
   income: number;
