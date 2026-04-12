@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 
+// Auth pages are user-specific — never prerender at build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "OprexDuit — Masuk atau Daftar",
 };
