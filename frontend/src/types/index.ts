@@ -78,11 +78,12 @@ export interface HealthReport {
   grade: string;
   headline: string;
   dimensions: HealthDimension[];
-
-  // ---------------------------------------------------------------------------
-  // Shared Budget Room Types
-  // ---------------------------------------------------------------------------
+  tips: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Shared Budget Room Types
+// ---------------------------------------------------------------------------
 
 // Plan tier keys
 export type PlanType =
