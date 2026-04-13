@@ -1,14 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-// Routes that require login to access
+// Routes that require login to access.
+// proxy.ts runs on Node.js runtime (Next.js 16) — replaces the deprecated middleware.ts.
 const PROTECTED_PATHS = ["/settings", "/profile", "/admin"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only enforce auth on explicitly protected paths.
-  // Session cookie refresh happens in Server Components via createClient(),
-  // so we don't need @supabase/ssr here (avoids Edge Runtime NFT tracing issues).
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
   if (!isProtected) return NextResponse.next({ request });
 
