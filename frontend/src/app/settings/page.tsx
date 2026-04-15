@@ -14,6 +14,7 @@ import {
   Check,
 } from "lucide-react";
 import NextLink from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -75,7 +76,11 @@ function CopyButton({ text }: { text: string }) {
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  // Pre-fill link code from ?code= URL param (reverse flow: user clicked bot link)
+  const codeFromUrl = searchParams.get("code") ?? "";
 
   const [status, setStatus] = useState<TelegramStatus>({
     linked: false,
@@ -83,17 +88,25 @@ export default function SettingsPage() {
     linked_at: null,
   });
   const [loadingStatus, setLoadingStatus] = useState(true);
-  const [linkCode, setLinkCode] = useState("");
+  const [linkCode, setLinkCode] = useState(codeFromUrl.toUpperCase());
   const [submitting, setSubmitting] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Redirect to login if not authenticated
+  // Redirect to login (preserving current URL with code) if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace("/auth/login");
+      const next = encodeURIComponent(`/settings${codeFromUrl ? `?code=${codeFromUrl}` : ""}`);
+      router.replace(`/auth/login?next=${next}`);
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, codeFromUrl]);
+
+  // Sync code from URL if it arrives late (e.g. hydration)
+  useEffect(() => {
+    if (codeFromUrl && !linkCode) {
+      setLinkCode(codeFromUrl.toUpperCase());
+    }
+  }, [codeFromUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load Telegram status from Supabase
   useEffect(() => {

@@ -28,6 +28,12 @@ import httpx
 from app.telegram_parser import ParsedTx, parse_transaction
 
 # ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+
+_WEB_URL = os.environ.get("WEB_URL", "https://oprexduit.vercel.app")
+
+# ---------------------------------------------------------------------------
 # Telegram API helper
 # ---------------------------------------------------------------------------
 
@@ -201,6 +207,7 @@ def _cmd_start(chat_id: int | str, user_id: Optional[str], sb_client: Any) -> No
         )
     else:
         link_code = _store_pending_link(chat_id, sb_client)
+        link_url = f"{_WEB_URL}/settings?code={link_code}"
         send_message(
             chat_id,
             "👋 Halo! Selamat datang di <b>OprexDuit Bot</b> 🤑\n\n"
@@ -209,22 +216,23 @@ def _cmd_start(chat_id: int | str, user_id: Optional[str], sb_client: Any) -> No
             "📊 Laporan harian &amp; mingguan otomatis\n"
             "⏰ Reminder budget\n\n"
             "<b>Hubungkan akun OprexDuit kamu:</b>\n"
-            "1. Buka <a href='https://oprexduit.vercel.app'>oprexduit.vercel.app</a>\n"
-            f"2. Masukkan kode: <code>{link_code}</code>\n"
-            "3. Selesai! 🎉\n\n"
+            f"👉 <a href='{link_url}'>Klik link ini untuk menghubungkan</a>\n\n"
+            f"Atau masukkan kode manual di Settings:\n"
+            f"<code>{link_code}</code>\n\n"
             "<i>Kode berlaku 24 jam. Gunakan /link untuk kode baru.</i>",
         )
 
 
 def _cmd_link(chat_id: int | str, sb_client: Any) -> None:
     link_code = _store_pending_link(chat_id, sb_client)
+    link_url = f"{_WEB_URL}/settings?code={link_code}"
     send_message(
         chat_id,
-        "🔗 <b>Kode Hubungkan Akun</b>\n\n"
-        f"Kode kamu: <code>{link_code}</code>\n\n"
-        "Masukkan kode ini di:\n"
-        "<b>OprexDuit Web → Settings → Hubungkan Telegram</b>\n\n"
-        "<i>Kode berlaku 24 jam.</i>",
+        "🔗 <b>Hubungkan Akun OprexDuit</b>\n\n"
+        f"👉 <a href='{link_url}'>Klik di sini untuk menghubungkan</a>\n\n"
+        f"Atau buka Settings secara manual dan masukkan kode:\n"
+        f"<code>{link_code}</code>\n\n"
+        "<i>Link/kode berlaku 24 jam.</i>",
     )
 
 

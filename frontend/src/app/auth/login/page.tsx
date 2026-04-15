@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { Eye, EyeOff, Loader2, Wallet } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  // After login, redirect to ?next= or fallback to home
+  const next = searchParams.get("next") ?? "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +39,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.push(next);
     router.refresh();
   }
 
@@ -45,7 +49,8 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        // Pass ?next= through so callback/route.ts redirects correctly
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         scopes: "email profile",
       },
     });
