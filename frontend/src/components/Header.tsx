@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, Heart, LogIn, LogOut, ChevronDown } from "lucide-react";
+import { RefreshCw, Heart, LogIn, LogOut, ChevronDown, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +26,14 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
         className="rounded-xl py-1 shadow-lg text-xs"
         style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}
       >
+        <Link
+          href="/settings"
+          className="w-full flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Pengaturan
+        </Link>
+        <div style={{ height: "1px", background: "#f1f5f9", margin: "2px 0" }} />
         <button
           onClick={onSignOut}
           className="w-full flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 transition-colors"
