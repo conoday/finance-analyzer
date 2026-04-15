@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -659,3 +659,195 @@ def _df_tx(df: pd.DataFrame) -> list[dict]:
     if "tanggal" in df.columns:
         df["tanggal"] = df["tanggal"].dt.strftime("%Y-%m-%d")
     return df.fillna("").to_dict(orient="records")
+
+
+# ---------------------------------------------------------------------------
+# Telegram Bot — Webhook + Account Linking
+# ---------------------------------------------------------------------------
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: str = Header(default=""),
+):
+    """Receive updates pushed by Telegram. Register this URL via /telegram/setup."""
+    webhook_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
+    if webhook_secret and x_telegram_bot_api_secret_token != webhook_secret:
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+
+    update = await request.json()
+    from app.telegram_bot import handle_update
+    handle_update(update, _supabase())
+    return {"ok": True}
+
+
+class TelegramLinkRequest(BaseModel):
+    link_code: str
+
+
+@app.post("/telegram/link")
+def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
+    """Link a Telegram chat to the authenticated user's Supabase account.
+
+    Flow:
+      1. User opens bot → /start → bot generates link_code stored in pending_telegram_links.
+      2. User enters link_code in OprexDuit Web → Settings → Telegram.
+      3. Frontend calls POST /telegram/link (with Bearer JWT).
+      4. Backend resolves chat_id from link_code, saves to profiles, confirms on Telegram.
+    """
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersedia")
+
+    user_id = user.get("sub")
+
+    try:
+        # Look up pending link
+        res = (
+            sb.table("pending_telegram_links")
+            .select("chat_id,created_at")
+            .eq("link_code", req.link_code.strip())
+            .maybe_single()
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Kode tidak ditemukan atau sudah kadaluarsa")
+
+        chat_id = res.data["chat_id"]
+
+        # Save telegram_chat_id to user profile
+        sb.table("profiles").update({
+            "telegram_chat_id": chat_id,
+            "telegram_linked_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", user_id).execute()
+
+        # Delete used link code
+        sb.table("pending_telegram_links").delete().eq("link_code", req.link_code.strip()).execute()
+
+        # Send confirmation message to Telegram
+        from app.telegram_bot import send_message
+        send_message(
+            chat_id,
+            "✅ <b>Akun OprexDuit berhasil terhubung!</b>\n\n"
+            "Sekarang kamu bisa:\n"
+            "📝 Catat transaksi langsung di sini\n"
+            "📊 Terima laporan harian otomatis\n"
+            "⏰ Notif budget saat hampir melebihi limit\n\n"
+            "Coba sekarang: ketik <code>50rb makan siang</code> 🚀",
+        )
+
+        return {"ok": True, "chat_id": chat_id}
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Gagal menghubungkan: {exc}")
+
+
+@app.delete("/telegram/unlink")
+def telegram_unlink(user: dict = Depends(require_auth)):
+    """Remove Telegram link from user's profile."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersedia")
+    sb.table("profiles").update({
+        "telegram_chat_id": None,
+        "telegram_linked_at": None,
+    }).eq("id", user.get("sub")).execute()
+    return {"ok": True}
+
+
+# ── Cron-triggered broadcast endpoints ──────────────────────────────────────
+# Protect with CRON_SECRET env var. Call from cron-job.org every day:
+#   POST https://your-render-app.onrender.com/telegram/daily-report
+#   Header: x-cron-secret: <CRON_SECRET>
+
+def _verify_cron(secret: str) -> None:
+    expected = os.environ.get("CRON_SECRET", "")
+    if expected and secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
+
+
+@app.post("/telegram/daily-report")
+def telegram_daily_report(x_cron_secret: str = Header(default="")):
+    """Send today's summary to all linked Telegram users. Trigger at 09:00 WIB."""
+    _verify_cron(x_cron_secret)
+    from app.telegram_bot import send_daily_reports
+    count = send_daily_reports(_supabase())
+    return {"ok": True, "sent": count}
+
+
+@app.post("/telegram/weekly-report")
+def telegram_weekly_report(x_cron_secret: str = Header(default="")):
+    """Send 7-day report to all linked users. Trigger every Monday 08:00 WIB."""
+    _verify_cron(x_cron_secret)
+    from app.telegram_bot import send_weekly_reports
+    count = send_weekly_reports(_supabase())
+    return {"ok": True, "sent": count}
+
+
+@app.post("/telegram/budget-alert")
+def telegram_budget_alert(x_cron_secret: str = Header(default="")):
+    """Send budget alerts to users above 80% of limit. Trigger daily at 20:00 WIB."""
+    _verify_cron(x_cron_secret)
+    from app.telegram_bot import send_budget_alerts
+    count = send_budget_alerts(_supabase())
+    return {"ok": True, "sent": count}
+
+
+# ---------------------------------------------------------------------------
+# Personal Budgets CRUD
+# ---------------------------------------------------------------------------
+
+class BudgetUpsertRequest(BaseModel):
+    category: str
+    monthly_limit: float
+
+
+@app.get("/budgets")
+def get_budgets(user: dict = Depends(require_auth)):
+    """Return all personal budget limits for the authenticated user."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersedia")
+    res = (
+        sb.table("budgets")
+        .select("category,monthly_limit,updated_at")
+        .eq("user_id", user["sub"])
+        .order("category")
+        .execute()
+    )
+    return res.data or []
+
+
+@app.put("/budgets")
+def upsert_budget(req: BudgetUpsertRequest, user: dict = Depends(require_auth)):
+    """Create or update a budget limit for one category."""
+    if not req.category.strip():
+        raise HTTPException(status_code=422, detail="category tidak boleh kosong")
+    if req.monthly_limit <= 0:
+        raise HTTPException(status_code=422, detail="monthly_limit harus lebih dari 0")
+
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersedia")
+
+    sb.table("budgets").upsert(
+        {
+            "user_id": user["sub"],
+            "category": req.category.strip(),
+            "monthly_limit": req.monthly_limit,
+        },
+        on_conflict="user_id,category",
+    ).execute()
+    return {"ok": True}
+
+
+@app.delete("/budgets/{category}")
+def delete_budget(category: str, user: dict = Depends(require_auth)):
+    """Delete a budget limit for one category."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersedia")
+    sb.table("budgets").delete().eq("user_id", user["sub"]).eq("category", category).execute()
+    return {"ok": True}
