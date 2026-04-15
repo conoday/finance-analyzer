@@ -363,8 +363,7 @@ export default function RegisterPage() {
       </p>
     </div>
   );
-
-      <div className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-sm p-6 space-y-4">
+}
         {/* Google */}
         <button
           onClick={handleGoogle}
