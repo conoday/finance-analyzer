@@ -50,7 +50,7 @@ export default function LoginPage() {
       provider: "google",
       options: {
         // Pass ?next= through so callback/route.ts redirects correctly
-        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         scopes: "email profile",
       },
     });
