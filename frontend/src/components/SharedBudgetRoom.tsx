@@ -62,26 +62,39 @@ function PlanCard({ plan, selected, onClick }: {
   plan: PlanType; selected: boolean; onClick: () => void;
 }) {
   const meta = PLAN_META[plan];
+  const isFree = plan === "personal";
+  const isSoon = !isFree;
   return (
     <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.97 }}
-      onClick={onClick}
-      className="text-left rounded-xl p-3 border transition-all"
+      whileHover={isFree ? { scale: 1.02 } : {}}
+      whileTap={isFree ? { scale: 0.97 } : {}}
+      onClick={isFree ? onClick : undefined}
+      disabled={isSoon}
+      className="relative text-left rounded-xl p-3 border transition-all disabled:cursor-not-allowed"
       style={{
-        background: selected ? `${meta.color}15` : "rgba(255,255,255,0.04)",
-        borderColor: selected ? meta.color : "rgba(255,255,255,0.08)",
-        boxShadow: selected ? `0 0 0 1px ${meta.color}50` : "none",
+        background: isSoon
+          ? "rgba(255,255,255,0.02)"
+          : selected ? `${meta.color}15` : "rgba(255,255,255,0.04)",
+        borderColor: isSoon
+          ? "rgba(255,255,255,0.06)"
+          : selected ? meta.color : "rgba(255,255,255,0.08)",
+        boxShadow: selected && !isSoon ? `0 0 0 1px ${meta.color}50` : "none",
+        opacity: isSoon ? 0.5 : 1,
       }}
     >
+      {isSoon && (
+        <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-slate-700 text-slate-400 border border-slate-600/50">
+          Segera
+        </span>
+      )}
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-bold" style={{ color: meta.color }}>{meta.label}</span>
-        <span className="text-[10px] font-mono text-slate-500">
+        <span className="text-xs font-bold" style={{ color: isSoon ? "#475569" : meta.color }}>{meta.label}</span>
+        <span className="text-[10px] font-mono text-slate-600">
           {meta.maxMembers === -1 ? "∞" : `≤${meta.maxMembers}`}
         </span>
       </div>
-      <p className="text-[10px] text-slate-500 leading-snug">{meta.desc}</p>
-      <p className="text-[10px] font-semibold mt-1" style={{ color: meta.color }}>
+      <p className="text-[10px] text-slate-600 leading-snug">{meta.desc}</p>
+      <p className="text-[10px] font-semibold mt-1" style={{ color: isSoon ? "#475569" : meta.color }}>
         {meta.price === 0 ? "Gratis" : meta.price === -1 ? "Hubungi kami" : formatRupiah(meta.price, true) + "/bulan"}
       </p>
     </motion.button>
@@ -472,7 +485,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
 
   // Create form state
   const [displayName, setDisplayName] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>("couple");
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>("personal");
 
   // Join form state
   const [inviteCode, setInviteCode] = useState("");
@@ -518,7 +531,12 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
       saveRoomState(data.room_id, data.member_id);
       await fetchRoom(data.room_id);
     } catch (e: any) {
-      setError(e.message ?? "Gagal membuat room");
+      const msg: string = e?.message ?? "";
+      setError(
+        msg.toLowerCase().includes("fetch") || msg.toLowerCase().includes("network")
+          ? "Tidak dapat terhubung ke server. Pastikan koneksi aktif dan coba lagi."
+          : msg || "Gagal membuat room"
+      );
     } finally {
       setLoading(false);
     }
@@ -545,7 +563,12 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
       setRoom(data.room);
       setStep("room");
     } catch (e: any) {
-      setError(e.message ?? "Gagal bergabung");
+      const msg: string = e?.message ?? "";
+      setError(
+        msg.toLowerCase().includes("fetch") || msg.toLowerCase().includes("network")
+          ? "Tidak dapat terhubung ke server. Pastikan koneksi aktif dan coba lagi."
+          : msg || "Gagal bergabung"
+      );
     } finally {
       setLoading(false);
     }

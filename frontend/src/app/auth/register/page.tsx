@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Eye, EyeOff, Loader2, Wallet, ChevronDown, Shield, Lock, UserCheck, Trash2, FileText } from "lucide-react";
+import { Eye, EyeOff, Loader2, Wallet, ChevronDown, Shield, Lock, UserCheck, Trash2, FileText, X } from "lucide-react";
 
 const TNC_SECTIONS = [
   {
@@ -67,6 +67,7 @@ export default function RegisterPage() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeAge, setAgreeAge] = useState(false);
   const [expandedSection, setExpandedSection] = useState<number | null>(null);
+  const [showTNC, setShowTNC] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -244,48 +245,15 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* T&C Accordion */}
-          <div className="rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <p className="text-xs font-semibold text-slate-700 tracking-wide">Syarat &amp; Ketentuan Layanan</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Baca setiap bagian — klik untuk memperluas</p>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {TNC_SECTIONS.map((s, i) => {
-                const Icon = s.icon;
-                const isOpen = expandedSection === i;
-                return (
-                  <div key={i}>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedSection(isOpen ? null : i)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors"
-                    >
-                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${s.bg}`}>
-                        <Icon className={`w-3.5 h-3.5 ${s.color}`} />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-700 leading-snug">{s.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{s.subtitle}</p>
-                      </div>
-                      <ChevronDown
-                        className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {isOpen && (
-                      <div className="px-4 pb-4 pt-1">
-                        <div className={`rounded-lg p-3 ${s.bg}`}>
-                          <p className={`text-xs leading-relaxed ${s.color.replace("600", "700")}`}>
-                            {s.content}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* T&C Button — opens popup modal */}
+          <button
+            type="button"
+            onClick={() => setShowTNC(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-teal-200 hover:border-teal-400 bg-teal-50/60 hover:bg-teal-50 text-xs font-medium text-teal-700 hover:text-teal-600 transition-all"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Baca Syarat &amp; Ketentuan Layanan
+          </button>
 
           {/* Checkboxes */}
           <div className="space-y-2.5 pt-1">
@@ -361,6 +329,82 @@ export default function RegisterPage() {
           Masuk di sini
         </Link>
       </p>
+
+      {/* T&C Modal */}
+      {showTNC && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setShowTNC(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl"
+            style={{ maxHeight: "85vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <p className="text-sm font-bold text-slate-800">Syarat &amp; Ketentuan Layanan</p>
+                <p className="text-xs text-slate-500 mt-0.5">OprexDuit — baca sebelum mendaftar</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTNC(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable sections */}
+            <div className="overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: "calc(85vh - 140px)" }}>
+              {TNC_SECTIONS.map((s, i) => {
+                const Icon = s.icon;
+                const isOpen = expandedSection === i;
+                return (
+                  <div key={i}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSection(isOpen ? null : i)}
+                      className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                    >
+                      <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>
+                        <Icon className={`w-4 h-4 ${s.color}`} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 leading-snug">{s.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{s.subtitle}</p>
+                      </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-4">
+                        <div className={`rounded-xl p-4 ${s.bg}`}>
+                          <p className={`text-sm leading-relaxed ${s.color}`}>{s.content}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowTNC(false)}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
+              >
+                Sudah Membaca
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

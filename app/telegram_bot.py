@@ -1,19 +1,19 @@
-"""app/telegram_bot.py — Telegram Bot handlers for OprexDuit.
+﻿"""app/telegram_bot.py â€” Telegram Bot handlers for OprexDuit.
 
 Webhook-based (no polling). Telegram sends POST requests to
 /telegram/webhook on the FastAPI backend.
 
-No python-telegram-bot required — uses httpx directly.
+No python-telegram-bot required â€” uses httpx directly.
 
 Commands:
-  /start     — Welcome + generate link code
-  /link      — Get/refresh link code to connect web account
-  /catat     — Record transaction: /catat 50rb makan siang
-  /ringkasan — Today's spending summary
-  /laporan   — This month's report
-  /budget    — Check budget status vs limits
-  /bantuan   — Show help
-  (free text) — Auto-parsed as transaction input
+  /start     â€” Welcome + generate link code
+  /link      â€” Get/refresh link code to connect web account
+  /catat     â€” Record transaction: /catat 50rb makan siang
+  /ringkasan â€” Today's spending summary
+  /laporan   â€” This month's report
+  /budget    â€” Check budget status vs limits
+  /bantuan   â€” Show help
+  (free text) â€” Auto-parsed as transaction input
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ def _fmt(amount: float) -> str:
 
 def _progress_bar(pct: float, width: int = 10) -> str:
     filled = min(int(pct / 100 * width), width)
-    return "█" * filled + "░" * (width - filled)
+    return "â–ˆ" * filled + "â–‘" * (width - filled)
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ def _progress_bar(pct: float, width: int = 10) -> str:
 # ---------------------------------------------------------------------------
 
 def handle_update(update: dict, sb_client: Any) -> None:
-    """Entry point — called by the FastAPI /telegram/webhook endpoint."""
+    """Entry point â€” called by the FastAPI /telegram/webhook endpoint."""
     message = update.get("message") or update.get("edited_message")
     if not message:
         return
@@ -87,14 +87,21 @@ def handle_update(update: dict, sb_client: Any) -> None:
     if not text:
         return
 
+    from_data = message.get("from") or {}
+    username: str = (
+        from_data.get("username")
+        or from_data.get("first_name")
+        or str(chat_id)
+    )
+
     if text.startswith("/"):
         parts = text.split()
         # Strip @BotName suffix from command (e.g. /start@OprexDuidbot -> /start)
         command = parts[0].lower().split("@")[0]
         args = parts[1:]
-        _handle_command(chat_id, command, args, sb_client)
+        _handle_command(chat_id, command, args, username, sb_client)
     else:
-        _handle_free_text(chat_id, text, sb_client)
+        _handle_free_text(chat_id, text, username, sb_client)
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +143,76 @@ def _store_pending_link(chat_id: int | str, sb_client: Any) -> str:
     return code
 
 
+def _create_telegram_user(chat_id: int | str, username: str, sb_client: Any) -> Optional[str]:
+    """Create a new Supabase auth user for this Telegram chat_id (standalone mode).
+
+    Uses SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to call the admin REST API.
+    A placeholder internal email is used so the schema is satisfied â€” the user
+    never needs to log in via email.  Returns the new UUID or None on failure.
+    """
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not supabase_url or not service_role_key:
+        print("[telegram] Cannot auto-create user: SUPABASE_URL / SERVICE_ROLE_KEY not set")
+        return None
+
+    internal_email = f"tg_{chat_id}@telegram.oprexduit.internal"
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.post(
+                f"{supabase_url}/auth/v1/admin/users",
+                headers={
+                    "Authorization": f"Bearer {service_role_key}",
+                    "apikey": service_role_key,
+                },
+                json={
+                    "email": internal_email,
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "telegram_chat_id": str(chat_id),
+                        "telegram_username": username,
+                        "account_type": "telegram_only",
+                    },
+                },
+            )
+
+        if resp.status_code not in (200, 201):
+            print(f"[telegram] Admin create_user failed {resp.status_code}: {resp.text[:200]}")
+            return None
+
+        new_user_id: Optional[str] = resp.json().get("id")
+        if not new_user_id:
+            return None
+
+        # Write profile so _get_user_id can find this user by chat_id going forward
+        if sb_client:
+            try:
+                sb_client.table("profiles").upsert(
+                    {
+                        "id": new_user_id,
+                        "telegram_chat_id": str(chat_id),
+                        "full_name": username,
+                    },
+                    on_conflict="id",
+                ).execute()
+            except Exception as exc:
+                print(f"[telegram] profile upsert error: {exc}")
+
+        return new_user_id
+
+    except Exception as exc:
+        print(f"[telegram] _create_telegram_user error: {exc}")
+        return None
+
+
+def _get_or_create_telegram_user(chat_id: int | str, username: str, sb_client: Any) -> Optional[str]:
+    """Return existing user_id or auto-create a Telegram-only Supabase account."""
+    user_id = _get_user_id(chat_id, sb_client)
+    if user_id:
+        return user_id
+    return _create_telegram_user(chat_id, username, sb_client)
+
+
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
@@ -144,14 +221,19 @@ def _handle_command(
     chat_id: int | str,
     command: str,
     args: list[str],
+    username: str,
     sb_client: Any,
 ) -> None:
-    user_id = _get_user_id(chat_id, sb_client)
+    # /link only checks existing link â€” does NOT auto-create
+    if command == "/link":
+        _cmd_link(chat_id, sb_client)
+        return
+
+    # All other commands: auto-create Telegram-only account if first use
+    user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
 
     if command == "/start":
-        _cmd_start(chat_id, user_id, sb_client)
-    elif command == "/link":
-        _cmd_link(chat_id, sb_client)
+        _cmd_start(chat_id, user_id, username, sb_client)
     elif command in ("/catat", "/tambah", "/add"):
         _cmd_catat(chat_id, " ".join(args), user_id, sb_client)
     elif command == "/ringkasan":
@@ -166,15 +248,14 @@ def _handle_command(
         send_message(chat_id, "Perintah tidak dikenal. Ketik /bantuan untuk panduan.")
 
 
-def _handle_free_text(chat_id: int | str, text: str, sb_client: Any) -> None:
+def _handle_free_text(chat_id: int | str, text: str, username: str, sb_client: Any) -> None:
     """Try to parse free-form text as a transaction."""
-    user_id = _get_user_id(chat_id, sb_client)
+    user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
     if not user_id:
         send_message(
             chat_id,
-            "Akun belum terhubung 🔗\n\n"
-            "Ketik /link untuk mendapatkan kode hubungkan.\n"
-            "Masukkan kode tersebut di OprexDuit Web → Settings → Telegram.",
+            "âš ï¸ Tidak bisa membuat akun saat ini.\n"
+            "Coba ketik /start untuk memulai.",
         )
         return
 
@@ -184,11 +265,11 @@ def _handle_free_text(chat_id: int | str, text: str, sb_client: Any) -> None:
     else:
         send_message(
             chat_id,
-            "Hmm, tidak bisa membaca transaksi ini 🤔\n\n"
+            "Hmm, tidak bisa membaca transaksi ini ðŸ¤”\n\n"
             "<b>Format yang bisa dibaca:</b>\n"
-            "• <code>50rb makan siang</code>\n"
-            "• <code>catat 25000 bensin</code>\n"
-            "• <code>+2jt gaji bulan ini</code>\n\n"
+            "â€¢ <code>50rb makan siang</code>\n"
+            "â€¢ <code>catat 25000 bensin</code>\n"
+            "â€¢ <code>+2jt gaji bulan ini</code>\n\n"
             "Atau ketik /bantuan untuk panduan lengkap.",
         )
 
@@ -197,29 +278,26 @@ def _handle_free_text(chat_id: int | str, text: str, sb_client: Any) -> None:
 # Individual command implementations
 # ---------------------------------------------------------------------------
 
-def _cmd_start(chat_id: int | str, user_id: Optional[str], sb_client: Any) -> None:
+def _cmd_start(chat_id: int | str, user_id: Optional[str], username: str, sb_client: Any) -> None:
     if user_id:
         send_message(
             chat_id,
-            "👋 Selamat datang kembali di <b>OprexDuit Bot</b>!\n\n"
-            "✅ Akun sudah terhubung\n\n"
-            "Ketik /bantuan untuk daftar perintah.",
+            f"ðŸ‘‹ Halo <b>{username}</b>! Selamat datang di <b>OprexDuit Bot</b> ðŸ¤‘\n\n"
+            "âœ… Akun kamu sudah aktif â€” langsung bisa dipakai!\n\n"
+            "ðŸ“ Catat pengeluaran:\n"
+            "  <code>50rb makan siang</code>\n"
+            "  <code>25000 bensin</code>\n\n"
+            "ðŸ“Š Perintah lainnya:\n"
+            "  /ringkasan â€” Ringkasan hari ini\n"
+            "  /laporan   â€” Laporan bulan ini\n"
+            "  /budget    â€” Cek budget\n"
+            "  /bantuan   â€” Panduan lengkap\n\n"
+            "ðŸ’¡ <i>Ingin akses analisis di web? Ketik /link untuk menghubungkan ke OprexDuit Web.</i>",
         )
     else:
-        link_code = _store_pending_link(chat_id, sb_client)
-        link_url = f"{_WEB_URL}/settings?code={link_code}"
         send_message(
             chat_id,
-            "👋 Halo! Selamat datang di <b>OprexDuit Bot</b> 🤑\n\n"
-            "Bot ini bisa:\n"
-            "📝 Catat transaksi lewat chat\n"
-            "📊 Laporan harian &amp; mingguan otomatis\n"
-            "⏰ Reminder budget\n\n"
-            "<b>Hubungkan akun OprexDuit kamu:</b>\n"
-            f"👉 <a href='{link_url}'>Klik link ini untuk menghubungkan</a>\n\n"
-            f"Atau masukkan kode manual di Settings:\n"
-            f"<code>{link_code}</code>\n\n"
-            "<i>Kode berlaku 24 jam. Gunakan /link untuk kode baru.</i>",
+            "âš ï¸ Tidak bisa membuat akun saat ini. Coba lagi nanti atau hubungi support.",
         )
 
 
@@ -228,8 +306,8 @@ def _cmd_link(chat_id: int | str, sb_client: Any) -> None:
     link_url = f"{_WEB_URL}/settings?code={link_code}"
     send_message(
         chat_id,
-        "🔗 <b>Hubungkan Akun OprexDuit</b>\n\n"
-        f"👉 <a href='{link_url}'>Klik di sini untuk menghubungkan</a>\n\n"
+        "ðŸ”— <b>Hubungkan Akun OprexDuit</b>\n\n"
+        f"ðŸ‘‰ <a href='{link_url}'>Klik di sini untuk menghubungkan</a>\n\n"
         f"Atau buka Settings secara manual dan masukkan kode:\n"
         f"<code>{link_code}</code>\n\n"
         "<i>Link/kode berlaku 24 jam.</i>",
@@ -243,7 +321,7 @@ def _cmd_catat(
     sb_client: Any,
 ) -> None:
     if not user_id:
-        send_message(chat_id, "Akun belum terhubung. Gunakan /link terlebih dahulu.")
+        send_message(chat_id, "⚠️ Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
     if not text.strip():
@@ -251,9 +329,9 @@ def _cmd_catat(
             chat_id,
             "Format: <code>/catat [jumlah] [keterangan]</code>\n\n"
             "Contoh:\n"
-            "• <code>/catat 50rb makan siang</code>\n"
-            "• <code>/catat 25000 bensin</code>\n"
-            "• <code>/catat +2jt gaji</code>",
+            "â€¢ <code>/catat 50rb makan siang</code>\n"
+            "â€¢ <code>/catat 25000 bensin</code>\n"
+            "â€¢ <code>/catat +2jt gaji</code>",
         )
         return
 
@@ -271,11 +349,11 @@ def _save_and_confirm(
     user_id: str,
     sb_client: Any,
 ) -> None:
-    icon = "💰" if parsed.type == "income" else "💸"
+    icon = "ðŸ’°" if parsed.type == "income" else "ðŸ’¸"
     type_label = "Pemasukan" if parsed.type == "income" else "Pengeluaran"
 
     if not sb_client:
-        send_message(chat_id, "⚠️ Database tidak tersambung saat ini.")
+        send_message(chat_id, "âš ï¸ Database tidak tersambung saat ini.")
         return
 
     try:
@@ -300,7 +378,7 @@ def _save_and_confirm(
             f"Tanggal   : {date.today().strftime('%d %b %Y')}",
         )
     except Exception as exc:
-        send_message(chat_id, f"⚠️ Gagal menyimpan: {exc}")
+        send_message(chat_id, f"âš ï¸ Gagal menyimpan: {exc}")
 
 
 def _cmd_ringkasan(
@@ -309,7 +387,7 @@ def _cmd_ringkasan(
     sb_client: Any,
 ) -> None:
     if not user_id:
-        send_message(chat_id, "Akun belum terhubung. Gunakan /link terlebih dahulu.")
+        send_message(chat_id, "⚠️ Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
     today = date.today().isoformat()
@@ -327,7 +405,7 @@ def _cmd_ringkasan(
         if not txs:
             send_message(
                 chat_id,
-                f"📊 <b>Ringkasan Hari Ini</b> ({date.today().strftime('%d %b %Y')})\n\n"
+                f"ðŸ“Š <b>Ringkasan Hari Ini</b> ({date.today().strftime('%d %b %Y')})\n\n"
                 "Belum ada transaksi hari ini.\n"
                 "Yuk catat: <code>50rb makan siang</code>",
             )
@@ -342,22 +420,22 @@ def _cmd_ringkasan(
             reverse=True,
         )
 
-        lines = [f"📊 <b>Ringkasan Hari Ini</b> ({date.today().strftime('%d %b %Y')})\n"]
-        lines.append(f"💰 Pemasukan : <b>{_fmt(total_income)}</b>")
-        lines.append(f"💸 Pengeluaran: <b>{_fmt(total_expense)}</b>")
-        lines.append(f"{'📈' if net >= 0 else '📉'} Net       : <b>{_fmt(net)}</b>")
+        lines = [f"ðŸ“Š <b>Ringkasan Hari Ini</b> ({date.today().strftime('%d %b %Y')})\n"]
+        lines.append(f"ðŸ’° Pemasukan : <b>{_fmt(total_income)}</b>")
+        lines.append(f"ðŸ’¸ Pengeluaran: <b>{_fmt(total_expense)}</b>")
+        lines.append(f"{'ðŸ“ˆ' if net >= 0 else 'ðŸ“‰'} Net       : <b>{_fmt(net)}</b>")
 
         if expenses:
             lines.append(f"\n<b>Top pengeluaran ({len(expenses)} transaksi):</b>")
             for tx in expenses[:5]:
-                lines.append(f"• {tx['description']} — {_fmt(tx['amount'])}")
+                lines.append(f"â€¢ {tx['description']} â€” {_fmt(tx['amount'])}")
             if len(expenses) > 5:
                 lines.append(f"  ... dan {len(expenses) - 5} lainnya")
 
         send_message(chat_id, "\n".join(lines))
 
     except Exception as exc:
-        send_message(chat_id, f"⚠️ Gagal mengambil data: {exc}")
+        send_message(chat_id, f"âš ï¸ Gagal mengambil data: {exc}")
 
 
 def _cmd_laporan(
@@ -366,7 +444,7 @@ def _cmd_laporan(
     sb_client: Any,
 ) -> None:
     if not user_id:
-        send_message(chat_id, "Akun belum terhubung. Gunakan /link terlebih dahulu.")
+        send_message(chat_id, "⚠️ Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
     today = date.today()
@@ -395,22 +473,22 @@ def _cmd_laporan(
 
         top_cats = sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        lines = [f"📅 <b>Laporan Bulan Ini</b> ({today.strftime('%B %Y')})\n"]
-        lines.append(f"💰 Pemasukan : <b>{_fmt(total_income)}</b>")
-        lines.append(f"💸 Pengeluaran: <b>{_fmt(total_expense)}</b>")
-        lines.append(f"{'📈' if net >= 0 else '📉'} Net       : <b>{_fmt(net)}</b>")
-        lines.append(f"📝 Total transaksi: {len(txs)}")
+        lines = [f"ðŸ“… <b>Laporan Bulan Ini</b> ({today.strftime('%B %Y')})\n"]
+        lines.append(f"ðŸ’° Pemasukan : <b>{_fmt(total_income)}</b>")
+        lines.append(f"ðŸ’¸ Pengeluaran: <b>{_fmt(total_expense)}</b>")
+        lines.append(f"{'ðŸ“ˆ' if net >= 0 else 'ðŸ“‰'} Net       : <b>{_fmt(net)}</b>")
+        lines.append(f"ðŸ“ Total transaksi: {len(txs)}")
 
         if top_cats:
             lines.append("\n<b>Top Kategori Pengeluaran:</b>")
             for cat, total in top_cats:
                 pct = (total / total_expense * 100) if total_expense > 0 else 0
-                lines.append(f"• {cat}: {_fmt(total)} ({pct:.0f}%)")
+                lines.append(f"â€¢ {cat}: {_fmt(total)} ({pct:.0f}%)")
 
         send_message(chat_id, "\n".join(lines))
 
     except Exception as exc:
-        send_message(chat_id, f"⚠️ Gagal mengambil laporan: {exc}")
+        send_message(chat_id, f"âš ï¸ Gagal mengambil laporan: {exc}")
 
 
 def _cmd_budget(
@@ -419,7 +497,7 @@ def _cmd_budget(
     sb_client: Any,
 ) -> None:
     if not user_id:
-        send_message(chat_id, "Akun belum terhubung. Gunakan /link terlebih dahulu.")
+        send_message(chat_id, "⚠️ Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
     today = date.today()
@@ -437,9 +515,9 @@ def _cmd_budget(
         if not budgets:
             send_message(
                 chat_id,
-                "⚠️ Belum ada budget yang diatur.\n\n"
+                "âš ï¸ Belum ada budget yang diatur.\n\n"
                 "Set budget di website:\n"
-                "<b>OprexDuit → Budgeting → Atur Limit</b>",
+                "<b>OprexDuit â†’ Budgeting â†’ Atur Limit</b>",
             )
             return
 
@@ -457,12 +535,12 @@ def _cmd_budget(
             cat = tx.get("category_raw") or "Lainnya"
             spending[cat] = spending.get(cat, 0) + tx["amount"]
 
-        lines = [f"💰 <b>Status Budget {today.strftime('%B %Y')}</b>\n"]
+        lines = [f"ðŸ’° <b>Status Budget {today.strftime('%B %Y')}</b>\n"]
         for cat, limit in budgets.items():
             used = spending.get(cat, 0)
             pct = (used / limit * 100) if limit > 0 else 0
             bar = _progress_bar(pct)
-            status = "🟢" if pct < 70 else ("🟡" if pct < 90 else "🔴")
+            status = "ðŸŸ¢" if pct < 70 else ("ðŸŸ¡" if pct < 90 else "ðŸ”´")
             lines.append(
                 f"{status} <b>{cat}</b>\n"
                 f"   {bar} {pct:.0f}%\n"
@@ -472,28 +550,28 @@ def _cmd_budget(
         send_message(chat_id, "\n\n".join(lines))
 
     except Exception as exc:
-        send_message(chat_id, f"⚠️ Gagal mengambil data budget: {exc}")
+        send_message(chat_id, f"âš ï¸ Gagal mengambil data budget: {exc}")
 
 
 def _cmd_bantuan(chat_id: int | str) -> None:
     send_message(
         chat_id,
-        "<b>📱 OprexDuit Bot — Panduan</b>\n\n"
+        "<b>ðŸ“± OprexDuit Bot â€” Panduan</b>\n\n"
         "<b>Catat Transaksi (kirim teks langsung):</b>\n"
-        "• <code>50rb makan siang</code>\n"
-        "• <code>catat 25000 bensin</code>\n"
-        "• <code>+2jt gaji bulan ini</code>\n\n"
+        "â€¢ <code>50rb makan siang</code>\n"
+        "â€¢ <code>catat 25000 bensin</code>\n"
+        "â€¢ <code>+2jt gaji bulan ini</code>\n\n"
         "<b>Format Jumlah:</b>\n"
-        "• <code>50rb</code> = Rp50.000\n"
-        "• <code>1.5jt</code> = Rp1.500.000\n"
-        "• <code>500000</code> = Rp500.000\n"
-        "• Awali <code>+</code> untuk pemasukan\n\n"
+        "â€¢ <code>50rb</code> = Rp50.000\n"
+        "â€¢ <code>1.5jt</code> = Rp1.500.000\n"
+        "â€¢ <code>500000</code> = Rp500.000\n"
+        "â€¢ Awali <code>+</code> untuk pemasukan\n\n"
         "<b>Perintah:</b>\n"
-        "/ringkasan — Ringkasan hari ini\n"
-        "/laporan   — Laporan bulan ini\n"
-        "/budget    — Cek status budget\n"
-        "/link      — Kode hubungkan akun\n"
-        "/bantuan   — Tampilkan panduan ini",
+        "/ringkasan â€” Ringkasan hari ini\n"
+        "/laporan   â€” Laporan bulan ini\n"
+        "/budget    â€” Cek status budget\n"
+        "/link      â€” Kode hubungkan akun\n"
+        "/bantuan   â€” Tampilkan panduan ini",
     )
 
 
@@ -567,13 +645,13 @@ def _send_weekly_summary(
 
         send_message(
             chat_id,
-            f"📊 <b>Laporan Mingguan OprexDuit</b>\n"
-            f"({week_start} — {today.isoformat()})\n\n"
-            f"💰 Pemasukan : <b>{_fmt(total_income)}</b>\n"
-            f"💸 Pengeluaran: <b>{_fmt(total_expense)}</b>\n"
-            f"{'📈' if net >= 0 else '📉'} Net       : <b>{_fmt(net)}</b>\n"
-            f"📝 Transaksi : {len(txs)}\n\n"
-            f"Detail selengkapnya di <a href='https://oprexduit.vercel.app'>OprexDuit Web</a> 🌐",
+            f"ðŸ“Š <b>Laporan Mingguan OprexDuit</b>\n"
+            f"({week_start} â€” {today.isoformat()})\n\n"
+            f"ðŸ’° Pemasukan : <b>{_fmt(total_income)}</b>\n"
+            f"ðŸ’¸ Pengeluaran: <b>{_fmt(total_expense)}</b>\n"
+            f"{'ðŸ“ˆ' if net >= 0 else 'ðŸ“‰'} Net       : <b>{_fmt(net)}</b>\n"
+            f"ðŸ“ Transaksi : {len(txs)}\n\n"
+            f"Detail selengkapnya di <a href='https://oprexduit.vercel.app'>OprexDuit Web</a> ðŸŒ",
         )
     except Exception as exc:
         print(f"[telegram] weekly_summary error for {user_id}: {exc}")
@@ -626,16 +704,16 @@ def send_budget_alerts(sb_client: Any) -> int:
                 used = spending.get(cat, 0)
                 pct = (used / limit * 100) if limit > 0 else 0
                 if pct >= 80:
-                    emoji = "🔴" if pct >= 100 else "🟡"
+                    emoji = "ðŸ”´" if pct >= 100 else "ðŸŸ¡"
                     alerts.append(
                         f"{emoji} <b>{cat}</b>: {pct:.0f}%"
                         f" ({_fmt(used)} / {_fmt(limit)})"
                     )
 
             if alerts:
-                lines = ["⚠️ <b>Peringatan Budget Bulan Ini!</b>\n"]
+                lines = ["âš ï¸ <b>Peringatan Budget Bulan Ini!</b>\n"]
                 lines.extend(alerts)
-                lines.append("\nYuk hemat di sisa bulan ini 💪")
+                lines.append("\nYuk hemat di sisa bulan ini ðŸ’ª")
                 send_message(chat_id, "\n".join(lines))
                 count += 1
 
@@ -643,3 +721,4 @@ def send_budget_alerts(sb_client: Any) -> int:
     except Exception as exc:
         print(f"[telegram] budget_alerts error: {exc}")
         return 0
+
