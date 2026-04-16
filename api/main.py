@@ -1055,3 +1055,40 @@ async def report_broken_link(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/affiliate/reports", tags=["affiliate"])
+async def list_link_reports(
+    limit: int = 100,
+    user: dict = Depends(require_auth),
+):
+    """Admin: list broken-link reports with product info."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        res = (
+            sb.table("link_reports")
+            .select("id,product_id,reason,created_at,affiliate_products(name,platform,affiliate_url)")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {"reports": res.data or []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/affiliate/reports/{report_id}", tags=["affiliate"])
+async def delete_link_report(
+    report_id: str,
+    user: dict = Depends(require_auth),
+):
+    """Admin: dismiss (delete) a broken-link report."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        sb.table("link_reports").delete().eq("id", report_id).execute()
+        return {"status": "deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
