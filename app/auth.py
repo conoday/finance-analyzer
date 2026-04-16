@@ -4,25 +4,28 @@ app/auth.py — FastAPI dependency for Supabase JWT verification.
 Every protected endpoint should declare:
     current_user: dict = Depends(require_auth)
 
-The frontend sends the Supabase access token in the Authorization header:
-    Authorization: Bearer <supabase_access_token>
+Supports both:
+  - HS256 → verified using SUPABASE_JWT_SECRET (symmetric)
+  - RS256 → verified using Supabase JWKS endpoint (asymmetric, newer projects)
 
-The JWT is verified locally using SUPABASE_JWT_SECRET — no round-trip to
-Supabase on every request.
+Algorithm is auto-detected from the JWT header — no manual config needed.
 
-Required env var:  SUPABASE_JWT_SECRET
-  → Supabase dashboard → Project Settings → API → JWT Secret
+Required env vars:
+  SUPABASE_JWT_SECRET  → Supabase dashboard → Project Settings → API → JWT Secret
+  SUPABASE_URL         → Supabase project URL (needed for RS256 JWKS fallback)
 """
 
 from __future__ import annotations
 
 import os
+import time
 import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt as _jwt
+from jwt import PyJWKClient
 from jwt.exceptions import PyJWTError
 
 logger = logging.getLogger(__name__)
@@ -30,77 +33,128 @@ logging.basicConfig(level=logging.INFO)
 
 _bearer = HTTPBearer(auto_error=True)
 
-ALGORITHM = "HS256"
+# Cache JWKS client agar tidak fetch ulang setiap request
+_jwks_client: PyJWKClient | None = None
+
+
+def _get_jwks_client() -> PyJWKClient:
+    """Return cached PyJWKClient pointing to Supabase JWKS endpoint."""
+    global _jwks_client
+    if _jwks_client is None:
+        supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+        if not supabase_url:
+            raise RuntimeError("SUPABASE_URL tidak di-set — dibutuhkan untuk RS256 verification")
+        jwks_url = f"{supabase_url}/.well-known/jwks.json"
+        logger.info(f"[AUTH] Inisialisasi JWKS client: {jwks_url}")
+        _jwks_client = PyJWKClient(jwks_url, cache_keys=True)
+    return _jwks_client
 
 
 def _get_jwt_secret() -> str:
-    secret = os.environ.get("SUPABASE_JWT_SECRET")
+    secret = os.environ.get("SUPABASE_JWT_SECRET", "")
     if not secret:
-        logger.error("[AUTH] ❌ SUPABASE_JWT_SECRET tidak di-set di environment!")
-        raise RuntimeError(
-            "SUPABASE_JWT_SECRET is not set. Add it to Render env vars."
-        )
-    logger.info(f"[AUTH] ✅ SUPABASE_JWT_SECRET ditemukan (panjang: {len(secret)} karakter)")
+        logger.error("[AUTH] SUPABASE_JWT_SECRET tidak di-set!")
+        raise RuntimeError("SUPABASE_JWT_SECRET is not set. Add it to Render env vars.")
     return secret
 
 
 def require_auth(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
 ) -> dict:
-    """Verify Supabase JWT and return the decoded payload (contains user id, email, role).
+    """Verify Supabase JWT. Auto-detects HS256 (secret) vs RS256 (JWKS).
 
     Raises HTTP 401 if the token is missing, expired, or invalid.
     """
     token = credentials.credentials
 
-    # Log token preview (aman: hanya 20 karakter pertama)
-    logger.info(f"[AUTH] 🔑 Token diterima: {token[:20]}... (panjang total: {len(token)})")
-
-    # Decode header tanpa verifikasi untuk diagnosa
+    # ── 1. Peek header untuk deteksi algoritma ──────────────────────────────
     try:
-        unverified_header = _jwt.get_unverified_header(token)
-        logger.info(f"[AUTH] 📋 JWT Header (unverified): {unverified_header}")
-    except Exception as header_err:
-        logger.warning(f"[AUTH] ⚠️ Gagal decode JWT header: {header_err}")
-
-    # Decode claims tanpa verifikasi untuk diagnosa
-    try:
-        unverified_claims = _jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256", "RS256"])
-        import time
-        exp = unverified_claims.get("exp")
-        now = int(time.time())
-        if exp:
-            sisa = exp - now
-            logger.info(f"[AUTH] ⏰ Token exp: {exp}, sekarang: {now}, sisa: {sisa}s ({'EXPIRED' if sisa < 0 else 'VALID'})")
-        logger.info(f"[AUTH] 📦 Claims: sub={unverified_claims.get('sub')}, email={unverified_claims.get('email')}, role={unverified_claims.get('role')}")
-    except Exception as claims_err:
-        logger.warning(f"[AUTH] ⚠️ Gagal decode JWT claims: {claims_err}")
-
-    # Verifikasi sesungguhnya
-    try:
-        secret = _get_jwt_secret()
-        payload = _jwt.decode(
-            token,
-            secret,
-            algorithms=[ALGORITHM],
-            options={"verify_aud": False},  # Supabase JWTs don't set aud by default
+        header = _jwt.get_unverified_header(token)
+        alg = header.get("alg", "HS256")
+        logger.info(f"[AUTH] JWT header: alg={alg}, typ={header.get('typ')}, kid={header.get('kid')}")
+    except Exception as e:
+        logger.error(f"[AUTH] Gagal baca JWT header: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token format tidak valid: {e}",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        logger.info(f"[AUTH] ✅ Token valid! user_id={payload.get('sub')}")
+
+    # ── 2. Peek claims untuk diagnosa (tanpa verifikasi) ─────────────────────
+    try:
+        unverified = _jwt.decode(
+            token,
+            options={"verify_signature": False},
+            algorithms=["HS256", "RS256", "HS384", "HS512"],
+        )
+        exp = unverified.get("exp")
+        now = int(time.time())
+        sisa = (exp - now) if exp else None
+        status_exp = "EXPIRED" if (sisa is not None and sisa < 0) else "VALID"
+        logger.info(
+            f"[AUTH] exp={exp}, now={now}, sisa={sisa}s [{status_exp}] | "
+            f"sub={unverified.get('sub')} | email={unverified.get('email')}"
+        )
+        if sisa is not None and sisa < 0:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token sudah expired. Silakan login ulang.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"[AUTH] Gagal decode claims (unverified): {e}")
+
+    # ── 3. Verifikasi signature sesuai algoritma ─────────────────────────────
+    try:
+        if alg == "HS256":
+            # Symmetric — gunakan JWT secret
+            secret = _get_jwt_secret()
+            logger.info(f"[AUTH] Verifikasi HS256 dengan secret (len={len(secret)})")
+            payload = _jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                options={"verify_aud": False},
+            )
+        else:
+            # Asymmetric (RS256, ES256, dll) — gunakan JWKS dari Supabase
+            logger.info(f"[AUTH] Verifikasi {alg} via JWKS Supabase")
+            jwks_client = _get_jwks_client()
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            payload = _jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=[alg],
+                options={"verify_aud": False},
+            )
+
+        logger.info(f"[AUTH] Token valid! user_id={payload.get('sub')}, email={payload.get('email')}")
+        return payload
+
     except PyJWTError as exc:
-        logger.error(f"[AUTH] ❌ JWT verification GAGAL: {type(exc).__name__}: {exc}")
+        logger.error(f"[AUTH] Verifikasi GAGAL [{alg}]: {type(exc).__name__}: {exc}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or expired token: {exc}",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
-
-    return payload
+    except RuntimeError as exc:
+        logger.error(f"[AUTH] Config error: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
 
 def get_user_id(payload: Annotated[dict, Depends(require_auth)]) -> str:
     """Shortcut dependency — returns just the Supabase user UUID (sub claim)."""
     uid = payload.get("sub")
     if not uid:
-        logger.error("[AUTH] ❌ Field 'sub' tidak ada di JWT payload!")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID missing from token")
+        logger.error("[AUTH] Field 'sub' tidak ada di JWT payload!")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User ID missing from token",
+        )
     return uid

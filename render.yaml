@@ -12,9 +12,12 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: ALLOWED_ORIGINS
-        # Set ke URL Vercel kamu di Render dashboard
-        value: "https://finance-analyzer-roan.vercel.app"
+        # URL frontend Vercel — sesuaikan jika berubah
+        value: "https://oprexduit.vercel.app"
       # Set nilai berikut di Render dashboard (JANGAN taruh secret di sini):
-      # - key: SUPABASE_URL
+      # - key: SUPABASE_URL             (contoh: https://xxxx.supabase.co)
       # - key: SUPABASE_SERVICE_ROLE_KEY
-      # - key: SUPABASE_JWT_SECRET
+      # - key: SUPABASE_JWT_SECRET      (Supabase -> Project Settings -> API -> JWT Secret)
+      # - key: TELEGRAM_BOT_TOKEN
+      # - key: TELEGRAM_WEBHOOK_SECRET
+      # - key: CRON_SECRET
