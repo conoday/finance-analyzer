@@ -9,6 +9,6 @@ uvicorn[standard]
 python-multipart
 # Supabase integration
 supabase
-python-jose[cryptography]
+PyJWT[crypto]
 # HTTP client (used by Telegram bot to call Telegram API)
 httpx

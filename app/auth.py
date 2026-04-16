@@ -21,7 +21,8 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+import jwt as _jwt
+from jwt.exceptions import PyJWTError
 
 _bearer = HTTPBearer(auto_error=True)
 
@@ -46,13 +47,13 @@ def require_auth(
     """
     token = credentials.credentials
     try:
-        payload = jwt.decode(
+        payload = _jwt.decode(
             token,
             _get_jwt_secret(),
             algorithms=[ALGORITHM],
             options={"verify_aud": False},  # Supabase JWTs don't set aud by default
         )
-    except JWTError as exc:
+    except PyJWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or expired token: {exc}",
