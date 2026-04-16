@@ -44,7 +44,7 @@ def _get_jwks_client() -> PyJWKClient:
         supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
         if not supabase_url:
             raise RuntimeError("SUPABASE_URL tidak di-set — dibutuhkan untuk RS256 verification")
-        jwks_url = f"{supabase_url}/.well-known/jwks.json"
+        jwks_url = f"{supabase_url}/auth/v1/.well-known/jwks.json"
         logger.info(f"[AUTH] Inisialisasi JWKS client: {jwks_url}")
         _jwks_client = PyJWKClient(jwks_url, cache_keys=True)
     return _jwks_client
@@ -121,8 +121,14 @@ def require_auth(
         else:
             # Asymmetric (RS256, ES256, dll) — gunakan JWKS dari Supabase
             logger.info(f"[AUTH] Verifikasi {alg} via JWKS Supabase")
-            jwks_client = _get_jwks_client()
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            try:
+                jwks_client = _get_jwks_client()
+                signing_key = jwks_client.get_signing_key_from_jwt(token)
+            except Exception:
+                # Reset cached client so next request re-fetches fresh JWKS
+                global _jwks_client
+                _jwks_client = None
+                raise
             payload = _jwt.decode(
                 token,
                 signing_key.key,
