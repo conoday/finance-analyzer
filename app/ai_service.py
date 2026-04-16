@@ -21,37 +21,96 @@ from typing import Any
 _PROVIDERS: dict[str, dict] = {
     "glm": {
         "base_url": "https://open.bigmodel.cn/api/paas/v4/",
-        "model":    "glm-4-flash",
-        "key_env":  "GLM_API_KEY",
+        "model":    "glm-4.6",
+        # Cek 3 key secara berurutan; pakai yang pertama terisi
+        "key_envs": ["GLM_API_KEY", "GLM_API_KEY_2", "GLM_API_KEY_3"],
     },
     "deepseek": {
         "base_url": "https://api.deepseek.com/v1",
         "model":    "deepseek-chat",
-        "key_env":  "DEEPSEEK_API_KEY",
+        "key_envs": ["DEEPSEEK_API_KEY"],
     },
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "model":    "gemini-2.0-flash",
-        "key_env":  "GEMINI_API_KEY",
+        "key_envs": ["GEMINI_API_KEY"],
     },
 }
 
+# Error classes yang menandakan key ini sudah habis/rate-limited di GLM
+_QUOTA_ERRORS = ("rate_limit", "quota", "insufficient_quota", "exceeded", "429")
 
-def _get_client():
-    """Buat OpenAI client sesuai AI_PROVIDER di env."""
+
+def _get_glm_keys() -> list[str]:
+    """Kembalikan semua GLM API key yang sudah di-set (non-empty)."""
+    return [
+        v for env in _PROVIDERS["glm"]["key_envs"]
+        if (v := os.environ.get(env, "").strip())
+    ]
+
+
+def _get_client(api_key: str | None = None):
+    """
+    Buat OpenAI client sesuai AI_PROVIDER di env.
+
+    Untuk GLM: jika api_key di-pass, pakai key itu (digunakan saat fallback).
+    Jika tidak di-pass, pakai key pertama yang tersedia.
+    """
     from openai import OpenAI
 
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
     cfg = _PROVIDERS.get(provider_name, _PROVIDERS["glm"])
 
-    api_key = os.environ.get(cfg["key_env"], "")
+    if api_key is None:
+        # Ambil key pertama yang terisi
+        for env in cfg["key_envs"]:
+            api_key = os.environ.get(env, "").strip()
+            if api_key:
+                break
+
     if not api_key:
+        envs = ", ".join(cfg["key_envs"])
         raise ValueError(
             f"API key untuk provider '{provider_name}' belum di-set. "
-            f"Set env var {cfg['key_env']} di Render."
+            f"Set salah satu env var berikut di Render: {envs}"
         )
 
     return OpenAI(api_key=api_key, base_url=cfg["base_url"]), cfg["model"]
+
+
+def _call_with_fallback(fn, **kwargs):
+    """
+    Jalankan fn(client, model, **kwargs) dengan fallback key GLM.
+
+    Jika provider bukan GLM, jalan normal tanpa fallback.
+    Jika GLM dan key pertama rate-limit / quota habis, coba key berikutnya.
+    """
+    provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
+
+    if provider_name != "glm":
+        client, model = _get_client()
+        return fn(client, model, **kwargs)
+
+    keys = _get_glm_keys()
+    if not keys:
+        raise ValueError(
+            "Belum ada GLM API key yang di-set. "
+            "Set GLM_API_KEY (dan opsional GLM_API_KEY_2, GLM_API_KEY_3) di Render."
+        )
+
+    last_err: Exception = RuntimeError("No keys available")
+    for key in keys:
+        try:
+            client, model = _get_client(api_key=key)
+            return fn(client, model, **kwargs)
+        except Exception as e:
+            err_str = str(e).lower()
+            if any(q in err_str for q in _QUOTA_ERRORS):
+                last_err = e
+                continue  # coba key berikutnya
+            raise  # error lain (network, bad request, dll) langsung raise
+
+    raise last_err  # semua key habis
 
 
 # ---------------------------------------------------------------------------
@@ -73,9 +132,8 @@ def get_ai_insight(
           "warn":       list kategori berpotensi boros (bisa kosong),
         }
     """
-    client, model = _get_client()
+    import json
 
-    # Format ringkas untuk prompt agar hemat token
     income = summary.get("total_income", 0)
     expense = summary.get("total_expense", 0)
     net = summary.get("net_cashflow", 0)
@@ -100,18 +158,18 @@ def get_ai_insight(
         "Jawab bahasa Indonesia, ringkas, to the point."
     )
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=400,
-        temperature=0.4,
-        response_format={"type": "json_object"},
-    )
+    def _do(client, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=400,
+            temperature=0.4,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        return json.loads(raw)
 
-    import json
-    raw = response.choices[0].message.content or "{}"
-    parsed = json.loads(raw)
-
+    parsed = _call_with_fallback(_do)
     return {
         "headline": parsed.get("headline", ""),
         "tips": parsed.get("tips", []),
@@ -143,8 +201,6 @@ def get_financial_plan(
         }
     """
     import json
-
-    client, model = _get_client()
 
     net = monthly_income - monthly_expense
     savings_rate = round((net / monthly_income * 100) if monthly_income > 0 else 0, 1)
@@ -182,16 +238,18 @@ def get_financial_plan(
         "Jawab bahasa Indonesia, realistis, fokus ke tujuan yang disebutkan."
     )
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=800,
-        temperature=0.5,
-        response_format={"type": "json_object"},
-    )
+    def _do(client, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800,
+            temperature=0.5,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        return json.loads(raw)
 
-    raw = response.choices[0].message.content or "{}"
-    parsed = json.loads(raw)
+    parsed = _call_with_fallback(_do)
 
     # Normalize & provide fallback values
     return {
@@ -221,14 +279,7 @@ def parse_receipt_image(image_bytes: bytes, content_type: str) -> dict:
     import json
     import base64
 
-    client, model = _get_client()
-
-    # Use vision-capable model variant when needed
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
-    vision_model = model
-    if provider_name == "glm":
-        vision_model = "glm-4v-flash"  # GLM vision model
-
     b64 = base64.b64encode(image_bytes).decode("utf-8")
     image_url = f"data:{content_type};base64,{b64}"
 
@@ -246,22 +297,26 @@ def parse_receipt_image(image_bytes: bytes, content_type: str) -> dict:
         "Harga dalam Rupiah (tanpa simbol). Qty default 1 jika tidak disebutkan."
     )
 
-    response = client.chat.completions.create(
-        model=vision_model,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image_url", "image_url": {"url": image_url}},
-                {"type": "text", "text": prompt},
-            ],
-        }],
-        max_tokens=600,
-        temperature=0.1,
-        response_format={"type": "json_object"},
-    )
+    def _do(client, model):
+        # GLM pakai model vision khusus
+        used_model = "glm-4v-flash" if provider_name == "glm" else model
+        response = client.chat.completions.create(
+            model=used_model,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                    {"type": "text", "text": prompt},
+                ],
+            }],
+            max_tokens=600,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        return json.loads(raw)
 
-    raw = response.choices[0].message.content or "{}"
-    parsed = json.loads(raw)
+    parsed = _call_with_fallback(_do)
 
     return {
         "event_name": parsed.get("event_name"),
@@ -284,7 +339,7 @@ def ai_categorize(description: str) -> dict[str, str]:
 
     Returns: {"kategori": "...", "tipe": "income" | "expense"}
     """
-    client, model = _get_client()
+    import json
 
     prompt = (
         f'Transaksi: "{description}"\n'
@@ -295,17 +350,18 @@ def ai_categorize(description: str) -> dict[str, str]:
         'JSON: {"kategori": "...", "tipe": "income" atau "expense"}'
     )
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=60,
-        temperature=0.1,
-        response_format={"type": "json_object"},
-    )
+    def _do(client, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=60,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        return json.loads(raw)
 
-    import json
-    raw = response.choices[0].message.content or "{}"
-    parsed = json.loads(raw)
+    parsed = _call_with_fallback(_do)
     return {
         "kategori": parsed.get("kategori", "Lainnya"),
         "tipe": parsed.get("tipe", "expense"),
