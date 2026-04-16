@@ -973,7 +973,7 @@ async def list_affiliate_products(
 @app.post("/affiliate/products", tags=["affiliate"])
 async def create_affiliate_product(
     payload: AffiliateProductCreate,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_auth),
 ):
     """Admin: add a new affiliate product."""
     sb = _get_supabase()
@@ -994,7 +994,7 @@ async def create_affiliate_product(
 async def update_affiliate_product(
     product_id: str,
     payload: AffiliateProductUpdate,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_auth),
 ):
     """Admin: update an existing affiliate product."""
     sb = _get_supabase()
@@ -1023,7 +1023,7 @@ async def update_affiliate_product(
 @app.delete("/affiliate/products/{product_id}", tags=["affiliate"])
 async def delete_affiliate_product(
     product_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_auth),
 ):
     """Admin: delete an affiliate product."""
     sb = _get_supabase()
@@ -1039,7 +1039,7 @@ async def delete_affiliate_product(
 @app.post("/affiliate/report", tags=["affiliate"])
 async def report_broken_link(
     payload: LinkReportCreate,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_auth),
 ):
     """User: report a broken affiliate link."""
     sb = _get_supabase()
