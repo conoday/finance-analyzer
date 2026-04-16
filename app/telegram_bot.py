@@ -127,7 +127,7 @@ def _get_user_id(chat_id: int | str, sb_client: Any) -> Optional[str]:
 
 def _store_pending_link(chat_id: int | str, sb_client: Any) -> str:
     """Upsert a fresh link code for this chat_id. Returns the code."""
-    code = secrets.token_urlsafe(8)
+    code = secrets.token_urlsafe(8).upper()
     if sb_client:
         try:
             sb_client.table("pending_telegram_links").upsert(

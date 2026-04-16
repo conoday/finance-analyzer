@@ -704,10 +704,11 @@ def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
     try:
         # Look up pending link — use limit(1) to avoid maybe_single() returning None
         # in some supabase-py versions when no row is found
+        normalized_code = req.link_code.strip().upper()
         res = (
             sb.table("pending_telegram_links")
             .select("chat_id,created_at")
-            .eq("link_code", req.link_code.strip())
+            .eq("link_code", normalized_code)
             .limit(1)
             .execute()
         )
@@ -724,7 +725,7 @@ def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
         }).eq("id", user_id).execute()
 
         # Delete used link code
-        sb.table("pending_telegram_links").delete().eq("link_code", req.link_code.strip()).execute()
+        sb.table("pending_telegram_links").delete().eq("link_code", normalized_code).execute()
 
         # Send confirmation message to Telegram
         from app.telegram_bot import send_message
