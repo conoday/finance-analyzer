@@ -17,7 +17,7 @@ import io
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
@@ -915,4 +915,143 @@ async def split_bill_parse(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal membaca struk: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Affiliate Products endpoints
+# ---------------------------------------------------------------------------
+
+class AffiliateProductCreate(BaseModel):
+    name: str
+    price: Optional[float] = None
+    platform: str  # shopee | tiktokshop | alfagift | other
+    affiliate_url: str
+    image_url: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+
+
+class AffiliateProductUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    platform: Optional[str] = None
+    affiliate_url: Optional[str] = None
+    image_url: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class LinkReportCreate(BaseModel):
+    product_id: str
+    reason: Optional[str] = None
+
+
+@app.get("/affiliate/products", tags=["affiliate"])
+async def list_affiliate_products(
+    platform: Optional[str] = None,
+    active_only: bool = True,
+    limit: int = 50,
+):
+    """List affiliate products, optionally filtered by platform."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        q = sb.table("affiliate_products").select(
+            "id,name,price,platform,affiliate_url,image_url,description,is_active,created_at"
+        )
+        if active_only:
+            q = q.eq("is_active", True)
+        if platform:
+            q = q.eq("platform", platform)
+        res = q.order("created_at", desc=True).limit(limit).execute()
+        return {"products": res.data or []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/affiliate/products", tags=["affiliate"])
+async def create_affiliate_product(
+    payload: AffiliateProductCreate,
+    user: dict = Depends(get_current_user),
+):
+    """Admin: add a new affiliate product."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    valid_platforms = {"shopee", "tiktokshop", "alfagift", "other"}
+    if payload.platform not in valid_platforms:
+        raise HTTPException(status_code=400, detail=f"Platform harus salah satu dari: {valid_platforms}")
+    try:
+        data = payload.dict()
+        res = sb.table("affiliate_products").insert(data).execute()
+        return {"product": (res.data or [{}])[0]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/affiliate/products/{product_id}", tags=["affiliate"])
+async def update_affiliate_product(
+    product_id: str,
+    payload: AffiliateProductUpdate,
+    user: dict = Depends(get_current_user),
+):
+    """Admin: update an existing affiliate product."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    update_data = {k: v for k, v in payload.dict().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Tidak ada data yang diupdate.")
+    try:
+        res = (
+            sb.table("affiliate_products")
+            .update(update_data)
+            .eq("id", product_id)
+            .execute()
+        )
+        rows = res.data or []
+        if not rows:
+            raise HTTPException(status_code=404, detail="Produk tidak ditemukan.")
+        return {"product": rows[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/affiliate/products/{product_id}", tags=["affiliate"])
+async def delete_affiliate_product(
+    product_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Admin: delete an affiliate product."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        sb.table("affiliate_products").delete().eq("id", product_id).execute()
+        return {"status": "deleted", "id": product_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/affiliate/report", tags=["affiliate"])
+async def report_broken_link(
+    payload: LinkReportCreate,
+    user: dict = Depends(get_current_user),
+):
+    """User: report a broken affiliate link."""
+    sb = _get_supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        res = sb.table("link_reports").insert({
+            "product_id": payload.product_id,
+            "reported_by": user["id"],
+            "reason": payload.reason,
+        }).execute()
+        return {"status": "reported", "report": (res.data or [{}])[0]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
