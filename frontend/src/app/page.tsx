@@ -23,6 +23,9 @@ import { SharePanel, DonasiModal } from "@/components/SharePanel";
 import { QuickTracker } from "@/components/QuickTracker";
 import { BudgetTracker } from "@/components/BudgetTracker";
 import { SharedBudgetRoom } from "@/components/SharedBudgetRoom";
+import { AssetDebtTracker } from "@/components/AssetDebtTracker";
+import { SplitBill } from "@/components/SplitBill";
+import { AIPlanner } from "@/components/AIPlanner";
 import { Loader2, Zap, Sparkles, BookOpen, Plus } from "lucide-react";
 
 const TABS = [
@@ -34,6 +37,9 @@ const TABS = [
   { id: "forecast",   label: "Forecast" },
   { id: "health",     label: "Health" },
   { id: "simulator",  label: "Simulator" },
+  { id: "aset",       label: "Aset & Hutang" },
+  { id: "split-bill", label: "Split Bill" },
+  { id: "ai-planner", label: "AI Planner ✨" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -291,6 +297,27 @@ export default function Home() {
                 {activeTab === "simulator" && (
                   <TabPanel key="simulator">
                     <SimulatorPanel data={data} />
+                  </TabPanel>
+                )}
+
+                {activeTab === "aset" && (
+                  <TabPanel key="aset">
+                    <AssetDebtTracker />
+                  </TabPanel>
+                )}
+
+                {activeTab === "split-bill" && (
+                  <TabPanel key="split-bill">
+                    <SplitBill />
+                  </TabPanel>
+                )}
+
+                {activeTab === "ai-planner" && (
+                  <TabPanel key="ai-planner">
+                    <AIPlanner
+                      prefillIncome={data.summary.total_income}
+                      prefillExpense={data.summary.total_expense}
+                    />
                   </TabPanel>
                 )}
               </AnimatePresence>

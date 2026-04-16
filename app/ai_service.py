@@ -119,6 +119,165 @@ def get_ai_insight(
     }
 
 
+def get_financial_plan(
+    monthly_income: float,
+    monthly_expense: float,
+    goals: str,
+    current_savings: float = 0,
+    horizon_months: int = 12,
+) -> dict:
+    """
+    Buat rencana keuangan personal berdasarkan pemasukan, pengeluaran, & tujuan.
+
+    Returns dict:
+        {
+          "headline": str,
+          "health_score": int (0-100),
+          "savings_rate_now": float,
+          "savings_rate_target": float,
+          "monthly_savings_needed": float,
+          "tips": list[str],
+          "warn": list[str],
+          "milestones": [{"label": str, "months": int, "amount": float}],
+          "budget_allocation": [{"category": str, "pct": int, "color": str}],
+        }
+    """
+    import json
+
+    client, model = _get_client()
+
+    net = monthly_income - monthly_expense
+    savings_rate = round((net / monthly_income * 100) if monthly_income > 0 else 0, 1)
+
+    prompt = (
+        f"Bantu buat rencana keuangan personal.\n"
+        f"Data keuangan:\n"
+        f"- Pemasukan bulanan: Rp {monthly_income:,.0f}\n"
+        f"- Pengeluaran bulanan: Rp {monthly_expense:,.0f}\n"
+        f"- Net cashflow: Rp {net:,.0f}\n"
+        f"- Savings rate saat ini: {savings_rate}%\n"
+        f"- Tabungan saat ini: Rp {current_savings:,.0f}\n"
+        f"- Tujuan keuangan: {goals}\n"
+        f"- Horizon waktu: {horizon_months} bulan\n\n"
+        "Buat rencana dalam format JSON:\n"
+        "{\n"
+        '  "headline": "kalimat singkat kondisi & rekomendasi utama",\n'
+        '  "health_score": (angka 0-100 seberapa sehat kondisi keuangan),\n'
+        '  "savings_rate_now": (savings rate saat ini dalam %),\n'
+        '  "savings_rate_target": (savings rate yang sebaiknya dicapai dalam %),\n'
+        '  "monthly_savings_needed": (jumlah tabungan bulanan yang perlu ditarget dalam Rp),\n'
+        '  "tips": ["tip konkret 1", "tip konkret 2", "tip konkret 3", "tip 4"],\n'
+        '  "warn": ["peringatan/risiko 1", ...],\n'
+        '  "milestones": [\n'
+        '    {"label": "nama milestone", "months": bulan_ke_berapa, "amount": jumlah_Rp},\n'
+        '    ...\n'
+        '  ],\n'
+        '  "budget_allocation": [\n'
+        '    {"category": "Tabungan/Investasi", "pct": 20, "color": "#14b8a6"},\n'
+        '    {"category": "Kebutuhan Pokok", "pct": 50, "color": "#6366f1"},\n'
+        '    {"category": "Hiburan & Lifestyle", "pct": 20, "color": "#f59e0b"},\n'
+        '    {"category": "Dana Darurat", "pct": 10, "color": "#22c55e"}\n'
+        '  ]\n'
+        "}\n"
+        "Jawab bahasa Indonesia, realistis, fokus ke tujuan yang disebutkan."
+    )
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=800,
+        temperature=0.5,
+        response_format={"type": "json_object"},
+    )
+
+    raw = response.choices[0].message.content or "{}"
+    parsed = json.loads(raw)
+
+    # Normalize & provide fallback values
+    return {
+        "headline": parsed.get("headline", ""),
+        "health_score": int(parsed.get("health_score", 50)),
+        "savings_rate_now": float(parsed.get("savings_rate_now", savings_rate)),
+        "savings_rate_target": float(parsed.get("savings_rate_target", 20)),
+        "monthly_savings_needed": float(parsed.get("monthly_savings_needed", 0)),
+        "tips": parsed.get("tips", []),
+        "warn": parsed.get("warn", []),
+        "milestones": parsed.get("milestones", []),
+        "budget_allocation": parsed.get("budget_allocation", []),
+    }
+
+
+def parse_receipt_image(image_bytes: bytes, content_type: str) -> dict:
+    """
+    Baca foto struk belanja/restoran via AI vision.
+
+    Returns:
+        {
+          "event_name": str | None,
+          "tax_pct": int | None,
+          "items": [{"name": str, "price": float, "qty": int}],
+        }
+    """
+    import json
+    import base64
+
+    client, model = _get_client()
+
+    # Use vision-capable model variant when needed
+    provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
+    vision_model = model
+    if provider_name == "glm":
+        vision_model = "glm-4v-flash"  # GLM vision model
+
+    b64 = base64.b64encode(image_bytes).decode("utf-8")
+    image_url = f"data:{content_type};base64,{b64}"
+
+    prompt = (
+        "Baca struk/receipt ini. Ekstrak semua item beserta harga dan kuantitas.\n"
+        "Kembalikan dalam format JSON:\n"
+        "{\n"
+        '  "event_name": "nama restoran atau acara jika ada, null jika tidak ada",\n'
+        '  "tax_pct": (persentase pajak jika tertulis, null jika tidak ada),\n'
+        '  "items": [\n'
+        '    {"name": "nama item", "price": harga_satuan_dalam_angka, "qty": jumlah},\n'
+        '    ...\n'
+        '  ]\n'
+        "}\n"
+        "Harga dalam Rupiah (tanpa simbol). Qty default 1 jika tidak disebutkan."
+    )
+
+    response = client.chat.completions.create(
+        model=vision_model,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": image_url}},
+                {"type": "text", "text": prompt},
+            ],
+        }],
+        max_tokens=600,
+        temperature=0.1,
+        response_format={"type": "json_object"},
+    )
+
+    raw = response.choices[0].message.content or "{}"
+    parsed = json.loads(raw)
+
+    return {
+        "event_name": parsed.get("event_name"),
+        "tax_pct": parsed.get("tax_pct"),
+        "items": [
+            {
+                "name": str(it.get("name", "")),
+                "price": float(it.get("price", 0)),
+                "qty": int(it.get("qty", 1)),
+            }
+            for it in parsed.get("items", [])
+            if it.get("name") and float(it.get("price", 0)) > 0
+        ],
+    }
+
+
 def ai_categorize(description: str) -> dict[str, str]:
     """
     Kategorisasi 1 transaksi via AI (fallback dari rule-based).
