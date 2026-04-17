@@ -1,14 +1,23 @@
 ﻿# Prompt for Agent Planner
 
+> Last updated: 2026-04-17
+
 ## Konteks Penting untuk Agent
 
-1. Stack: Next.js 16 App Router (bukan Pages Router)
-2. NextAuth: v5 (bukan v4 — API berbeda)
-3. SQLAlchemy: 2.x async
-4. FastAPI: gunakan async def untuk semua endpoint
-5. Python venv: c:\Users\lenovo\Documents\rafif\.venv
-6. Render auto-deploy dari branch main di repo conoday/finance-analyzer
-7. Model bisnis: Freemium — Free (manual only, 5 file/bulan) | Pro (Rp 29K/bln) | Business (Rp 99K/bln)
+1. Stack: Next.js 14 App Router (bukan Pages Router)
+2. Auth: Supabase Auth (JWT), bukan NextAuth
+3. Backend: FastAPI async Python 3.11
+4. Python venv: c:\Users\lenovo\Documents\rafif\.venv
+5. Render auto-deploy dari branch main di repo conoday/finance-analyzer
+6. Model bisnis: Freemium — Free | Pro (Rp 29K/bln) | AI (Rp 59K/bln) | Business (Rp 149K/bln)
+7. Telegram bot ada di `app/telegram_bot.py` — webhook handler, inline keyboard
+8. Admin console di repo terpisah: `conoday/oprex-admin-console`
+
+## Live URLs
+
+- Frontend: https://finance-analyzer-roan.vercel.app
+- Backend: https://oprexduit.onrender.com
+- Admin console: github.com/conoday/oprex-admin-console
 
 ## Master Prompt
 
@@ -16,32 +25,37 @@
 You are a senior system architect and product planner.
 
 Context:
-I am building a personal finance web app with:
-- Frontend: Next.js 16 (Vercel) at https://finance-analyzer-roan.vercel.app
-- Backend: FastAPI (Render) at https://finance-analyzer-a82j.onrender.com
+I am building a personal finance web app called OprexDuit with:
+- Frontend: Next.js 14 (Vercel) at https://finance-analyzer-roan.vercel.app
+- Backend: FastAPI (Render) at https://oprexduit.onrender.com
 - Database: PostgreSQL on Supabase (free tier)
-- Business model: Freemium (Free / Pro / Business)
+- Telegram Bot: webhook handler in app/telegram_bot.py, inline keyboard
+- Admin Console: separate repo conoday/oprex-admin-console (Next.js 14, Tailwind)
+- Business model: Freemium (Free / Pro Rp29K / AI Rp59K / Business Rp149K)
 
 Current Features (already implemented):
 - CSV/XLSX upload → financial pipeline (categorizer, forecasting, health score, simulator)
-- 4 API endpoints: /health, /analyze/sample, /analyze (POST), /simulate
-- Frontend dashboard with 5 tabs
-- No auth, no database, no persistence, no payment yet
+- Auth: Supabase login/register/OTP/Google OAuth + JWT backend guard (require_auth)
+- Transaction tracking: SmartInput NLP parse + QuickTracker dashboard
+- Telegram Bot: /catat /ringkasan /laporan /budget /belanja + inline keyboard
+- Affiliate system: CRUD products + link_reports table + ReportLinkButton
+- Admin Console: affiliate CRUD + broken link reports + settings page
 
-Architecture docs in /artefak/ folder (01 to 10).
+Supabase Tables: profiles, transactions, budgets, affiliate_products, link_reports, pending_telegram_links, import_batches
+
+Architecture docs in /artefak/ folder (01 to 17). Read 17_master_tracking.md first.
 
 Next phases:
-1. Phase 2: Auth — NextAuth.js v5 + Google + user table with tier column
-2. Phase 3: Transactions + Tier enforcement (5 file/bulan untuk Free)
-3. Phase 4: OCR image extraction (Pro tier only)
-4. Phase 5: Admin Console
-5. Phase 6: Payment Gateway (Midtrans)
+1. Phase 3: Transaction CRUD + Tier enforcement (max 3 akun, 3 bulan history untuk Free)
+2. Phase AI: LLM insight + financial persona detection
+3. Phase 4: OCR struk (Pro tier)
+4. Phase 6: Payment Gateway (Midtrans)
+5. Phase 7: Mobile (Expo)
 
 Constraints:
 - Free-tier infra (Vercel + Render + Supabase)
 - No overengineering, keep it simple but extensible
-- No heavy AI/ML
-- Rule-based OCR only
+- Auth via Supabase JWT (bukan NextAuth)
 
 For each phase, provide:
 1. Files to create/modify (full paths)
@@ -59,3 +73,4 @@ Start with: [Phase X]
 - Ganti kalimat terakhir: `Start with Phase 3 (Transaction CRUD)`
 - Fokus 1 file: tambahkan `Focus only on file: api/main.py`
 - Debug: paste error message + `What is wrong and how do I fix it?`
+- Telegram bot context: tambahkan `Focus on app/telegram_bot.py`

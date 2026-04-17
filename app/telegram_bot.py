@@ -37,6 +37,7 @@ _WEB_URL = os.environ.get("WEB_URL", "https://oprexduit.vercel.app")
 # In-memory state for AI shopping sessions per chat_id
 # { str(chat_id): { "step": str, "platform": str, "query": str, "products": [...] } }
 _SHOPPING_SESSIONS: dict[str, dict] = {}
+_SPLITBILL_SESSIONS: dict[str, dict] = {}
 
 # ---------------------------------------------------------------------------
 # Telegram API helper
@@ -146,9 +147,10 @@ def handle_update(update: dict, sb_client: Any) -> None:
         args = parts[1:]
         _handle_command(chat_id, command, args, username, sb_client)
     else:
-        # Check if user is in a shopping session first
-        session = _SHOPPING_SESSIONS.get(str(chat_id))
-        if session:
+        # Check if user is in a stateful session
+        if str(chat_id) in _SPLITBILL_SESSIONS:
+            _handle_splitbill_input(chat_id, text, username, sb_client)
+        elif str(chat_id) in _SHOPPING_SESSIONS:
             _handle_shopping_input(chat_id, text, username, sb_client)
         else:
             _handle_free_text(chat_id, text, username, sb_client)
@@ -319,7 +321,10 @@ def _handle_command(
         _cmd_bantuan(chat_id, sb_client)
     elif command == "/batal":
         _SHOPPING_SESSIONS.pop(str(chat_id), None)
-        send_message(chat_id, "\u274e Sesi belanja dibatalkan.")
+        _SPLITBILL_SESSIONS.pop(str(chat_id), None)
+        send_message(chat_id, "\u274e Sesi dibatalkan.")
+    elif command in ("/splitbill", "/patungan"):
+        _cmd_splitbill_start(chat_id)
     else:
         send_message(chat_id, "Perintah tidak dikenal. Ketik /bantuan untuk panduan.")
 
@@ -473,18 +478,35 @@ def _save_and_confirm(
             "type": parsed.type,
             "category_raw": parsed.category_hint or "Lainnya",
             "source": "telegram",
+            "scope": "private"
         }
-        sb_client.table("transactions").insert(tx_data).execute()
+        res = sb_client.table("transactions").insert(tx_data).execute()
+        
+        # Get inserted tx id
+        tx_id = ""
+        if res.data and len(res.data) > 0:
+            tx_id = res.data[0].get("id", "")
 
-        send_message(
-            chat_id,
+        msg = (
             f"{icon} <b>Transaksi dicatat!</b>\n\n"
             f"Jenis     : {type_label}\n"
             f"Jumlah    : <b>{_fmt(parsed.amount)}</b>\n"
             f"Keterangan: {parsed.description}\n"
             f"Kategori  : {parsed.category_hint or 'Lainnya'}\n"
-            f"Tanggal   : {date.today().strftime('%d %b %Y')}",
+            f"Tanggal   : {date.today().strftime('%d %b %Y')}"
         )
+        
+        if tx_id:
+            keyboard = [[
+                {"text": "\U0001f464 Pribadi", "callback_data": f"tx:scope:private:{tx_id}"},
+                {"text": "\U0001f469\u200d\u2764\ufe0f\u200d\U0001f468 Pasangan", "callback_data": f"tx:scope:couple:{tx_id}"},
+                {"text": "\U0001f465 Grup", "callback_data": f"tx:scope:group:{tx_id}"},
+            ]]
+            msg += "\n\nAtur cakupan pengeluaran ini:"
+            _send_keyboard(chat_id, msg, keyboard)
+        else:
+            send_message(chat_id, msg)
+            
     except Exception as exc:
         send_message(chat_id, f"\u26a0\ufe0f Gagal menyimpan: {exc}")
 
@@ -665,12 +687,27 @@ def _cmd_budget(
 
 def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
     linked = _is_linked_to_web(chat_id, sb_client) if sb_client else False
-    link_section = (
-        "\u2705 Akun sudah terhubung ke OprexDuit Web"
-        if linked
-        else "/link      - Hubungkan ke OprexDuit Web"
-    )
-    send_message(
+    link_text = "\u2705 Sudah Terhubung Web" if linked else "\U0001f517 Hubungkan Akun Web"
+    link_data = "cmd:noop" if linked else "cmd:link"
+    
+    keyboard = [
+        [
+            {"text": "\U0001f4ca Ringkasan", "callback_data": "cmd:ringkasan"},
+            {"text": "\U0001f4c5 Laporan", "callback_data": "cmd:laporan"},
+        ],
+        [
+            {"text": "\U0001f4b0 Budget", "callback_data": "cmd:budget"},
+            {"text": "\U0001f6cd\ufe0f Belanja AI", "callback_data": "cmd:belanja"},
+        ],
+        [
+            {"text": "\U0001f9d1\u200d\ud83e\udd1d\u200d\U0001f9d1 Patungan (Split Bill)", "callback_data": "cmd:splitbill"},
+        ],
+        [
+            {"text": link_text, "callback_data": link_data},
+        ]
+    ]
+
+    _send_keyboard(
         chat_id,
         "<b>\U0001f4f1 OprexDuit Bot - Panduan</b>\n\n"
         "<b>Catat Transaksi (kirim teks langsung):</b>\n"
@@ -682,13 +719,8 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
         "\u2022 <code>1.5jt</code> = Rp1.500.000\n"
         "\u2022 <code>500000</code> = Rp500.000\n"
         "\u2022 Awali <code>+</code> untuk pemasukan\n\n"
-        "<b>Perintah:</b>\n"
-        "/ringkasan - Ringkasan hari ini\n"
-        "/laporan   - Laporan bulan ini\n"
-        "/budget    - Cek status budget\n"
-        "/belanja   - Belanja hemat dengan AI \U0001f6cd\ufe0f\n"
-        f"{link_section}\n"
-        "/bantuan   - Tampilkan panduan ini",
+        "<b>Pilih Menu Interaktif di Bawah Ini:</b>",
+        keyboard
     )
 
 
@@ -952,6 +984,36 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         _answer_callback(cq_id, "Platform dipilih!")
         _handle_platform_selection(chat_id, platform_key)
 
+    elif data == "cmd:ringkasan":
+        _answer_callback(cq_id)
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        _cmd_ringkasan(chat_id, user_id, sb_client)
+        
+    elif data == "cmd:laporan":
+        _answer_callback(cq_id)
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        _cmd_laporan(chat_id, user_id, sb_client)
+        
+    elif data == "cmd:budget":
+        _answer_callback(cq_id)
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        _cmd_budget(chat_id, user_id, sb_client)
+        
+    elif data == "cmd:belanja":
+        _answer_callback(cq_id)
+        _cmd_belanja_start(chat_id)
+        
+    elif data == "cmd:link":
+        _answer_callback(cq_id)
+        _cmd_link(chat_id, sb_client)
+        
+    elif data == "cmd:splitbill":
+        _answer_callback(cq_id)
+        _cmd_splitbill_start(chat_id)
+        
+    elif data == "cmd:noop":
+        _answer_callback(cq_id)
+
     elif data == "shop:confirm":
         _answer_callback(cq_id, "Mencatat pembelian...")
         _handle_purchase_confirm(chat_id, username, sb_client)
@@ -976,6 +1038,22 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         product_id = data[len("shop:report:"):]
         _answer_callback(cq_id, "Laporan terkirim! Terima kasih \U0001f64f")
         _report_broken_link(chat_id, product_id, username, sb_client)
+
+    elif data.startswith("tx:scope:"):
+        parts = data.split(":")
+        if len(parts) == 4:
+            new_scope = parts[2]
+            tx_id = parts[3]
+            try:
+                sb_client.table("transactions").update({"scope": new_scope}).eq("id", tx_id).execute()
+                _answer_callback(cq_id, f"Scope diubah menjadi {new_scope.title()}!")
+                
+                # Optional: Edit original message to remove buttons
+                # But telegram API call needs message_id. We'll skip editing for now.
+            except Exception:
+                _answer_callback(cq_id, "Gagal mengubah scope.")
+        else:
+            _answer_callback(cq_id)
 
     else:
         _answer_callback(cq_id)
@@ -1060,6 +1138,56 @@ def _report_broken_link(
     except Exception as exc:
         send_message(chat_id, f"\u26a0\ufe0f Gagal mengirim laporan: {exc}")
 
+
+# ---------------------------------------------------------------------------
+# Split Bill Flow
+# ---------------------------------------------------------------------------
+
+def _cmd_splitbill_start(chat_id: int | str) -> None:
+    _SPLITBILL_SESSIONS[str(chat_id)] = {"step": "input_text"}
+    send_message(
+        chat_id,
+        "\U0001f9d1\u200d\ud83e\udd1d\u200d\U0001f9d1 <b>Mode Patungan (Split Bill)</b> - Powered by AI\n\n"
+        "Ketikkan daftar belanjaanmu untuk dipisah secara cerdas. Contoh:\n\n"
+        "<code>bakso 15rb 3 porsi\n"
+        "es teh 5000 2 gelas\n"
+        "krupuk 2000 1x</code>\n\n"
+        "Ketik /batal untuk membatalkan."
+    )
+
+
+def _handle_splitbill_input(chat_id: int | str, text: str, username: str, sb_client: Any) -> None:
+    session = _SPLITBILL_SESSIONS.get(str(chat_id))
+    if not session:
+        return
+
+    step = session.get("step")
+
+    if step == "input_text":
+        send_message(chat_id, "\u23f3 Sedang membaca tagihan dengan AI...")
+        try:
+            from app.ai_service import parse_split_bill_text
+            items = parse_split_bill_text(text)
+            if not items:
+                send_message(chat_id, "\u26a0\ufe0f Tidak mendektesi daftar belanja. Coba format lain atau ketik /batal")
+                return
+
+            lines = ["\U0001f4cb <b>Item Tagihan Ditemukan:</b>\n"]
+            total = 0
+            for i, it in enumerate(items, 1):
+                sub = it["price"] * it["qty"]
+                total += sub
+                lines.append(f"{i}. <b>{it['name']}</b> (x{it['qty']}) = {_fmt(sub)}")
+            lines.append(f"\n<b>Total: {_fmt(total)}</b>")
+            lines.append("\n\U0001f449 <i>Fitur penugasan tagihan ke teman sedang disempurnakan. Data ini dapat ditambahkan ke database Split Bill Anda!</i>")
+
+            # Reset session after outputting the raw items mapping MVP
+            _SPLITBILL_SESSIONS.pop(str(chat_id), None)
+            send_message(chat_id, "\n".join(lines))
+
+        except Exception as exc:
+            send_message(chat_id, f"\u26a0\ufe0f Gagal memproses AI: {exc}")
+            _SPLITBILL_SESSIONS.pop(str(chat_id), None)
 
 # ---------------------------------------------------------------------------
 # Scheduled broadcast functions (called by cron endpoints)

@@ -91,6 +91,7 @@ _CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "Transfer":        ["transfer", "kirim", "tf"],
     "Investasi":       ["investasi", "reksa dana", "saham", "kripto", "bitcoin",
                         "deposito", "tabungan berjangka"],
+    "Amal & Donasi":   ["amal", "donasi", "sedekah", "zakat", "infaq", "sumbangan", "zIS", "panti"],
 }
 
 _INCOME_HINTS = {
@@ -146,17 +147,35 @@ def parse_transaction(text: str) -> Optional[ParsedTx]:
     # Find first token that parses as an amount
     amount: Optional[float] = None
     amount_idx: int = -1
+    amount_ends_idx: int = -1
+
     for i, tok in enumerate(tokens):
+        combined_tok = tok
+        lookahead = 0
+        if i + 1 < len(tokens):
+            next_t = tokens[i+1].lower()
+            if next_t in _MULTIPLIERS:
+                combined_tok = tok + next_t
+                lookahead = 1
+
+        amt = parse_amount(combined_tok)
+        if amt is not None and amt > 0:
+            amount = amt
+            amount_idx = i
+            amount_ends_idx = i + lookahead
+            break
+
         amt = parse_amount(tok)
         if amt is not None and amt > 0:
             amount = amt
             amount_idx = i
+            amount_ends_idx = i
             break
 
     if amount is None:
         return None
 
-    desc_tokens = [t for i, t in enumerate(tokens) if i != amount_idx]
+    desc_tokens = [t for i, t in enumerate(tokens) if i < amount_idx or i > amount_ends_idx]
     description = " ".join(desc_tokens).strip().title() or "Transaksi"
 
     # Infer type from description if not set by sign

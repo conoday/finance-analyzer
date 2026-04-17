@@ -366,3 +366,48 @@ def ai_categorize(description: str) -> dict[str, str]:
         "kategori": parsed.get("kategori", "Lainnya"),
         "tipe": parsed.get("tipe", "expense"),
     }
+
+def parse_split_bill_text(text: str) -> list[dict]:
+    """
+    Baca daftar belanja manual via AI.
+    
+    Returns:
+        [{"name": "barang a", "price": 15000, "qty": 3}, ...]
+    """
+    import json
+
+    prompt = (
+        "Ekstrak daftar belanja berikut menjadi JSON array.\n"
+        "Teks:\n"
+        f"{text}\n\n"
+        "Kembalikan tepat sebuah JSON dengan format:\n"
+        "{\n"
+        '  "items": [\n'
+        '    {"name": "nama barang", "price": angka_harga_satuan, "qty": angka_jumlah},\n'
+        '    ...\n'
+        '  ]\n'
+        "}\n"
+        "Abaikan jika ada kalimat yang bukan barang belanjaan. Pastikan hasil valid JSON."
+    )
+
+    def _do(client, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=600,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        return json.loads(raw)
+
+    parsed = _call_with_fallback(_do)
+    return [
+        {
+            "name": str(it.get("name", "")),
+            "price": float(it.get("price", 0)),
+            "qty": int(it.get("qty", 1)),
+        }
+        for it in parsed.get("items", [])
+        if it.get("name") and float(it.get("price", 0)) > 0
+    ]

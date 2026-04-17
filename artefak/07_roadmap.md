@@ -1,21 +1,21 @@
 ﻿# Roadmap
 
-> Last updated: 2026-04-12 (rev 6)
+> Last updated: 2026-04-17 (rev 7)
 > Lihat tracking detail di `artefak/17_master_tracking.md`
 
 ## Overview
 
 ```
-Phase 0 ─── Phase 1 ─── Phase 1.5 ── Phase 2 ─── Phase 3 ─── Phase AI ─── Phase 4 ─── Phase 5 ─── Phase 6 ─── Phase WA
- Docs        Deploy      Sprint 1      Auth         DB+Tier     AI Feat       OCR          Admin       Payment     WhatsApp
-  ✅           ✅           ✅           ✅           🔲           🔲           🔲            🔧           🔲          🔲
+Phase 0 ─── Phase 1 ─── Phase 1.5 ── Phase 2 ─── Phase TG ── Phase Aff ─ Phase 5 ─── Phase 3 ─── Phase AI ─── Phase 4 ─── Phase 6
+ Docs        Deploy      Sprint 1      Auth       Telegram    Affiliate     Admin        DB+Tier     AI Feat       OCR         Payment
+  ✅           ✅           ✅           ✅           ✅           ✅           ✅           🔲           🔲           🔲           🔲
 ```
 
 ## Phase 0 — Documentation ✅ DONE
 Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 
 ## Phase 1 — Deploy ✅ DONE
-- Backend live: https://finance-analyzer-a82j.onrender.com
+- Backend live: https://oprexduit.onrender.com
 - Frontend live: https://finance-analyzer-roan.vercel.app
 
 ## Phase 1.5 — Sprint Free Features ✅ DONE (2026-04-10)
@@ -27,18 +27,46 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - ✅ Spending Heatmap, WA Share, QRIS Donasi modal
 - ✅ Product vision finalized (Free → Pro → AI tier)
 
-## Phase 2 — Authentication ✅ DONE (commit 14b121c + polish session)
+## Phase 2 — Authentication ✅ DONE (commit 14b121c)
 **Goal**: user bisa login, data tersimpan permanent (bukan localStorage)
 - ✅ Supabase Auth setup (schema.sql: profiles, categories, transactions, import_batches + RLS)
-- ✅ Auth pages: login (light theme), register (T&C UU PDP), verify OTP, callback route
-- ✅ `middleware.ts` proxy — protects /settings, /profile, /admin; `/` tetap publik
+- ✅ Auth pages: login, register (T&C UU PDP), verify OTP, callback route
+- ✅ `middleware.ts` — protects /settings, /profile, /admin; `/` tetap publik
 - ✅ `useAuth.ts` hook — `{ user, loading, signOut }` via `onAuthStateChange`
 - ✅ `useTransactions.ts` — localStorage guest → auto-migrasi ke Supabase saat login
-- ✅ Header auth state: user menu (first name), login button, signOut
-- ✅ Backend `_clean_amount` fix — Indonesian dot-thousands format (1.234.567 → 1234567, 50.000 → 50000)
-- ✅ Header light theme contrast fix — `rgba(255,255,255,0.88)` + `text-slate-800`
-- ✅ Empty state redesign — 2-column: upload+teaser KPI / QuickTracker
-- ✅ Dashboard greeting: `text-slate-100 → text-slate-800`
+- ✅ Header auth state: user menu, login button, signOut
+- ✅ Backend `require_auth` dependency, JWT verify via `SUPABASE_JWT_SECRET`
+- ✅ `GET /me` endpoint
+
+## Phase Telegram — Telegram Bot ✅ DONE (commit b8feffc, 2026-04-17)
+**Goal**: user bisa catat transaksi, cek laporan, dan belanja via Telegram
+- ✅ `app/telegram_bot.py` — webhook handler di `/telegram/webhook`
+- ✅ `/start` — auto-create user Supabase, welcome message
+- ✅ `/link` — generate link code 6 digit
+- ✅ `/catat` — NLP parse free text (50rb makan siang → transaksi)
+- ✅ `/ringkasan` — ringkasan pengeluaran hari ini
+- ✅ `/laporan` — laporan bulan ini + top 3 kategori
+- ✅ `/budget` — cek sisa budget vs limit
+- ✅ `/belanja` — shopping flow: pilih platform → cari produk → beli → lapor
+- ✅ Inline keyboard (tidak perlu ketik) — platform picker, URL beli, lapor link rusak
+- ✅ Shopping intent detection — "saya mau belanja", "beli", "cariin" → auto-trigger /belanja
+- ✅ Fix SyntaxError: file truncation commit 5fc7160
+
+## Phase Affiliate — Affiliate System ✅ DONE (commit dc3b2d4)
+**Goal**: monetisasi via komisi produk belanja rekomendasi
+- ✅ Migration: `affiliate_products` + `link_reports` tables
+- ✅ Backend CRUD endpoints (GET/POST/PUT/DELETE /affiliate/products)
+- ✅ `POST /affiliate/report` + `GET/DELETE /affiliate/reports`
+- ✅ `frontend/src/components/ReportLinkButton.tsx`
+
+## Phase 5 — Admin Console ✅ DONE (repo terpisah, commit 342a5cb)
+**Goal**: admin bisa manage produk affiliate, lihat laporan link rusak
+- ✅ Repo: `github.com/conoday/oprex-admin-console`
+- ✅ Dashboard stat cards (produk aktif, laporan pending)
+- ✅ CRUD tabel affiliate products
+- ✅ List + dismiss broken link reports
+- ✅ Settings: API URL + Bearer token config
+- Stack: Next.js 14 App Router, TypeScript, Tailwind
 
 ## Phase 3 — Transaction CRUD + Tier Enforcement 🔲 Planned
 **Goal**: data persistent, tier dikunci
@@ -52,12 +80,10 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 
 ## Phase AI — AI Features 🔲 Planned (setelah Phase 3)
 **Goal**: insight otomatis, jadi bedanya OprexDuit dari app lain
-- Data collection: simpan `ai_profiles` dari pola transaksi
 - Rule-based suggestion engine (IF spending > 30% → warning)
 - Financial persona detection (saver/impulsive/balanced)
-- DeepSeek-V3 integration untuk natural language insight
+- LLM integration untuk natural language insight
 - "Bulan ini boros di makan +30%", prediksi cashflow
-- Personal AI agent dengan memory per user
 - Estimasi: 7-10 hari
 
 ## Phase 4 — Image Extraction (OCR) 🔲 Planned (setelah Phase 3)
@@ -66,24 +92,9 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - Hanya Pro+ tier
 - Estimasi: 4-7 hari
 
-## Phase 5 — Admin Console 🔧 Scaffolded
-- Deploy admin-console ke Vercel (project baru)
-- Real user metrics
-
-## Phase 6 — Payment 🔲 Planned
-- Midtrans integration untuk upgrade tier
-- Webhook /payment/callback
-- Upgrade CTA di frontend
-
-## Phase 5 — Admin Console 🔧 IN PROGRESS (scaffold done)
-- Scaffold: `admin-console/` di repo ✅
-- Deploy ke Vercel (project baru) 🔲
-- Data real (butuh Phase 2+3) 🔲
-- Estimasi deploy: 1 hari, data real: +2-3 hari
-
 ## Phase 6 — Payment Gateway (Monetisasi) 🔲 Planned
-- Integrasi Midtrans atau Xendit
-- Endpoint: POST /subscribe (buat invoice) + webhook /payment/callback
+- Midtrans integration untuk upgrade tier
+- POST /subscribe (buat invoice) + webhook /payment/callback
 - Update tier user di DB setelah pembayaran sukses
 - Estimasi: 3-5 hari
 
@@ -96,20 +107,17 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 ```
 Phase 1.5 (Sprint Free) ← SELESAI
      │
-Phase 2 (Auth + Supabase)
-     ├─→ Phase 3 (Transactions + Tier)
-     │       ├─→ Phase AI (AI Categorization)
-     │       ├─→ Phase 4 (OCR)
-     │       └─→ Phase 6 (Payment)
-     └─→ Phase 5 (Admin — data real)
+Phase 2 (Auth + Supabase) ← SELESAI
+     │
+Phase Telegram ← SELESAI
+     │
+Phase Affiliate ← SELESAI
+     │
+Phase 5 (Admin Console) ← SELESAI (repo terpisah)
+     │
+Phase 3 (Transactions + Tier) ← NEXT
+     ├─→ Phase AI (AI Categorization)
+     ├─→ Phase 4 (OCR)
+     └─→ Phase 6 (Payment)
               └─→ Phase 7 (Mobile)
 ```
-
-## Quick Wins Berikutnya (sebelum Phase 2)
-
-Tanpa database pun bisa dikerjakan:
-1. F01 Quick Add Transaction (localStorage sementara)
-2. F06 Smart Search (client-side filter transaksi)
-3. A08 Year-in-Review summary card
-4. Merchant leaderboard visual upgrade
-5. Sample data button lebih prominent

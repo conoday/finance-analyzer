@@ -1,6 +1,6 @@
 ﻿# Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-12 (rev 6)
+> Last updated: 2026-04-17 (rev 7)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -12,12 +12,14 @@
 | Komponen | Status | URL / Lokasi |
 |---|---|---|
 | Frontend | ✅ Live | https://finance-analyzer-roan.vercel.app |
-| Backend API | ✅ Live | https://finance-analyzer-a82j.onrender.com |
-| Database | ⚠️ Schema siap, env vars belum di-set | Supabase — jalankan `supabase/schema.sql` |
-| Auth | ✅ Kode selesai, butuh Supabase env vars | Login/Register/Verify/Callback pages + hooks |
-| Admin Console | 🔧 Scaffolded | admin-console/ di repo, belum deploy |
+| Backend API | ✅ Live | https://oprexduit.onrender.com |
+| Database | ✅ Schema + migrations applied | Supabase — schema.sql + 002_affiliate_tables.sql |
+| Auth | ✅ Live | Login/Register/Verify/Callback + hooks + backend JWT |
+| Admin Console | ✅ Done, repo terpisah | github.com/conoday/oprex-admin-console |
+| Telegram Bot | ✅ Live | Webhook di /telegram/webhook, inline keyboard |
+| Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Commit | ✅ a66ccfc (2026-04-10) | fix(middleware): guard Supabase env vars |
+| Last Commit | ✅ b8feffc (2026-04-17) | feat: inline keyboard buttons belanja + shopping intent |
 
 ---
 
@@ -77,8 +79,45 @@
 - [x] `infer_datetime_format` removed (pandas 2+ compat)
 - [x] `parseIDR`: rebu/miliar/triliun + brand auto-kategorisasi
 
-### Dokumentasi Artefak (rev 6)
+### Dokumentasi Artefak (rev 7)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking
+
+### Telegram Bot (Phase Telegram — DONE)
+- [x] `app/telegram_bot.py` — webhook handler, auto user create, inline keyboard
+- [x] `/start` — auto-create Supabase user (telegram-only), welcome message
+- [x] `/link` — generate link code, blocked jika sudah linked
+- [x] `/catat` — simpan transaksi via free text (50rb makan siang)
+- [x] `/ringkasan` — ringkasan hari ini
+- [x] `/laporan` — laporan bulan ini
+- [x] `/budget` — cek status budget vs limit
+- [x] `/belanja` — shopping flow dengan inline keyboard buttons (platform pilih, produk, lapor)
+- [x] `/bantuan` — panduan lengkap
+- [x] Shopping intent detection — "saya mau belanja", "cariin", "beli" → auto-trigger /belanja
+- [x] Inline keyboard: platform picker (Shopee/TikTok Shop/Alfagift), beli URL button, lapor button
+- [x] Konfirmasi "Sudah Beli" via button → auto-catat transaksi
+- [x] Lapor link rusak via button → insert ke `link_reports` Supabase
+- [x] `_SHOPPING_SESSIONS` dict — stateful per chat_id
+
+### Affiliate System (Phase Affiliate — DONE)
+- [x] `data/migrations/002_affiliate_tables.sql` — `affiliate_products` + `link_reports` + triggers
+- [x] `GET /affiliate/products` — list produk aktif (publik, no auth)
+- [x] `POST /affiliate/products` — tambah produk (auth required)
+- [x] `PUT /affiliate/products/{id}` — edit produk (auth required)
+- [x] `DELETE /affiliate/products/{id}` — hapus produk (auth required)
+- [x] `POST /affiliate/report` — user lapor link rusak (auth required)
+- [x] `GET /affiliate/reports` — admin lihat semua laporan + join produk (auth required)
+- [x] `DELETE /affiliate/reports/{id}` — admin dismiss laporan (auth required)
+- [x] `frontend/src/components/ReportLinkButton.tsx` — button + modal lapor link
+
+### Admin Console (Phase 5 — DONE, repo terpisah)
+- [x] Repo: `conoday/oprex-admin-console` (commit 342a5cb)
+- [x] `app/page.tsx` — Dashboard: stat cards (produk aktif, laporan pending)
+- [x] `app/affiliate/page.tsx` — CRUD tabel affiliate: create/edit/delete/toggle is_active
+- [x] `app/reports/page.tsx` — List laporan link rusak + dismiss
+- [x] `app/settings/page.tsx` — Config API URL + Bearer token (localStorage)
+- [x] `components/Sidebar.tsx` — Nav dengan active link highlight
+- [x] `lib/api.ts` — `apiFetch<T>()`, `formatRupiah()`, `formatDate()`
+- [x] Stack: Next.js 14 App Router, TypeScript, Tailwind CSS
 
 ---
 
@@ -86,23 +125,11 @@
 
 | # | Task | Di mana | Priority |
 |---|---|---|---|
-| 1 | Run `supabase/schema.sql` | Supabase → SQL Editor | 🔴 Blocker auth |
-| 2 | Set Site URL + Redirect URL | Supabase → Auth → URL Config: `https://finance-analyzer-roan.vercel.app/auth/callback` | 🔴 Blocker auth |
-| 3 | Enable Email provider | Supabase → Auth → Providers → Email → ON, Confirm email ON | 🔴 Blocker auth |
-| 4 | Set Vercel env vars | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 🔴 Blocker auth |
-| 5 | Set Render env vars | `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS` | 🔴 Blocker auth |
-| 6 | Setup Google OAuth | Google Cloud Console → Credentials → Client ID + Secret → Supabase | 🟡 Nice to have |
-| 7 | Jalankan ALTER TABLE | SQL snippet di bawah | 🟡 Untuk AI features |
-| 8 | Daftar Midtrans Sandbox | https://dashboard.midtrans.com → set `MIDTRANS_SERVER_KEY` | 🟠 Phase Payment |
-| 9 | Ganti/rotate API keys AI | Keys Kimi & GLM yang di-share di chat harus di-revoke segera | 🔴 Security |
-
-**SQL ALTER TABLE (jalankan di Supabase SQL Editor):**
-```sql
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
-```
+| 1 | Set env vars Supabase (jika belum) | Vercel + Render | 🟡 Jika auth belum jalan |
+| 2 | Deploy admin console ke Vercel | cd oprexduit-admin-consol → vercel --prod | 🟡 Optional |
+| 3 | Set env admin console | NEXT_PUBLIC_API_URL + NEXT_PUBLIC_ADMIN_TOKEN di Vercel | 🟡 Setelah deploy |
+| 4 | Rotate API keys AI | Keys Kimi & GLM yang di-share di chat harus di-revoke | 🔴 Security |
+| 5 | Daftar Midtrans Sandbox | https://dashboard.midtrans.com → set MIDTRANS_SERVER_KEY | 🟠 Phase Payment |
 
 ---
 
@@ -110,9 +137,9 @@ ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
 
 | Task | Status | Notes |
 |---|---|---|
-| Supabase env setup | Menunggu user | Auth jalan setelah ini |
 | AI integration (Kimi/GLM) | 🔧 Test script ready | `test_ai_keys.py` — tunggu key baru dari user |
-| Admin Console scaffold | 🔧 Folder ada | `admin-console/` belum deploy |
+| Tier enforcement backend | 🔧 Schema ready | Belum enforce max 3 akun, max 3 bulan history |
+| Transaction CRUD endpoints | 🔧 Planned | POST/GET/PUT/DELETE /transactions Phase 3 |
 
 ---
 
@@ -254,18 +281,27 @@ Target: UMKM, tim kecil, pasangan.
 Lihat detail di [05_data_modeling.md](05_data_modeling.md).
 
 ```
-profiles         → id (FK auth.users), email, name, plan_type, created_at
-accounts         → id, user_id, name, type (bank/ewallet/cash), color, balance
-transactions     → id, user_id, account_id, amount, type, category, sub_category,
-                   payment_method, note, date, source, hour_of_day, day_of_week,
-                   method, created_at
-tags             → id, user_id, name
-transaction_tags → transaction_id, tag_id
-categories       → id, user_id, name, icon, color, budget_limit
-budgets          → id, user_id, category_id, month, limit_amount, spent_amount
-subscriptions    → id, user_id, tier, status, started_at, expires_at, payment_ref
-import_batches   → id, user_id, filename, period, row_count, created_at
-ai_profiles      → user_id, spending_pattern, risk_level, persona_type, last_analysis
+profiles              → id (FK auth.users), email, name, plan_type, telegram_chat_id, created_at
+accounts              → id, user_id, name, type (bank/ewallet/cash), color, balance
+transactions          → id, user_id, account_id, amount, type, category, sub_category,
+                         payment_method, note, date, source, hour_of_day, day_of_week,
+                         method, created_at
+tags                  → id, user_id, name
+transaction_tags      → transaction_id, tag_id
+categories            → id, user_id, name, icon, color, budget_limit
+budgets               → id, user_id, category_id, month, limit_amount, spent_amount
+subscriptions         → id, user_id, tier, status, started_at, expires_at, payment_ref
+import_batches        → id, user_id, filename, period, row_count, created_at
+ai_profiles           → user_id, spending_pattern, risk_level, persona_type, last_analysis
+affiliate_products    → id, name, url, platform, price, commission_rate, is_active, created_at
+link_reports          → id, product_id, reported_by (username), reason, created_at
+pending_telegram_links → chat_id, link_code, created_at
+```
+
+### Migration files
+```
+supabase/schema.sql              — core tables (v1)
+data/migrations/002_affiliate_tables.sql — affiliate_products + link_reports
 ```
 
 ---
