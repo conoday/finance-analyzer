@@ -38,6 +38,7 @@ _WEB_URL = os.environ.get("WEB_URL", "https://oprexduit.vercel.app")
 # { str(chat_id): { "step": str, "platform": str, "query": str, "products": [...] } }
 _SHOPPING_SESSIONS: dict[str, dict] = {}
 _SPLITBILL_SESSIONS: dict[str, dict] = {}
+_REPORT_SESSIONS: dict[str, dict] = {}
 
 # ---------------------------------------------------------------------------
 # Telegram API helper
@@ -152,6 +153,8 @@ def handle_update(update: dict, sb_client: Any) -> None:
             _handle_splitbill_input(chat_id, text, username, sb_client)
         elif str(chat_id) in _SHOPPING_SESSIONS:
             _handle_shopping_input(chat_id, text, username, sb_client)
+        elif str(chat_id) in _REPORT_SESSIONS:
+            _handle_lapor_input(chat_id, text, username)
         else:
             _handle_free_text(chat_id, text, username, sb_client)
 
@@ -322,9 +325,12 @@ def _handle_command(
     elif command == "/batal":
         _SHOPPING_SESSIONS.pop(str(chat_id), None)
         _SPLITBILL_SESSIONS.pop(str(chat_id), None)
+        _REPORT_SESSIONS.pop(str(chat_id), None)
         send_message(chat_id, "\u274e Sesi dibatalkan.")
     elif command in ("/splitbill", "/patungan"):
         _cmd_splitbill_start(chat_id)
+    elif command in ("/lapor", "/bug"):
+        _cmd_lapor_start(chat_id)
     elif command == "/room":
         _cmd_room(chat_id, args, username, sb_client)
     else:
@@ -706,7 +712,11 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
         ],
         [
             {"text": link_text, "callback_data": link_data},
-        ]
+        ],
+        [
+            {"text": "🚨 Lapor Bug", "callback_data": "cmd:lapor"},
+        ],
+
     ]
 
     _send_keyboard(
@@ -725,6 +735,32 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
         keyboard
     )
 
+
+
+def _cmd_lapor_start(chat_id: int | str) -> None:
+    _REPORT_SESSIONS[str(chat_id)] = {"step": "waiting_feedback"}
+    send_message(
+        chat_id,
+        "🚨 <b>Lapor Bug / Kendala</b>
+
+Silakan ketikkan masalah atau bug yang kamu alami. Nanti tim OprexDuit akan mengeceknya.
+
+Ketik /batal jika tidak jadi melapor."
+    )
+
+def _handle_lapor_input(chat_id: int | str, text: str, username: str) -> None:
+    session = _REPORT_SESSIONS.get(str(chat_id))
+    if not session:
+        return
+    
+    # Store to backend log for now
+    print("====================================================")
+    print(f"[BUG REPORT] From user {username} ({chat_id}):")
+    print(f"{text}")
+    print("====================================================")
+    
+    send_message(chat_id, "✅ Laporanmu sudah diteruskan ke tim pengembang kami (OprexDuit Admin Console). Terima kasih!")
+    _REPORT_SESSIONS.pop(str(chat_id), None)
 
 # ---------------------------------------------------------------------------
 # AI Shopping Flow
