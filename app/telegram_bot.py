@@ -67,6 +67,41 @@ def send_message(chat_id: int | str, text: str, parse_mode: str = "HTML") -> Non
         print(f"[telegram] send_message error: {exc}")
 
 
+def _send_keyboard(
+    chat_id: int | str,
+    text: str,
+    keyboard: list[list[dict]],
+    parse_mode: str = "HTML",
+) -> None:
+    """Send a message with an inline keyboard (buttons)."""
+    url = _TG_API.format(token=_bot_token(), method="sendMessage")
+    try:
+        with httpx.Client(timeout=8) as client:
+            client.post(url, json={
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": parse_mode,
+                "disable_web_page_preview": True,
+                "reply_markup": {"inline_keyboard": keyboard},
+            })
+    except Exception as exc:
+        print(f"[telegram] _send_keyboard error: {exc}")
+
+
+def _answer_callback(callback_query_id: str, text: str = "") -> None:
+    """Acknowledge a callback query so the button stops loading."""
+    url = _TG_API.format(token=_bot_token(), method="answerCallbackQuery")
+    try:
+        with httpx.Client(timeout=5) as client:
+            client.post(url, json={
+                "callback_query_id": callback_query_id,
+                "text": text,
+                "show_alert": False,
+            })
+    except Exception as exc:
+        print(f"[telegram] _answer_callback error: {exc}")
+
+
 def _fmt(amount: float) -> str:
     """Format as Indonesian Rupiah: 1234567 -> Rp1.234.567"""
     return f"Rp{amount:,.0f}".replace(",", ".")
@@ -83,6 +118,11 @@ def _progress_bar(pct: float, width: int = 10) -> str:
 
 def handle_update(update: dict, sb_client: Any) -> None:
     """Entry point - called by the FastAPI /telegram/webhook endpoint."""
+    # Handle inline button presses
+    if "callback_query" in update:
+        _handle_callback_query(update["callback_query"], sb_client)
+        return
+
     message = update.get("message") or update.get("edited_message")
     if not message:
         return
@@ -285,7 +325,21 @@ def _handle_command(
 
 
 def _handle_free_text(chat_id: int | str, text: str, username: str, sb_client: Any) -> None:
-    """Try to parse free-form text as a transaction."""
+    """Try to parse free-form text as a transaction. If shopping intent detected, start shopping."""
+    text_lower = text.lower()
+
+    # Detect shopping intent keywords
+    _SHOPPING_KEYWORDS = {
+        "belanja", "beli", "mau beli", "mau belanja", "pengen beli", "pengen belanja",
+        "ingin beli", "ingin belanja", "cariin", "cariiin", "cari produk",
+        "rekomendasi", "rekomendasiin", "shop", "shopping", "mau cari",
+        "mau order", "order", "pesan produk",
+    }
+    if any(kw in text_lower for kw in _SHOPPING_KEYWORDS):
+        _get_or_create_telegram_user(chat_id, username, sb_client)
+        _cmd_belanja_start(chat_id)
+        return
+
     user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
     if not user_id:
         send_message(
@@ -306,6 +360,7 @@ def _handle_free_text(chat_id: int | str, text: str, username: str, sb_client: A
             "\u2022 <code>50rb makan siang</code>\n"
             "\u2022 <code>catat 25000 bensin</code>\n"
             "\u2022 <code>+2jt gaji bulan ini</code>\n\n"
+            "\U0001f6cd\ufe0f Mau belanja? Ketik /belanja\n"
             "Atau ketik /bantuan untuk panduan lengkap.",
         )
 
@@ -665,16 +720,20 @@ _PLATFORM_LABELS: dict[str, str] = {
 
 
 def _cmd_belanja_start(chat_id: int | str) -> None:
-    """Step 1 - Ask user which platform."""
+    """Step 1 - Ask user which platform via inline keyboard buttons."""
     _SHOPPING_SESSIONS[str(chat_id)] = {"step": "choose_platform"}
-    send_message(
+    _send_keyboard(
         chat_id,
-        "\U0001f6cd\ufe0f <b>Belanja Hemat dengan AI</b>\n\n"
-        "Mau belanja di platform mana?\n\n"
-        "1\ufe0f\u20e3 Shopee\n"
-        "2\ufe0f\u20e3 TikTok Shop\n"
-        "3\ufe0f\u20e3 Alfagift\n\n"
-        "Balas dengan angka (1/2/3) atau ketik /batal untuk keluar.",
+        "\U0001f6cd\ufe0f <b>Belanja Hemat dengan AI</b>\n\nMau belanja di platform mana?",
+        [
+            [
+                {"text": "\U0001f7e0 Shopee", "callback_data": "shop:platform:shopee"},
+                {"text": "\U0001f3b5 TikTok Shop", "callback_data": "shop:platform:tiktokshop"},
+            ],
+            [
+                {"text": "\U0001f7e2 Alfagift", "callback_data": "shop:platform:alfagift"},
+            ],
+        ],
     )
 
 
@@ -761,11 +820,14 @@ def _fetch_and_show_products(
             products = res2.data or []
 
         if not products:
-            send_message(
+            _send_keyboard(
                 chat_id,
                 f"\U0001f614 Belum ada produk <b>{query}</b> di {platform_label}.\n\n"
-                "Coba cari produk lain atau hubungi admin!\n"
-                "Mau cari yang lain? Ketik nama produk atau /batal untuk keluar.",
+                "Coba cari produk lain atau hubungi admin!",
+                [
+                    [{"text": "\U0001f50d Cari Produk Lain", "callback_data": "shop:newproduct"}],
+                    [{"text": "\u274c Selesai", "callback_data": "shop:cancel"}],
+                ],
             )
             _SHOPPING_SESSIONS[str(chat_id)]["step"] = "choose_product"
             return
@@ -779,19 +841,30 @@ def _fetch_and_show_products(
             price_str = _fmt(p["price"]) if p.get("price") else "Lihat di toko"
             lines.append(
                 f"{i}. <b>{p['name']}</b>\n"
-                f"   \U0001f4b0 {price_str}\n"
-                f"   \U0001f517 <a href='{p['affiliate_url']}'>Beli di {platform_label}</a>"
+                f"   \U0001f4b0 {price_str}"
             )
             if p.get("description"):
                 desc = p["description"][:80]
                 lines.append(f"   \U0001f4dd {desc}{'...' if len(p['description']) > 80 else ''}")
 
-        lines.append(
-            f"\n\u23eb Klik link untuk belanja langsung di {platform_label}.\n"
-            "\U0001f4ac Balas <b>jadi</b> jika sudah beli, atau <b>batal</b> jika tidak jadi."
-        )
+        # Build inline keyboard: each product row = [Beli URL button] [Lapor button]
+        keyboard: list[list[dict]] = []
+        for i, p in enumerate(products, 1):
+            price_str = _fmt(p["price"]) if p.get("price") else "Lihat"
+            name_short = p["name"][:22]
+            row: list[dict] = [
+                {"text": f"\U0001f6d2 {i}. {name_short}", "url": p["affiliate_url"]},
+                {"text": "\U0001f6a9 Lapor", "callback_data": f"shop:report:{p['id']}"},
+            ]
+            keyboard.append(row)
 
-        send_message(chat_id, "\n\n".join(lines))
+        keyboard.append([
+            {"text": "\u2705 Sudah Beli", "callback_data": "shop:confirm"},
+            {"text": "\U0001f50d Cari Lain", "callback_data": "shop:newproduct"},
+            {"text": "\u274c Selesai", "callback_data": "shop:cancel"},
+        ])
+
+        _send_keyboard(chat_id, "\n".join(lines), keyboard)
 
     except Exception as exc:
         send_message(chat_id, f"\u26a0\ufe0f Gagal mengambil produk: {exc}")
@@ -858,6 +931,134 @@ def _handle_purchase_confirmation(
         _SHOPPING_SESSIONS[str(chat_id)]["step"] = "choose_product"
         _SHOPPING_SESSIONS[str(chat_id)]["query"] = text
         _fetch_and_show_products(chat_id, text, session.get("platform", "shopee"), sb_client)
+
+
+# ---------------------------------------------------------------------------
+# Inline keyboard callback handlers
+# ---------------------------------------------------------------------------
+
+def _handle_callback_query(cq: dict, sb_client: Any) -> None:
+    """Dispatch inline button presses."""
+    cq_id: str = cq["id"]
+    chat_id: int = cq["message"]["chat"]["id"]
+    from_data = cq.get("from") or {}
+    username: str = (
+        from_data.get("username") or from_data.get("first_name") or str(chat_id)
+    )
+    data: str = cq.get("data", "")
+
+    if data.startswith("shop:platform:"):
+        platform_key = data[len("shop:platform:"):]
+        _answer_callback(cq_id, "Platform dipilih!")
+        _handle_platform_selection(chat_id, platform_key)
+
+    elif data == "shop:confirm":
+        _answer_callback(cq_id, "Mencatat pembelian...")
+        _handle_purchase_confirm(chat_id, username, sb_client)
+
+    elif data == "shop:cancel":
+        _answer_callback(cq_id, "Sesi belanja diakhiri.")
+        _SHOPPING_SESSIONS.pop(str(chat_id), None)
+        send_message(
+            chat_id,
+            "Tidak jadi belanja? Tidak apa-apa! \U0001f60a\n"
+            "Ketik /belanja kapan saja jika mau cari produk ya!",
+        )
+
+    elif data == "shop:newproduct":
+        _answer_callback(cq_id)
+        session = _SHOPPING_SESSIONS.get(str(chat_id), {})
+        session["step"] = "choose_product"
+        _SHOPPING_SESSIONS[str(chat_id)] = session
+        send_message(chat_id, "Mau cari produk apa? Ketik nama produknya \U0001f50d")
+
+    elif data.startswith("shop:report:"):
+        product_id = data[len("shop:report:"):]
+        _answer_callback(cq_id, "Laporan terkirim! Terima kasih \U0001f64f")
+        _report_broken_link(chat_id, product_id, username, sb_client)
+
+    else:
+        _answer_callback(cq_id)
+
+
+def _handle_platform_selection(chat_id: int | str, platform_key: str) -> None:
+    """Called when user picks a platform via button."""
+    platform_label = _PLATFORM_LABELS.get(platform_key, platform_key.title())
+    _SHOPPING_SESSIONS[str(chat_id)] = {
+        "step": "choose_product",
+        "platform": platform_key,
+        "platform_label": platform_label,
+    }
+    send_message(
+        chat_id,
+        f"\u2705 Platform: <b>{platform_label}</b>\n\n"
+        "Mau belanja apa? Ketik nama produknya:\n"
+        "<i>(contoh: sunscreen, headset gaming, beras 5kg)</i>\n\n"
+        "Ketik /batal untuk keluar.",
+    )
+
+
+def _handle_purchase_confirm(chat_id: int | str, username: str, sb_client: Any) -> None:
+    """Record a purchase when user presses 'Sudah Beli' button."""
+    session = _SHOPPING_SESSIONS.get(str(chat_id), {})
+    products = session.get("products", [])
+    query = session.get("query", "Belanja online")
+
+    if products and products[0].get("price"):
+        amount = products[0]["price"]
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        if user_id and sb_client:
+            try:
+                sb_client.table("transactions").insert({
+                    "user_id": user_id,
+                    "date": date.today().isoformat(),
+                    "description": f"Belanja {query} ({session.get('platform_label', 'Online')})",
+                    "amount": amount,
+                    "type": "expense",
+                    "category_raw": "Belanja",
+                    "source": "telegram_shopping",
+                }).execute()
+                send_message(
+                    chat_id,
+                    f"\u2705 <b>Pembelian dicatat!</b>\n\n"
+                    f"Pengeluaran <b>{_fmt(amount)}</b> untuk <b>{query}</b> sudah disimpan.\n\n"
+                    "Terima kasih sudah belanja hemat! \U0001f389",
+                )
+            except Exception as exc:
+                send_message(chat_id, f"\u2705 Terima kasih! (Gagal menyimpan transaksi: {exc})")
+        else:
+            send_message(chat_id, "\u2705 Terima kasih sudah belanja! \U0001f389")
+    else:
+        send_message(
+            chat_id,
+            f"\u2705 Terima kasih sudah belanja <b>{query}</b>!\n"
+            "Jangan lupa catat pengeluarannya ya:\n"
+            f"<code>50rb {query}</code>",
+        )
+    _SHOPPING_SESSIONS.pop(str(chat_id), None)
+
+
+def _report_broken_link(
+    chat_id: int | str, product_id: str, username: str, sb_client: Any
+) -> None:
+    """Insert a broken-link report into link_reports table."""
+    if not sb_client:
+        send_message(chat_id, "\u26a0\ufe0f Gagal mengirim laporan. Coba lagi nanti.")
+        return
+    try:
+        user_id = _get_user_id(chat_id, sb_client)
+        sb_client.table("link_reports").insert({
+            "product_id": product_id,
+            "reported_by": user_id,
+            "reason": "Link rusak / tidak bisa dibuka (laporan dari Telegram)",
+        }).execute()
+        send_message(
+            chat_id,
+            "\U0001f64f Terima kasih laporan kamu!\n\n"
+            "Admin akan segera memperbaiki link tersebut. \U0001f527",
+        )
+    except Exception as exc:
+        send_message(chat_id, f"\u26a0\ufe0f Gagal mengirim laporan: {exc}")
 
 
 # ---------------------------------------------------------------------------
