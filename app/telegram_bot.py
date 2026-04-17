@@ -368,13 +368,13 @@ def _handle_free_text(chat_id: int | str, text: str, username: str, sb_client: A
     else:
         send_message(
             chat_id,
-            "Hmm, tidak bisa membaca transaksi ini \U0001f914\n\n"
-            "<b>Format yang bisa dibaca:</b>\n"
-            "\u2022 <code>50rb makan siang</code>\n"
-            "\u2022 <code>catat 25000 bensin</code>\n"
-            "\u2022 <code>+2jt gaji bulan ini</code>\n\n"
-            "\U0001f6cd\ufe0f Mau belanja? Ketik /belanja\n"
-            "Atau ketik /bantuan untuk panduan lengkap.",
+            "💡 <b>Ups, formatnya kurang tepat!</b>\n\n"
+            "Jika kamu ingin <b>mencatat transaksi</b>, pastikan sertakan nominal angkanya.\n"
+            "Contoh penyebutan:\n"
+            "• <code>50rb makan siang</code>\n"
+            "• <code>+2jt gaji bulanan</code>\n\n"
+            "🤖 Jika kamu ingin diskusi analisa keuangan, silakan gunakan fitur fitur <b>AI Chat</b> di web-dashboard!\n\n"
+            "Ketik /bantuan untuk melihat daftar menu.",
         )
 
 
