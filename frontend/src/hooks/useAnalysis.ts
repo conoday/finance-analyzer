@@ -25,13 +25,27 @@ export function useAnalysis() {
     }
   }, []);
 
-  const reset = useCallback(() => {
+  
+  const analyzeMe = useCallback(async () => {
+    setStatus("loading");
+    setError(null);
+    try {
+      const result = await api.analyzeMe();
+      setData(result);
+      setStatus("success");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+      setStatus("error");
+    }
+  }, []);
+
+const reset = useCallback(() => {
     setData(null);
     setStatus("idle");
     setError(null);
   }, []);
 
-  return { data, status, error, analyze, reset };
+  return { data, status, error, analyze, analyzeMe, reset };
 }
 
 export function useSimulator(data: AnalysisResult | null) {

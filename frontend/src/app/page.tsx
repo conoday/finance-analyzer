@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -45,11 +46,20 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export default function Home() {
-  const { data, status, error, analyze, reset } = useAnalysis();
+  const { user } = useAuth();
+  const { data, status, error, analyze, analyzeMe, reset } = useAnalysis();
   const { txs, loading: txLoading, save, deleteOne, clear, isCloud } = useTransactions();
   const [activeTab, setActiveTab] = useState<TabId>("transaksi");
   const [showDonasi, setShowDonasi] = useState(false);
   const [showSmartInput, setShowSmartInput] = useState(false);
+
+  // Sync Cloud Data automatically
+  useEffect(() => {
+    if (user && !data && status === "idle") {
+      analyzeMe();
+    }
+  }, [user, data, status, analyzeMe]);
+
 
   return (
     <div className="relative min-h-screen bg-mesh overflow-x-hidden">

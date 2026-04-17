@@ -40,7 +40,7 @@ from app.simulator import build_category_baseline
 # ---------------------------------------------------------------------------
 
 def run_pipeline(
-    file: Union[str, Path, io.BytesIO, io.StringIO],
+    file: Union[str, Path, io.BytesIO, io.StringIO, pd.DataFrame],
     forecast_periods: int = 30,
     forecast_method: str = "linear_regression",
 ) -> dict[str, Any]:
@@ -61,7 +61,10 @@ def run_pipeline(
 
     # ── Step 1: Load ────────────────────────────────────────────────────────
     try:
-        raw_df = load_file(file)
+        if isinstance(file, pd.DataFrame):
+            raw_df = file.copy()
+        else:
+            raw_df = load_file(file)
     except Exception as exc:
         return _empty_result(errors=[f"Gagal membaca file: {exc}"])
 

@@ -2,11 +2,23 @@ import type { AnalysisResult, SimulateRequest, SimulateResult } from "@/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+import { createClient } from "@/utils/supabase/client";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  const headers = new Headers(init?.headers);
+  headers.set("Accept", "application/json");
+  if (session?.access_token) {
+    headers.set("Authorization", `Bearer ${session.access_token}`);
+  }
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { Accept: "application/json" },
     ...init,
+    headers,
   });
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API ${res.status}: ${text}`);
@@ -15,6 +27,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+
+  /** Analyze user's Supabase transactions */
+  analyzeMe: (forecastPeriods = 30): Promise<AnalysisResult> =>
+    request<AnalysisResult>(
+      `/analyze/me?forecast_periods=${forecastPeriods}&forecast_method=linear_regression`
+    ),
+
   /** Analyze uploaded file */
   analyzeFile: (file: File, forecastPeriods = 30): Promise<AnalysisResult> => {
     const form = new FormData();
