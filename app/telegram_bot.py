@@ -741,11 +741,7 @@ def _cmd_lapor_start(chat_id: int | str) -> None:
     _REPORT_SESSIONS[str(chat_id)] = {"step": "waiting_feedback"}
     send_message(
         chat_id,
-        "🚨 <b>Lapor Bug / Kendala</b>
-
-Silakan ketikkan masalah atau bug yang kamu alami. Nanti tim OprexDuit akan mengeceknya.
-
-Ketik /batal jika tidak jadi melapor."
+        "🚨 <b>Lapor Bug / Kendala</b>\n\nSilakan ketikkan masalah atau bug yang kamu alami. Nanti tim OprexDuit akan mengeceknya.\n\nKetik /batal jika tidak jadi melapor."
     )
 
 def _handle_lapor_input(chat_id: int | str, text: str, username: str) -> None:
