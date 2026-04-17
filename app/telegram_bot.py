@@ -179,13 +179,13 @@ def _get_user_id(chat_id: int | str, sb_client: Any) -> Optional[str]:
 
 
 def _is_linked_to_web(chat_id: int | str, sb_client: Any) -> bool:
-    """Check if this Telegram chat is linked to a web (email) account."""
+    """Check if this Telegram chat is linked to a web account."""
     if not sb_client:
         return False
     try:
         res = (
             sb_client.table("profiles")
-            .select("id,email")
+            .select("id,telegram_linked_at")
             .eq("telegram_chat_id", str(chat_id))
             .limit(1)
             .execute()
@@ -193,9 +193,9 @@ def _is_linked_to_web(chat_id: int | str, sb_client: Any) -> bool:
         rows = res.data or []
         if not rows:
             return False
-        # A web-linked account has a real email (not the internal telegram placeholder)
-        email: str = rows[0].get("email") or ""
-        return bool(email) and "@telegram.oprexduit.internal" not in email
+        
+        # If telegram_linked_at is set, it means the user manually linked their web account
+        return bool(rows[0].get("telegram_linked_at"))
     except Exception:
         return False
 
@@ -702,7 +702,7 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
             {"text": "\U0001f6cd\ufe0f Belanja AI", "callback_data": "cmd:belanja"},
         ],
         [
-            {"text": "\U0001f9d1\u200d\ud83e\udd1d\u200d\U0001f9d1 Patungan (Split Bill)", "callback_data": "cmd:splitbill"},
+            {"text": "🤝 Patungan (Split Bill)", "callback_data": "cmd:splitbill"},
         ],
         [
             {"text": link_text, "callback_data": link_data},
@@ -1149,7 +1149,7 @@ def _cmd_splitbill_start(chat_id: int | str) -> None:
     _SPLITBILL_SESSIONS[str(chat_id)] = {"step": "input_text"}
     send_message(
         chat_id,
-        "\U0001f9d1\u200d\ud83e\udd1d\u200d\U0001f9d1 <b>Mode Patungan (Split Bill)</b> - Powered by AI\n\n"
+        "🤝 <b>Mode Patungan (Split Bill)</b> - Powered by AI\n\n"
         "Ketikkan daftar belanjaanmu untuk dipisah secara cerdas. Contoh:\n\n"
         "<code>bakso 15rb 3 porsi\n"
         "es teh 5000 2 gelas\n"
