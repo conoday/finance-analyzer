@@ -83,17 +83,17 @@ function PlanCard({ plan, selected, onClick }: {
       }}
     >
       {isSoon && (
-        <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-slate-700 text-slate-400 border border-slate-600/50">
+        <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-slate-700 text-slate-200 border border-slate-600/50">
           Segera
         </span>
       )}
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-bold" style={{ color: isSoon ? "#475569" : meta.color }}>{meta.label}</span>
-        <span className="text-[10px] font-mono text-slate-600">
+        <span className="text-[10px] font-mono text-slate-200">
           {meta.maxMembers === -1 ? "∞" : `≤${meta.maxMembers}`}
         </span>
       </div>
-      <p className="text-[10px] text-slate-600 leading-snug">{meta.desc}</p>
+      <p className="text-[10px] text-slate-200 leading-snug">{meta.desc}</p>
       <p className="text-[10px] font-semibold mt-1" style={{ color: isSoon ? "#475569" : meta.color }}>
         {meta.price === 0 ? "Gratis" : meta.price === -1 ? "Hubungi kami" : formatRupiah(meta.price, true) + "/bulan"}
       </p>
@@ -118,11 +118,11 @@ function RupiahTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="glass rounded-lg px-3 py-2 text-xs space-y-1 border border-white/10 shadow-xl">
-      <p className="font-semibold text-slate-300 mb-1">{label}</p>
+      <p className="font-semibold text-slate-100 mb-1">{label}</p>
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-slate-400">{p.name}:</span>
+          <span className="text-slate-200">{p.name}:</span>
           <span className="font-mono font-bold" style={{ color: p.color }}>
             {formatRupiah(p.value, true)}
           </span>
@@ -188,12 +188,12 @@ function MemberCard({ member, isMe, isCreator }: {
               </span>
             </div>
           ) : (
-            <p className="text-[11px] text-slate-600 mt-0.5">Belum sync data</p>
+            <p className="text-[11px] text-slate-200 mt-0.5">Belum sync data</p>
           )}
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-slate-600 hover:text-slate-400 transition-colors"
+          className="text-slate-200 hover:text-slate-200 transition-colors"
         >
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
@@ -235,7 +235,7 @@ function MemberCard({ member, isMe, isCreator }: {
               {/* Spending donut */}
               {pieData.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-slate-500 mb-2 uppercase tracking-wide">Distribusi Pengeluaran</p>
+                  <p className="text-[10px] text-slate-100 mb-2 uppercase tracking-wide">Distribusi Pengeluaran</p>
                   <div className="flex items-center gap-4">
                     <ResponsiveContainer width={90} height={90}>
                       <PieChart>
@@ -251,8 +251,8 @@ function MemberCard({ member, isMe, isCreator }: {
                       {pieData.map((d, i) => (
                         <div key={d.name} className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                          <span className="text-[10px] text-slate-400 truncate flex-1">{d.name}</span>
-                          <span className="text-[10px] font-mono text-slate-300">{formatRupiah(d.value, true)}</span>
+                          <span className="text-[10px] text-slate-200 truncate flex-1">{d.name}</span>
+                          <span className="text-[10px] font-mono text-slate-100">{formatRupiah(d.value, true)}</span>
                         </div>
                       ))}
                     </div>
@@ -263,7 +263,7 @@ function MemberCard({ member, isMe, isCreator }: {
               {/* Personal budget limits */}
               {Object.keys(member.budgets).length > 0 && (
                 <div>
-                  <p className="text-[10px] text-slate-500 mb-2 uppercase tracking-wide">Budget Pribadi</p>
+                  <p className="text-[10px] text-slate-100 mb-2 uppercase tracking-wide">Budget Pribadi</p>
                   <div className="space-y-1.5">
                     {Object.entries(member.budgets).slice(0, 6).map(([cat, limit]) => {
                       const actual = member.by_category.find(c => c.kategori === cat)?.total ?? 0;
@@ -272,8 +272,8 @@ function MemberCard({ member, isMe, isCreator }: {
                       return (
                         <div key={cat}>
                           <div className="flex justify-between text-[10px] mb-0.5">
-                            <span className="text-slate-400 truncate">{cat}</span>
-                            <span className={over ? "text-red-400" : "text-slate-500"}>
+                            <span className="text-slate-200 truncate">{cat}</span>
+                            <span className={over ? "text-red-400" : "text-slate-100"}>
                               {formatRupiah(actual, true)} / {formatRupiah(limit, true)}
                               {over && " ⚠"}
                             </span>
@@ -329,7 +329,7 @@ function MemberCompareChart({ room }: { room: SharedRoom }) {
 
   return (
     <div className="glass rounded-xl p-4">
-      <p className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+      <p className="text-xs font-semibold text-slate-200 mb-3 uppercase tracking-wide">
         Perbandingan Anggota
       </p>
       <ResponsiveContainer width="100%" height={200}>
@@ -367,7 +367,7 @@ function SharedBudgetTable({ room, isCreator, memberId }: {
     new Set([...Object.keys(room.shared_budgets), ...Object.keys(aggregated)])
   );
   if (categories.length === 0) return (
-    <div className="glass rounded-xl p-6 text-center text-slate-600 text-sm">
+    <div className="glass rounded-xl p-6 text-center text-slate-200 text-sm">
       Belum ada data pengeluaran dari anggota. Sync dulu data analisismu.
     </div>
   );
@@ -391,8 +391,8 @@ function SharedBudgetTable({ room, isCreator, memberId }: {
   return (
     <div className="glass rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Budget Bersama</p>
-        {!isCreator && <p className="text-[10px] text-slate-600">Hanya pembuat room yang bisa edit</p>}
+        <p className="text-xs font-semibold text-slate-200 uppercase tracking-wide">Budget Bersama</p>
+        {!isCreator && <p className="text-[10px] text-slate-200">Hanya pembuat room yang bisa edit</p>}
       </div>
       <div className="divide-y divide-white/[0.04]">
         {categories.map((cat) => {
@@ -404,10 +404,10 @@ function SharedBudgetTable({ room, isCreator, memberId }: {
           return (
             <div key={cat} className="px-4 py-3">
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-sm text-slate-300 flex-1 truncate">{cat}</span>
+                <span className="text-sm text-slate-100 flex-1 truncate">{cat}</span>
                 {over && <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                 {near && <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                <span className="text-xs font-mono text-slate-400">
+                <span className="text-xs font-mono text-slate-200">
                   {formatRupiah(actual, true)}
                   {limit > 0 && <> / {formatRupiah(limit, true)}</>}
                 </span>
@@ -430,13 +430,13 @@ function SharedBudgetTable({ room, isCreator, memberId }: {
                         className="text-teal-400 hover:text-teal-300">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setEditing(null)} className="text-slate-600 hover:text-slate-400">
+                      <button onClick={() => setEditing(null)} className="text-slate-200 hover:text-slate-200">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
                     <button onClick={() => { setEditing(cat); setVal(String(limit || "")); }}
-                      className="text-slate-600 hover:text-slate-400 transition-colors">
+                      className="text-slate-200 hover:text-slate-200 transition-colors">
                       <Wallet className="w-3.5 h-3.5" />
                     </button>
                   )
@@ -632,7 +632,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
           Shared Budget Room
         </div>
         <h3 className="text-xl font-bold text-slate-200">Pantau keuangan bersama</h3>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-100">
           Buat room, bagikan invite code, dan lihat pengeluaran semua anggota dalam satu dashboard.
         </p>
       </div>
@@ -648,7 +648,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
             <Plus className="w-5 h-5 text-teal-400" />
           </div>
           <span className="text-sm font-semibold text-slate-200">Buat Room</span>
-          <span className="text-[10px] text-slate-500 text-center">Mulai room baru, pilih plan, undang orang</span>
+          <span className="text-[10px] text-slate-100 text-center">Mulai room baru, pilih plan, undang orang</span>
         </motion.button>
 
         <motion.button
@@ -661,13 +661,13 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
             <LogIn className="w-5 h-5 text-indigo-400" />
           </div>
           <span className="text-sm font-semibold text-slate-200">Gabung Room</span>
-          <span className="text-[10px] text-slate-500 text-center">Punya kode undangan? Masuk di sini</span>
+          <span className="text-[10px] text-slate-100 text-center">Punya kode undangan? Masuk di sini</span>
         </motion.button>
       </div>
 
       {/* plan tier preview */}
       <div>
-        <p className="text-[10px] text-slate-600 mb-3 uppercase tracking-wide font-semibold">Pilihan Plan</p>
+        <p className="text-[10px] text-slate-200 mb-3 uppercase tracking-wide font-semibold">Pilihan Plan</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {(["personal","couple","family","group","team","business","corporate","enterprise"] as PlanType[]).map(p => (
             <PlanCard key={p} plan={p} selected={false} onClick={() => { setSelectedPlan(p); setStep("create"); }} />
@@ -681,14 +681,14 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
   if (step === "create") return (
     <div className="max-w-lg mx-auto space-y-5 py-4">
       <div className="flex items-center gap-2 mb-2">
-        <button onClick={() => setStep("idle")} className="text-slate-600 hover:text-slate-400">
+        <button onClick={() => setStep("idle")} className="text-slate-200 hover:text-slate-200">
           <X className="w-4 h-4" />
         </button>
         <h3 className="text-base font-semibold text-slate-200">Buat Room Baru</h3>
       </div>
 
       <div>
-        <label className="block text-xs text-slate-500 mb-1">Namamu di room ini</label>
+        <label className="block text-xs text-slate-100 mb-1">Namamu di room ini</label>
         <input
           value={displayName}
           onChange={e => setDisplayName(e.target.value)}
@@ -698,7 +698,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
       </div>
 
       <div>
-        <label className="block text-xs text-slate-500 mb-2">Pilih Plan</label>
+        <label className="block text-xs text-slate-100 mb-2">Pilih Plan</label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {(["personal","couple","family","group","team","business","corporate","enterprise"] as PlanType[]).map(p => (
             <PlanCard key={p} plan={p} selected={selectedPlan === p} onClick={() => setSelectedPlan(p)} />
@@ -725,14 +725,14 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
   if (step === "join") return (
     <div className="max-w-sm mx-auto space-y-4 py-4">
       <div className="flex items-center gap-2 mb-2">
-        <button onClick={() => setStep("idle")} className="text-slate-600 hover:text-slate-400">
+        <button onClick={() => setStep("idle")} className="text-slate-200 hover:text-slate-200">
           <X className="w-4 h-4" />
         </button>
         <h3 className="text-base font-semibold text-slate-200">Gabung Room</h3>
       </div>
 
       <div>
-        <label className="block text-xs text-slate-500 mb-1">Kode Undangan</label>
+        <label className="block text-xs text-slate-100 mb-1">Kode Undangan</label>
         <input
           value={inviteCode}
           onChange={e => setInviteCode(e.target.value.toUpperCase())}
@@ -743,7 +743,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
       </div>
 
       <div>
-        <label className="block text-xs text-slate-500 mb-1">Namamu</label>
+        <label className="block text-xs text-slate-100 mb-1">Namamu</label>
         <input
           value={joinName}
           onChange={e => setJoinName(e.target.value)}
@@ -780,7 +780,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
               <Users className="w-3 h-3" />
               {planMeta?.label}
             </div>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-100">
               {room.member_count}/{room.max_members === -1 ? "∞" : room.max_members} anggota
             </span>
             {isCreator && (
@@ -790,16 +790,16 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
             )}
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-slate-500 text-xs">Kode:</span>
+            <span className="text-slate-100 text-xs">Kode:</span>
             <code className="text-sm font-mono font-bold tracking-widest"
               style={{ color: planMeta?.color }}>
               {room.invite_code}
             </code>
             <button onClick={copyInviteCode}
-              className="text-slate-600 hover:text-slate-300 transition-colors">
+              className="text-slate-200 hover:text-slate-100 transition-colors">
               {copied ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
-            <span className="text-[10px] text-slate-600">Bagikan ke anggota lain</span>
+            <span className="text-[10px] text-slate-200">Bagikan ke anggota lain</span>
           </div>
         </div>
 
@@ -822,16 +822,16 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
               {syncing ? "Syncing..." : syncDone ? "Tersync!" : "Sync Dataku"}
             </motion.button>
           ) : (
-            <span className="text-[10px] text-slate-500 italic px-2">
+            <span className="text-[10px] text-slate-100 italic px-2">
               Upload file dulu untuk sync data
             </span>
           )}
           <button onClick={() => fetchRoom(room.room_id)}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-colors">
+            className="p-1.5 rounded-lg text-slate-200 hover:text-slate-100 hover:bg-white/5 transition-colors">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <button onClick={leaveRoom}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+            className="p-1.5 rounded-lg text-slate-200 hover:text-red-400 hover:bg-red-500/10 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -855,7 +855,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
                 <p className="text-sm font-bold font-mono" style={{ color: stat.color }}>
                   {formatRupiah(Math.abs(stat.value), true)}
                 </p>
-                <p className="text-[10px] text-slate-500 leading-snug">{stat.label}</p>
+                <p className="text-[10px] text-slate-100 leading-snug">{stat.label}</p>
               </div>
             </div>
           ))}
@@ -870,7 +870,7 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
 
       {/* Individual member cards */}
       <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 px-1">
+        <p className="text-xs font-semibold text-slate-100 uppercase tracking-wide mb-3 px-1">
           Budget Masing-Masing Anggota
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -890,10 +890,10 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
               className="glass rounded-xl p-4 flex flex-col items-center justify-center gap-2 border border-dashed border-white/10 cursor-pointer min-h-[100px]"
               onClick={copyInviteCode}
             >
-              <UserPlus className="w-6 h-6 text-slate-600" />
-              <p className="text-xs text-slate-600 text-center">
+              <UserPlus className="w-6 h-6 text-slate-200" />
+              <p className="text-xs text-slate-200 text-center">
                 Undang anggota baru<br />
-                <span className="font-mono font-bold text-slate-500">{room.invite_code}</span>
+                <span className="font-mono font-bold text-slate-100">{room.invite_code}</span>
               </p>
             </motion.div>
           )}

@@ -11,11 +11,14 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.ico" },
 };
 
+import { FloatingAIChat } from "@/components/FloatingAIChat";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
       <body className={`${inter.variable} font-sans antialiased bg-[#f8fafc] text-slate-800 min-h-screen`}>
         {children}
+        <FloatingAIChat />
         <Toaster position="top-right" richColors theme="light" />
       </body>
     </html>

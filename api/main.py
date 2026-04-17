@@ -797,6 +797,22 @@ def telegram_budget_alert(x_cron_secret: str = Header(default="")):
     count = send_budget_alerts(_supabase())
     return {"ok": True, "sent": count}
 
+class AIChatRequest(BaseModel):
+    message: str
+    history: list[dict[str, str]] = []
+
+@app.post("/ai/chat")
+def ai_chat(req: AIChatRequest):
+    """Obrolan interaktif dengan Asisten AI terkait keuangan user."""
+    try:
+        from app.ai_service import get_ai_chat_response
+        reply = get_ai_chat_response(req.message, req.history)
+        return {"reply": reply}
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
 
 # ---------------------------------------------------------------------------
 # Personal Budgets CRUD

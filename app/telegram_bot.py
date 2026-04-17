@@ -325,6 +325,8 @@ def _handle_command(
         send_message(chat_id, "\u274e Sesi dibatalkan.")
     elif command in ("/splitbill", "/patungan"):
         _cmd_splitbill_start(chat_id)
+    elif command == "/room":
+        _cmd_room(chat_id, args, username, sb_client)
     else:
         send_message(chat_id, "Perintah tidak dikenal. Ketik /bantuan untuk panduan.")
 

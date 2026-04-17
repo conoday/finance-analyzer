@@ -411,3 +411,30 @@ def parse_split_bill_text(text: str) -> list[dict]:
         for it in parsed.get("items", [])
         if it.get("name") and float(it.get("price", 0)) > 0
     ]
+
+def get_ai_chat_response(message: str, history: list[dict[str, str]] = []) -> str:
+    """
+    Kirim obrolan User ke AI Assistant (GLM).
+    history format: [{"role": "user"|"assistant", "content": "..."}]
+    """
+    system_prompt = (
+        "Kamu adalah asisten keuangan OprexDuit yang pintar, ramah, dan solutif. "
+        "Bantu pengguna mengelola uang, mencari insight, dan menjawab pertanyaan. "
+        "Gunakan bahasa Indonesia yang santai tapi profesional. Jangan bertele-tele."
+    )
+    
+    messages = [{"role": "system", "content": system_prompt}]
+    for h in history[-5:]: # ambil 5 context terakhir
+        messages.append({"role": h.get("role", "user"), "content": h.get("content", "")})
+    messages.append({"role": "user", "content": message})
+    
+    def _do(client, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=600,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content or "Maaf, aku tidak bisa menjawab saat ini."
+
+    return _call_with_fallback(_do)
