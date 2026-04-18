@@ -63,9 +63,23 @@ def require_auth(
 ) -> dict:
     """Verify Supabase JWT. Auto-detects HS256 (secret) vs RS256 (JWKS).
 
+    Also accepts ADMIN_SECRET token for admin console access — returns a
+    synthetic admin payload so admin endpoints don't need separate auth.
+
     Raises HTTP 401 if the token is missing, expired, or invalid.
     """
     token = credentials.credentials
+
+    # ── 0. Check ADMIN_SECRET first (for admin console) ──────────────────────
+    admin_secret = os.environ.get("ADMIN_SECRET", "")
+    if admin_secret and token == admin_secret:
+        logger.info("[AUTH] Admin access via ADMIN_SECRET")
+        return {
+            "sub": "admin",
+            "email": "superadmin@oprex.com",
+            "role": "admin",
+            "aud": "authenticated",
+        }
 
     # ── 1. Peek header untuk deteksi algoritma ──────────────────────────────
     try:
