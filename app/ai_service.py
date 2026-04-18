@@ -4,6 +4,12 @@ app/ai_service.py — AI provider integration (GLM / DeepSeek / Gemini).
 Semua provider pakai OpenAI-compatible chat API agar mudah swap.
 Provider dipilih via env var AI_PROVIDER (default: glm).
 
+Key management:
+  - Primary: Keys diambil dari Supabase `ai_api_keys` table (dikelola via Admin Console).
+  - Fallback: Env vars GLM_API_KEY, GLM_API_KEY_2, GLM_API_KEY_3 (jika DB kosong/tidak tersambung).
+  - Auto-rotate: Key yang rate-limited ditandai di DB, sistem coba key berikutnya.
+  - Cache: Keys di-cache 5 menit agar tidak flood Supabase per request.
+
 Usage:
     from app.ai_service import get_ai_insight
     result = get_ai_insight(summary, by_category)
@@ -12,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -22,7 +29,7 @@ _PROVIDERS: dict[str, dict] = {
     "glm": {
         "base_url": "https://open.bigmodel.cn/api/paas/v4/",
         "model":    "glm-4.6",
-        # Cek 3 key secara berurutan; pakai yang pertama terisi
+        # Fallback env vars (dipakai jika DB kosong)
         "key_envs": ["GLM_API_KEY", "GLM_API_KEY_2", "GLM_API_KEY_3"],
     },
     "deepseek": {
@@ -37,14 +44,124 @@ _PROVIDERS: dict[str, dict] = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# Supabase-backed key cache
+# ---------------------------------------------------------------------------
+
+# Cache structure: { provider: {"rows": [...], "expires_at": float} }
+_keys_cache: dict[str, dict] = {}
+_CACHE_TTL = 300  # 5 menit
+
+
+def _supabase_client():
+    """Lazy Supabase admin client — returns None jika env vars tidak di-set."""
+    try:
+        from app.supabase_client import get_admin_client
+        return get_admin_client()
+    except Exception:
+        return None
+
+
+def _get_keys_from_db(provider: str) -> list[dict]:
+    """
+    Ambil semua key aktif dari Supabase untuk provider ini.
+    Urut berdasarkan priority ASC (key paling prioritas = indeks 0).
+    Returns list of {"id": uuid_str, "api_key": str}.
+    Mengembalikan [] jika DB tidak tersambung atau tidak ada key.
+    """
+    now = time.monotonic()
+    cached = _keys_cache.get(provider)
+    if cached and cached["expires_at"] > now:
+        return cached["rows"]
+
+    sb = _supabase_client()
+    if not sb:
+        return []
+
+    try:
+        res = (
+            sb.table("ai_api_keys")
+            .select("id, api_key, priority")
+            .eq("provider", provider)
+            .eq("is_active", True)
+            .eq("is_rate_limited", False)
+            .order("priority", desc=False)
+            .execute()
+        )
+        rows = [
+            {"id": r["id"], "api_key": r["api_key"]}
+            for r in (res.data or [])
+            if r.get("api_key")
+        ]
+    except Exception as exc:
+        print(f"[ai_service] Gagal ambil keys dari DB: {exc}")
+        rows = []
+
+    _keys_cache[provider] = {"rows": rows, "expires_at": now + _CACHE_TTL}
+    return rows
+
+
+def _invalidate_cache(provider: str) -> None:
+    """Hapus cache untuk provider tertentu agar fetch ulang dari DB."""
+    _keys_cache.pop(provider, None)
+
+
+def _mark_key_rate_limited(key_id: str, provider: str) -> None:
+    """
+    Tandai key sebagai rate-limited di DB dan invalidate cache.
+    Backend akan skip key ini pada request berikutnya sampai admin reset.
+    """
+    sb = _supabase_client()
+    if not sb or not key_id:
+        return
+    try:
+        from datetime import datetime, timezone
+        sb.table("ai_api_keys").update({
+            "is_rate_limited": True,
+            "rate_limited_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", key_id).execute()
+        print(f"[ai_service] Key {key_id[:8]}... ditandai rate-limited.")
+    except Exception as exc:
+        print(f"[ai_service] Gagal tandai rate-limited: {exc}")
+    finally:
+        _invalidate_cache(provider)
+
 # Error classes yang menandakan key ini sudah habis/rate-limited di GLM
 _QUOTA_ERRORS = ("rate_limit", "quota", "insufficient_quota", "exceeded", "429")
 
 
 def _get_glm_keys() -> list[str]:
-    """Kembalikan semua GLM API key yang sudah di-set (non-empty)."""
+    """
+    Kembalikan semua GLM API key yang tersedia.
+    Priority: Supabase DB > env vars (fallback).
+    Hanya mengembalikan string key (tanpa ID) untuk kompatibilitas backward.
+    """
+    # Coba dari DB dulu
+    db_keys = _get_keys_from_db("glm")
+    if db_keys:
+        return [row["api_key"] for row in db_keys]
+
+    # Fallback ke env vars
     return [
         v for env in _PROVIDERS["glm"]["key_envs"]
+        if (v := os.environ.get(env, "").strip())
+    ]
+
+
+def _get_glm_keys_with_id() -> list[dict]:
+    """
+    Kembalikan GLM keys dengan ID-nya (untuk keperluan marking rate-limit).
+    Returns list of {"id": str|None, "api_key": str}.
+    ID = None jika key berasal dari env var (tidak bisa di-track di DB).
+    """
+    db_keys = _get_keys_from_db("glm")
+    if db_keys:
+        return db_keys
+
+    # Fallback dengan id=None
+    return [
+        {"id": None, "api_key": v}
+        for env in _PROVIDERS["glm"]["key_envs"]
         if (v := os.environ.get(env, "").strip())
     ]
 
@@ -83,7 +200,9 @@ def _call_with_fallback(fn, **kwargs):
     Jalankan fn(client, model, **kwargs) dengan fallback key GLM.
 
     Jika provider bukan GLM, jalan normal tanpa fallback.
-    Jika GLM dan key pertama rate-limit / quota habis, coba key berikutnya.
+    Jika GLM dan key pertama rate-limit / quota habis:
+      - Tandai key tersebut sebagai rate-limited di Supabase DB
+      - Coba key berikutnya secara berurutan
     """
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
 
@@ -91,24 +210,32 @@ def _call_with_fallback(fn, **kwargs):
         client, model = _get_client()
         return fn(client, model, **kwargs)
 
-    keys = _get_glm_keys()
-    if not keys:
+    key_entries = _get_glm_keys_with_id()
+    if not key_entries:
         raise ValueError(
             "Belum ada GLM API key yang di-set. "
-            "Set GLM_API_KEY (dan opsional GLM_API_KEY_2, GLM_API_KEY_3) di Render."
+            "Tambahkan key via Admin Console (/api-keys) atau "
+            "set GLM_API_KEY di Render env vars."
         )
 
     last_err: Exception = RuntimeError("No keys available")
-    for key in keys:
+    for entry in key_entries:
+        api_key = entry["api_key"]
+        key_id  = entry.get("id")  # None jika dari env var
         try:
-            client, model = _get_client(api_key=key)
+            client, model = _get_client(api_key=api_key)
             return fn(client, model, **kwargs)
         except Exception as e:
             err_str = str(e).lower()
             if any(q in err_str for q in _QUOTA_ERRORS):
+                # Tandai rate-limited di DB (jika key dari DB)
+                if key_id:
+                    _mark_key_rate_limited(key_id, provider_name)
+                else:
+                    print(f"[ai_service] Key dari env var rate-limited (tidak bisa di-track otomatis).")
                 last_err = e
                 continue  # coba key berikutnya
-            raise  # error lain (network, bad request, dll) langsung raise
+            raise  # error lain langsung raise
 
     raise last_err  # semua key habis
 

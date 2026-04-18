@@ -1144,3 +1144,177 @@ async def delete_link_report(
         return {"status": "deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Admin — AI API Key Management
+# ---------------------------------------------------------------------------
+# Protected by ADMIN_SECRET env var.
+# Admin Console sends: Authorization: Bearer <ADMIN_SECRET>
+#
+# Usage flow:
+#   1. Admin adds keys via Admin Console UI → POST /admin/api-keys
+#   2. Backend reads keys from Supabase instead of env vars
+#   3. When a key hits rate-limit → auto-marked in DB → next key is tried
+#   4. Admin can reset / deactivate / reorder keys via Admin Console
+
+_ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
+
+
+def _verify_admin(authorization: str = Header(default="")) -> None:
+    """Guard for admin-only endpoints. Checks Bearer token against ADMIN_SECRET."""
+    if not _ADMIN_SECRET:
+        # If ADMIN_SECRET not set, block all requests for safety
+        raise HTTPException(
+            status_code=503,
+            detail="ADMIN_SECRET tidak di-set di server. Set env var ADMIN_SECRET di Render.",
+        )
+    token = authorization.removeprefix("Bearer ").strip()
+    if token != _ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized: invalid admin secret")
+
+
+class ApiKeyCreate(BaseModel):
+    provider: str = "glm"      # 'glm' | 'deepseek' | 'gemini'
+    label: str = ""             # friendly name, e.g. "Key 1 - Akun A"
+    api_key: str                # actual API key
+    priority: int = 0           # lower number = tried first
+
+
+class ApiKeyUpdate(BaseModel):
+    label: Optional[str] = None
+    priority: Optional[int] = None
+    is_active: Optional[bool] = None
+    is_rate_limited: Optional[bool] = None  # manual reset saat True → False
+
+
+def _mask_key(key: str) -> str:
+    """Tampilkan hanya 8 karakter pertama + '...' untuk keamanan."""
+    if len(key) <= 8:
+        return key
+    return key[:8] + "..." + key[-4:]
+
+
+@app.get("/admin/api-keys", tags=["admin"])
+def admin_list_api_keys(_: None = Depends(_verify_admin)):
+    """
+    Admin: list semua AI API keys.
+    Nilai api_key di-mask (hanya prefix 8 char) untuk keamanan.
+    """
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        res = (
+            sb.table("ai_api_keys")
+            .select("id,provider,label,priority,is_active,is_rate_limited,rate_limited_at,last_used_at,created_at,api_key")
+            .order("provider")
+            .order("priority")
+            .execute()
+        )
+        rows = res.data or []
+        # Mask the actual key value before returning
+        for row in rows:
+            row["api_key_preview"] = _mask_key(row.get("api_key", ""))
+            del row["api_key"]
+        return {"keys": rows}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/api-keys", tags=["admin"])
+def admin_add_api_key(req: ApiKeyCreate, _: None = Depends(_verify_admin)):
+    """Admin: tambah API key baru ke pool."""
+    if not req.api_key.strip():
+        raise HTTPException(status_code=422, detail="api_key tidak boleh kosong")
+    if req.provider not in ("glm", "deepseek", "gemini"):
+        raise HTTPException(status_code=422, detail="provider harus: glm | deepseek | gemini")
+
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        res = sb.table("ai_api_keys").insert({
+            "provider":  req.provider,
+            "label":     req.label.strip()[:64],
+            "api_key":   req.api_key.strip(),
+            "priority":  req.priority,
+            "is_active": True,
+            "is_rate_limited": False,
+        }).execute()
+        row = (res.data or [{}])[0]
+        row["api_key_preview"] = _mask_key(row.get("api_key", ""))
+        row.pop("api_key", None)
+
+        # Invalidate cache so backend picks up the new key immediately
+        from app.ai_service import _invalidate_cache
+        _invalidate_cache(req.provider)
+
+        return {"ok": True, "key": row}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/admin/api-keys/{key_id}", tags=["admin"])
+def admin_update_api_key(key_id: str, req: ApiKeyUpdate, _: None = Depends(_verify_admin)):
+    """
+    Admin: update label, priority, is_active, atau reset is_rate_limited.
+    Kirim hanya field yang ingin diubah.
+    """
+    payload: dict = {}
+    if req.label is not None:
+        payload["label"] = req.label.strip()[:64]
+    if req.priority is not None:
+        payload["priority"] = req.priority
+    if req.is_active is not None:
+        payload["is_active"] = req.is_active
+    if req.is_rate_limited is not None:
+        payload["is_rate_limited"] = req.is_rate_limited
+        if not req.is_rate_limited:
+            payload["rate_limited_at"] = None  # reset timestamp juga
+
+    if not payload:
+        raise HTTPException(status_code=422, detail="Tidak ada field yang diupdate")
+
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        res = (
+            sb.table("ai_api_keys")
+            .update(payload)
+            .eq("id", key_id)
+            .execute()
+        )
+        row = (res.data or [{}])[0]
+
+        # Invalidate cache untuk provider ini
+        from app.ai_service import _invalidate_cache
+        _invalidate_cache(row.get("provider", "glm"))
+
+        row["api_key_preview"] = _mask_key(row.get("api_key", ""))
+        row.pop("api_key", None)
+        return {"ok": True, "key": row}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/admin/api-keys/{key_id}", tags=["admin"])
+def admin_delete_api_key(key_id: str, _: None = Depends(_verify_admin)):
+    """Admin: hapus API key permanen dari pool."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        # Fetch provider dulu sebelum delete (untuk invalidate cache)
+        res = sb.table("ai_api_keys").select("provider").eq("id", key_id).maybe_single().execute()
+        provider = (res.data or {}).get("provider", "glm")
+
+        sb.table("ai_api_keys").delete().eq("id", key_id).execute()
+
+        from app.ai_service import _invalidate_cache
+        _invalidate_cache(provider)
+
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
