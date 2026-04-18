@@ -28,6 +28,19 @@ import httpx
 
 from app.telegram_parser import ParsedTx, parse_transaction
 
+# WIB timezone (UTC+7)
+_WIB = timezone(timedelta(hours=7))
+
+
+def _today_wib() -> date:
+    """Return today's date in WIB (UTC+7) timezone."""
+    return datetime.now(_WIB).date()
+
+
+def _now_wib() -> datetime:
+    """Return current datetime in WIB."""
+    return datetime.now(_WIB)
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -332,7 +345,9 @@ def _handle_command(
     elif command in ("/lapor", "/bug"):
         _cmd_lapor_start(chat_id)
     elif command == "/room":
-        _cmd_room(chat_id, args, username, sb_client)
+        _cmd_room(chat_id, args, username, user_id, sb_client)
+    elif command in ("/hapus", "/delete"):
+        _cmd_hapus(chat_id, user_id, sb_client)
     else:
         send_message(chat_id, "Perintah tidak dikenal. Ketik /bantuan untuk panduan.")
 
@@ -478,9 +493,10 @@ def _save_and_confirm(
         return
 
     try:
+        today = _today_wib()
         tx_data = {
             "user_id": user_id,
-            "date": date.today().isoformat(),
+            "date": today.isoformat(),
             "description": parsed.description,
             "amount": parsed.amount,
             "type": parsed.type,
@@ -501,7 +517,7 @@ def _save_and_confirm(
             f"Jumlah    : <b>{_fmt(parsed.amount)}</b>\n"
             f"Keterangan: {parsed.description}\n"
             f"Kategori  : {parsed.category_hint or 'Lainnya'}\n"
-            f"Tanggal   : {date.today().strftime('%d %b %Y')}"
+            f"Tanggal   : {today.strftime('%d %b %Y')}"
         )
         
         if tx_id:
@@ -528,7 +544,7 @@ def _cmd_ringkasan(
         send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
-    today = date.today().isoformat()
+    today = _today_wib().isoformat()
 
     try:
         res = (
@@ -543,7 +559,7 @@ def _cmd_ringkasan(
         if not txs:
             send_message(
                 chat_id,
-                f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({date.today().strftime('%d %b %Y')})\n\n"
+                f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({_today_wib().strftime('%d %b %Y')})\n\n"
                 "Belum ada transaksi hari ini.\n"
                 "Yuk catat: <code>50rb makan siang</code>",
             )
@@ -558,7 +574,7 @@ def _cmd_ringkasan(
             reverse=True,
         )
 
-        lines = [f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({date.today().strftime('%d %b %Y')})\n"]
+        lines = [f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({_today_wib().strftime('%d %b %Y')})\n"]
         lines.append(f"\U0001f4b0 Pemasukan : <b>{_fmt(total_income)}</b>")
         lines.append(f"\U0001f4b8 Pengeluaran: <b>{_fmt(total_expense)}</b>")
         _net_icon = "\U0001f4c8" if net >= 0 else "\U0001f4c9"
@@ -586,7 +602,7 @@ def _cmd_laporan(
         send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
-    today = date.today()
+    today = _today_wib()
     month_start = today.replace(day=1).isoformat()
 
     try:
@@ -640,7 +656,7 @@ def _cmd_budget(
         send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
-    today = date.today()
+    today = _today_wib()
     month_start = today.replace(day=1).isoformat()
 
     try:
@@ -708,15 +724,18 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
             {"text": "\U0001f6cd\ufe0f Belanja AI", "callback_data": "cmd:belanja"},
         ],
         [
-            {"text": "🤝 Patungan (Split Bill)", "callback_data": "cmd:splitbill"},
+            {"text": "\U0001f465 Room", "callback_data": "cmd:room"},
+            {"text": "\U0001f5d1 Hapus Transaksi", "callback_data": "cmd:hapus"},
+        ],
+        [
+            {"text": "\U0001f91d Patungan (Split Bill)", "callback_data": "cmd:splitbill"},
         ],
         [
             {"text": link_text, "callback_data": link_data},
         ],
         [
-            {"text": "🚨 Lapor Bug", "callback_data": "cmd:lapor"},
+            {"text": "\U0001f6a8 Lapor Bug", "callback_data": "cmd:lapor"},
         ],
-
     ]
 
     _send_keyboard(
@@ -736,6 +755,242 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Room management (Telegram)
+# ---------------------------------------------------------------------------
+
+def _cmd_room(
+    chat_id: int | str,
+    args: list[str],
+    username: str,
+    user_id: Optional[str],
+    sb_client: Any,
+) -> None:
+    """Handle /room subcommands: create, join, info."""
+    if not user_id:
+        send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba /start dulu.")
+        return
+
+    if not args:
+        _send_keyboard(
+            chat_id,
+            "\U0001f465 <b>Shared Room</b>\n\n"
+            "Kelola pengeluaran bersama pasangan, keluarga, atau teman.\n\n"
+            "Pilih aksi:",
+            [
+                [
+                    {"text": "\u2795 Buat Room", "callback_data": "room:create"},
+                    {"text": "\U0001f517 Gabung Room", "callback_data": "room:join_prompt"},
+                ],
+                [
+                    {"text": "\U0001f4cb Info Room Saya", "callback_data": "room:info"},
+                ],
+            ],
+        )
+        return
+
+    sub = args[0].lower()
+
+    if sub == "create":
+        name = " ".join(args[1:]) if len(args) > 1 else username
+        _room_create(chat_id, name, user_id, sb_client)
+
+    elif sub == "join":
+        if len(args) < 2:
+            send_message(chat_id, "Format: <code>/room join KODE_UNDANGAN</code>")
+            return
+        _room_join(chat_id, args[1], username, sb_client)
+
+    elif sub == "info":
+        _room_info(chat_id, user_id, sb_client)
+
+    else:
+        send_message(chat_id, "Subcommand tidak dikenal.\nGunakan: /room create, /room join KODE, /room info")
+
+
+def _room_create(chat_id: int | str, display_name: str, user_id: str, sb_client: Any) -> None:
+    """Create a couple room via backend API."""
+    if not sb_client:
+        send_message(chat_id, "\u26a0\ufe0f Database tidak tersambung.")
+        return
+    try:
+        import uuid as _uuid
+        room_id = str(_uuid.uuid4())
+        invite_code = secrets.token_urlsafe(6).upper()[:8]
+        created = datetime.now(timezone.utc).isoformat()
+
+        sb_client.table("rooms").insert({
+            "room_id": room_id,
+            "invite_code": invite_code,
+            "plan_type": "couple",
+            "max_members": 2,
+            "creator_member_id": user_id,
+            "shared_budgets": {},
+            "created_at": created,
+        }).execute()
+
+        sb_client.table("room_members").insert({
+            "room_id": room_id,
+            "member_id": user_id,
+            "display_name": display_name[:32],
+            "color": "#14b8a6",
+            "budgets": {},
+            "summary": None,
+            "by_category": [],
+            "joined_at": created,
+        }).execute()
+
+        web_url = os.environ.get("WEB_URL", "https://oprexduit.vercel.app")
+        send_message(
+            chat_id,
+            f"\u2705 <b>Room berhasil dibuat!</b>\n\n"
+            f"\U0001f511 Kode Undangan: <code>{invite_code}</code>\n\n"
+            "Bagikan kode di atas ke pasangan/teman kamu.\n"
+            f"Mereka bisa gabung dengan: <code>/room join {invite_code}</code>\n\n"
+            f"\U0001f310 Atau via web: {web_url}/shared?code={invite_code}",
+        )
+    except Exception as exc:
+        send_message(chat_id, f"\u26a0\ufe0f Gagal membuat room: {exc}")
+
+
+def _room_join(chat_id: int | str, code: str, username: str, sb_client: Any) -> None:
+    """Join an existing room via invite code."""
+    if not sb_client:
+        send_message(chat_id, "\u26a0\ufe0f Database tidak tersambung.")
+        return
+    try:
+        code = code.strip().upper()
+        res = sb_client.table("rooms").select("*").eq("invite_code", code).maybe_single().execute()
+        if not res.data:
+            send_message(chat_id, "\u274c Kode undangan tidak ditemukan. Pastikan kode benar.")
+            return
+
+        room = res.data
+        room_id = room["room_id"]
+
+        # Check existing member
+        members_res = sb_client.table("room_members").select("member_id").eq("room_id", room_id).execute()
+        existing_ids = [m["member_id"] for m in (members_res.data or [])]
+        member_count = len(existing_ids)
+
+        user_id = _get_user_id(chat_id, sb_client)
+        if user_id and user_id in existing_ids:
+            send_message(chat_id, "\u2705 Kamu sudah menjadi anggota room ini!")
+            return
+
+        max_m = room.get("max_members", 2)
+        if max_m != -1 and member_count >= max_m:
+            send_message(chat_id, f"\u274c Room penuh ({member_count}/{max_m}). Minta admin upgrade plan.")
+            return
+
+        sb_client.table("room_members").insert({
+            "room_id": room_id,
+            "member_id": user_id or str(chat_id),
+            "display_name": username[:32],
+            "color": "#6366f1",
+            "budgets": {},
+            "summary": None,
+            "by_category": [],
+            "joined_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
+        send_message(
+            chat_id,
+            f"\u2705 <b>Berhasil gabung room!</b>\n\n"
+            f"Plan: {room.get('plan_type', 'couple').title()}\n"
+            f"Anggota: {member_count + 1}/{max_m}\n\n"
+            "Transaksi yang kamu catat bisa diberi scope Pasangan/Grup.",
+        )
+    except Exception as exc:
+        send_message(chat_id, f"\u26a0\ufe0f Gagal gabung room: {exc}")
+
+
+def _room_info(chat_id: int | str, user_id: str, sb_client: Any) -> None:
+    """Show info about all rooms the user is a member of."""
+    if not sb_client:
+        send_message(chat_id, "\u26a0\ufe0f Database tidak tersambung.")
+        return
+    try:
+        memberships = (
+            sb_client.table("room_members")
+            .select("room_id")
+            .eq("member_id", user_id)
+            .execute()
+        )
+        room_ids = [m["room_id"] for m in (memberships.data or [])]
+
+        if not room_ids:
+            send_message(
+                chat_id,
+                "\U0001f4ad Kamu belum tergabung di room manapun.\n\n"
+                "Buat room baru: /room create\n"
+                "Atau gabung: /room join KODE",
+            )
+            return
+
+        lines = ["\U0001f465 <b>Room Kamu:</b>\n"]
+        for rid in room_ids[:5]:  # Max 5
+            room_res = sb_client.table("rooms").select("*").eq("room_id", rid).maybe_single().execute()
+            if not room_res.data:
+                continue
+            r = room_res.data
+            members_res = sb_client.table("room_members").select("display_name").eq("room_id", rid).execute()
+            members = [m["display_name"] for m in (members_res.data or [])]
+            lines.append(
+                f"\u2022 <b>{r.get('plan_type', 'couple').title()}</b>\n"
+                f"  Kode: <code>{r.get('invite_code', '-')}</code>\n"
+                f"  Anggota: {', '.join(members)}"
+            )
+
+        send_message(chat_id, "\n\n".join(lines))
+    except Exception as exc:
+        send_message(chat_id, f"\u26a0\ufe0f Gagal mengambil info room: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Delete Transaction (Telegram)
+# ---------------------------------------------------------------------------
+
+def _cmd_hapus(chat_id: int | str, user_id: Optional[str], sb_client: Any) -> None:
+    """Show last 5 transactions as buttons for deletion."""
+    if not user_id:
+        send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba /start dulu.")
+        return
+    if not sb_client:
+        send_message(chat_id, "\u26a0\ufe0f Database tidak tersambung.")
+        return
+
+    try:
+        res = (
+            sb_client.table("transactions")
+            .select("id,date,description,amount,type")
+            .eq("user_id", user_id)
+            .order("date", desc=True)
+            .limit(5)
+            .execute()
+        )
+        txs = res.data or []
+
+        if not txs:
+            send_message(chat_id, "\U0001f4ad Belum ada transaksi untuk dihapus.")
+            return
+
+        lines = ["\U0001f5d1 <b>Pilih transaksi yang mau dihapus:</b>\n"]
+        keyboard: list[list[dict]] = []
+        for i, tx in enumerate(txs, 1):
+            icon = "\U0001f4b0" if tx["type"] == "income" else "\U0001f4b8"
+            lines.append(
+                f"{i}. {icon} {tx['description']} — {_fmt(tx['amount'])} ({tx['date']})"
+            )
+            keyboard.append([
+                {"text": f"\U0001f5d1 {i}. {tx['description'][:25]}", "callback_data": f"del:{tx['id']}"}
+            ])
+
+        keyboard.append([{"text": "\u274c Batal", "callback_data": "del:cancel"}])
+        _send_keyboard(chat_id, "\n".join(lines), keyboard)
+
+    except Exception as exc:
+        send_message(chat_id, f"\u26a0\ufe0f Gagal mengambil transaksi: {exc}")
 
 def _cmd_lapor_start(chat_id: int | str) -> None:
     _REPORT_SESSIONS[str(chat_id)] = {"step": "waiting_feedback"}
@@ -958,7 +1213,7 @@ def _handle_purchase_confirmation(
                 try:
                     sb_client.table("transactions").insert({
                         "user_id": user_id,
-                        "date": date.today().isoformat(),
+                        "date": _today_wib().isoformat(),
                         "description": f"Belanja {query} ({session.get('platform_label', 'Online')})",
                         "amount": amount,
                         "type": "expense",
@@ -1089,6 +1344,53 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         else:
             _answer_callback(cq_id)
 
+    elif data == "cmd:room":
+        _answer_callback(cq_id)
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        _cmd_room(chat_id, [], username, user_id, sb_client)
+
+    elif data == "cmd:hapus":
+        _answer_callback(cq_id)
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        _cmd_hapus(chat_id, user_id, sb_client)
+
+    elif data == "cmd:lapor":
+        _answer_callback(cq_id)
+        _cmd_lapor_start(chat_id)
+
+    elif data == "room:create":
+        _answer_callback(cq_id, "Membuat room...")
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        if user_id:
+            _room_create(chat_id, username, user_id, sb_client)
+
+    elif data == "room:join_prompt":
+        _answer_callback(cq_id)
+        send_message(
+            chat_id,
+            "\U0001f517 Ketik kode undangan:\n"
+            "<code>/room join KODE_UNDANGAN</code>",
+        )
+
+    elif data == "room:info":
+        _answer_callback(cq_id)
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        if user_id:
+            _room_info(chat_id, user_id, sb_client)
+
+    elif data.startswith("del:"):
+        tx_id = data[4:]
+        if tx_id == "cancel":
+            _answer_callback(cq_id, "Batal hapus.")
+            send_message(chat_id, "\u274e Penghapusan dibatalkan.")
+        else:
+            _answer_callback(cq_id, "Menghapus...")
+            try:
+                sb_client.table("transactions").delete().eq("id", tx_id).execute()
+                send_message(chat_id, "\u2705 Transaksi berhasil dihapus!")
+            except Exception as exc:
+                send_message(chat_id, f"\u26a0\ufe0f Gagal menghapus: {exc}")
+
     else:
         _answer_callback(cq_id)
 
@@ -1123,7 +1425,7 @@ def _handle_purchase_confirm(chat_id: int | str, username: str, sb_client: Any) 
             try:
                 sb_client.table("transactions").insert({
                     "user_id": user_id,
-                    "date": date.today().isoformat(),
+                    "date": _today_wib().isoformat(),
                     "description": f"Belanja {query} ({session.get('platform_label', 'Online')})",
                     "amount": amount,
                     "type": "expense",
@@ -1260,7 +1562,7 @@ def send_weekly_reports(sb_client: Any) -> int:
             .execute()
         )
         count = 0
-        today = date.today()
+        today = _today_wib()
         week_start = (today - timedelta(days=7)).isoformat()
         for user in res.data or []:
             _send_weekly_summary(
@@ -1276,7 +1578,7 @@ def send_weekly_reports(sb_client: Any) -> int:
 def _send_weekly_summary(
     chat_id: str, user_id: str, week_start: str, sb_client: Any
 ) -> None:
-    today = date.today()
+    today = _today_wib()
     try:
         res = (
             sb_client.table("transactions")

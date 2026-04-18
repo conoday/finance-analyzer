@@ -1332,3 +1332,207 @@ def admin_delete_api_key(key_id: str, _: None = Depends(_verify_admin)):
         return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Transaction management
+# ---------------------------------------------------------------------------
+
+@app.delete("/transactions/{tx_id}", tags=["transactions"])
+def delete_transaction(tx_id: str, user: dict = Depends(require_auth)):
+    """Delete a transaction. Admin can delete any; regular user only their own."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        user_id = user.get("sub")
+        is_admin = user.get("role") == "admin"
+
+        # Verify ownership (unless admin)
+        if not is_admin:
+            check = sb.table("transactions").select("user_id").eq("id", tx_id).maybe_single().execute()
+            if not check.data:
+                raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan.")
+            if check.data.get("user_id") != user_id:
+                raise HTTPException(status_code=403, detail="Tidak diizinkan menghapus transaksi orang lain.")
+
+        sb.table("transactions").delete().eq("id", tx_id).execute()
+        return {"ok": True, "deleted_id": tx_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Admin: Stats & User Management
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/stats", tags=["admin"])
+def admin_stats(_: None = Depends(_verify_admin)):
+    """Admin: get system-wide statistics for dashboard."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        from datetime import datetime, timezone, timedelta
+        _wib = timezone(timedelta(hours=7))
+        today = datetime.now(_wib).date()
+        month_start = today.replace(day=1).isoformat()
+
+        # Users
+        profiles = sb.table("profiles").select("id", count="exact").execute()
+        user_count = profiles.count if profiles.count is not None else len(profiles.data or [])
+
+        # Telegram users (have telegram_chat_id)
+        tg_profiles = (
+            sb.table("profiles")
+            .select("id", count="exact")
+            .not_.is_("telegram_chat_id", "null")
+            .execute()
+        )
+        telegram_user_count = tg_profiles.count if tg_profiles.count is not None else len(tg_profiles.data or [])
+
+        # Transactions today
+        tx_today = (
+            sb.table("transactions")
+            .select("id", count="exact")
+            .eq("date", today.isoformat())
+            .execute()
+        )
+        transactions_today = tx_today.count if tx_today.count is not None else len(tx_today.data or [])
+
+        # Transactions this month
+        tx_month = (
+            sb.table("transactions")
+            .select("id", count="exact")
+            .gte("date", month_start)
+            .execute()
+        )
+        transactions_month = tx_month.count if tx_month.count is not None else len(tx_month.data or [])
+
+        # Total income/expense this month
+        tx_month_data = (
+            sb.table("transactions")
+            .select("amount,type")
+            .gte("date", month_start)
+            .execute()
+        )
+        total_income = sum(t["amount"] for t in (tx_month_data.data or []) if t.get("type") == "income")
+        total_expense = sum(t["amount"] for t in (tx_month_data.data or []) if t.get("type") == "expense")
+
+        # Affiliate products
+        products = sb.table("affiliate_products").select("id", count="exact").execute()
+        product_count = products.count if products.count is not None else len(products.data or [])
+
+        # Link reports
+        reports = sb.table("link_reports").select("id", count="exact").execute()
+        report_count = reports.count if reports.count is not None else len(reports.data or [])
+
+        # Active rooms
+        rooms = sb.table("rooms").select("room_id", count="exact").execute()
+        room_count = rooms.count if rooms.count is not None else len(rooms.data or [])
+
+        # AI API keys active
+        try:
+            keys = (
+                sb.table("ai_api_keys")
+                .select("id", count="exact")
+                .eq("is_active", True)
+                .execute()
+            )
+            active_keys = keys.count if keys.count is not None else len(keys.data or [])
+        except Exception:
+            active_keys = 0
+
+        return {
+            "user_count": user_count,
+            "telegram_user_count": telegram_user_count,
+            "transactions_today": transactions_today,
+            "transactions_month": transactions_month,
+            "total_income_month": total_income,
+            "total_expense_month": total_expense,
+            "affiliate_product_count": product_count,
+            "report_count": report_count,
+            "room_count": room_count,
+            "active_ai_keys": active_keys,
+            "date": today.isoformat(),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/admin/users", tags=["admin"])
+def admin_list_users(
+    search: str = "",
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(_verify_admin),
+):
+    """Admin: list all users with stats."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        q = sb.table("profiles").select("id,full_name,telegram_chat_id,created_at")
+        if search:
+            q = q.ilike("full_name", f"%{search}%")
+        q = q.order("created_at", desc=True).range(offset, offset + limit - 1)
+        res = q.execute()
+        users = res.data or []
+
+        # Enrich with transaction count per user
+        for u in users:
+            try:
+                tx_res = (
+                    sb.table("transactions")
+                    .select("id", count="exact")
+                    .eq("user_id", u["id"])
+                    .execute()
+                )
+                u["transaction_count"] = tx_res.count if tx_res.count is not None else len(tx_res.data or [])
+            except Exception:
+                u["transaction_count"] = 0
+
+        return {"users": users, "count": len(users)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/admin/transactions", tags=["admin"])
+def admin_list_transactions(
+    user_id: str = "",
+    type: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(_verify_admin),
+):
+    """Admin: list all transactions with filters."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        q = sb.table("transactions").select(
+            "id,user_id,date,description,amount,type,category_raw,source,scope,created_at"
+        )
+        if user_id:
+            q = q.eq("user_id", user_id)
+        if type:
+            q = q.eq("type", type)
+        if date_from:
+            q = q.gte("date", date_from)
+        if date_to:
+            q = q.lte("date", date_to)
+        q = q.order("date", desc=True).range(offset, offset + limit - 1)
+        res = q.execute()
+        return {"transactions": res.data or [], "count": len(res.data or [])}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
