@@ -552,7 +552,7 @@ def get_ai_chat_response(message: str, history: list[dict[str, str]] = []) -> st
         )
         return response.choices[0].message.content or "Maaf, aku tidak bisa menjawab saat ini."
 
-        try:
+    try:
         return _call_with_fallback(_do)
     except Exception as e:
         err_str = str(e).lower()
