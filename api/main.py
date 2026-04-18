@@ -63,6 +63,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import JSONResponse
+import logging
+
+logger = logging.getLogger(__name__)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global Exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Maaf, terjadi kesalahan internal pada sistem. Kami sedang memeriksanya."},
+    )
+
+
 
 @app.get("/", response_class=HTMLResponse)
 def home() -> str:

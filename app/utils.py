@@ -144,11 +144,15 @@ def ensure_datetime(df: pd.DataFrame) -> pd.DataFrame:
     if "tanggal" not in df.columns:
         return df
 
-    df["tanggal"] = pd.to_datetime(
-        df["tanggal"],
-        dayfirst=True,
-        errors="coerce",
-    )
+        # Suppress UserWarning by using format="mixed" for modern Pandas
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        df["tanggal"] = pd.to_datetime(
+            df["tanggal"],
+            dayfirst=True,
+            errors="coerce",
+        )
     # Hapus baris dengan tanggal tidak valid
     invalid = df["tanggal"].isna().sum()
     if invalid > 0:
