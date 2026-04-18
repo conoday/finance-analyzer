@@ -1019,7 +1019,7 @@ async def list_affiliate_products(
     limit: int = 50,
 ):
     """List affiliate products, optionally filtered by platform."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     try:
@@ -1042,7 +1042,7 @@ async def create_affiliate_product(
     user: dict = Depends(require_auth),
 ):
     """Admin: add a new affiliate product."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     valid_platforms = {"shopee", "tiktokshop", "alfagift", "other"}
@@ -1063,7 +1063,7 @@ async def update_affiliate_product(
     user: dict = Depends(require_auth),
 ):
     """Admin: update an existing affiliate product."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     update_data = {k: v for k, v in payload.dict().items() if v is not None}
@@ -1092,7 +1092,7 @@ async def delete_affiliate_product(
     user: dict = Depends(require_auth),
 ):
     """Admin: delete an affiliate product."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     try:
@@ -1108,7 +1108,7 @@ async def report_broken_link(
     user: dict = Depends(require_auth),
 ):
     """User: report a broken affiliate link."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     try:
@@ -1128,7 +1128,7 @@ async def list_link_reports(
     user: dict = Depends(require_auth),
 ):
     """Admin: list broken-link reports with product info."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     try:
@@ -1150,7 +1150,7 @@ async def delete_link_report(
     user: dict = Depends(require_auth),
 ):
     """Admin: dismiss (delete) a broken-link report."""
-    sb = _get_supabase()
+    sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
     try:
