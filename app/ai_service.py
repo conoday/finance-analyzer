@@ -126,6 +126,32 @@ def _mark_key_rate_limited(key_id: str, provider: str) -> None:
     finally:
         _invalidate_cache(provider)
 
+# ---------------------------------------------------------------------------
+# AI Error Log (in-memory ring buffer for Admin Console)
+# ---------------------------------------------------------------------------
+
+from collections import deque
+from datetime import datetime, timezone as _tz
+
+_AI_ERROR_LOG: deque[dict] = deque(maxlen=100)
+
+
+def _log_ai_error(level: str, provider: str, key_id: str | None, message: str) -> None:
+    """Append an AI error/warning to the in-memory log."""
+    _AI_ERROR_LOG.appendleft({
+        "timestamp": datetime.now(_tz.utc).isoformat(),
+        "level": level,
+        "provider": provider,
+        "key_id": key_id[:8] + "..." if key_id else None,
+        "message": message,
+    })
+    print(f"[ai_service] [{level}] {provider}: {message}")
+
+
+def get_ai_error_logs() -> list[dict]:
+    """Return the AI error log as a list (newest first)."""
+    return list(_AI_ERROR_LOG)
+
 # Error classes yang menandakan key ini sudah habis/rate-limited di GLM
 _QUOTA_ERRORS = ("rate_limit", "quota", "insufficient_quota", "exceeded", "429")
 
@@ -217,14 +243,16 @@ def _call_with_fallback(fn, **kwargs):
             err_str = str(e).lower()
             if any(q in err_str for q in _QUOTA_ERRORS):
                 # Tandai rate-limited di DB
+                _log_ai_error("RATE_LIMIT", provider_name, key_id, f"Key rate-limited: {str(e)[:200]}")
                 if key_id:
                     _mark_key_rate_limited(key_id, provider_name)
-                else:
-                    print(f"[ai_service] Key dari env var rate-limited (tidak bisa di-track otomatis).")
                 last_err = e
                 continue  # coba key berikutnya
-            raise  # error sistem/jaringan lainnya langsung raise
+            # Non-quota error — log and raise
+            _log_ai_error("ERROR", provider_name, key_id, f"API error: {str(e)[:300]}")
+            raise
 
+    _log_ai_error("EXHAUSTED", provider_name, None, f"Semua key habis! Error terakhir: {str(last_err)[:200]}")
     raise last_err  # semua key habis
 
 

@@ -178,7 +178,19 @@ def analyze_me(
     
     rows = res.data or []
     if not rows:
-        raise HTTPException(status_code=404, detail="Kamu belum mencatat transaksi apapun di Telegram/Web.")
+        # Return empty analysis instead of 404 so dashboards don't break
+        return {
+            "summary": {
+                "total_income": 0, "total_expense": 0, "net_cashflow": 0,
+                "avg_daily_expense": 0, "transaction_count": 0,
+            },
+            "by_category": [],
+            "monthly": [],
+            "forecast": [],
+            "daily_trend": [],
+            "raw_data": [],
+            "message": "Belum ada transaksi. Mulai catat pengeluaranmu!",
+        }
     
     df = pd.DataFrame(rows)
     df = df.rename(columns={
@@ -1536,3 +1548,14 @@ def admin_list_transactions(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Admin: AI Error Logs
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/ai-logs", tags=["admin"])
+def admin_ai_logs(_: None = Depends(_verify_admin)):
+    """Admin: return in-memory AI error/rate-limit log (last 100 events)."""
+    from app.ai_service import get_ai_error_logs
+    return {"logs": get_ai_error_logs()}
