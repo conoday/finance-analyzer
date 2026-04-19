@@ -133,6 +133,26 @@ def _progress_bar(pct: float, width: int = 10) -> str:
     return "\u2588" * filled + "\u2591" * (width - filled)
 
 
+_DONATE_TEXT = (
+    "💝 <b>Dukung OprexDuit!</b>\n\n"
+    "OprexDuit adalah platform gratis untuk semua orang. "
+    "Donasi kamu berapapun — bahkan 100 perak — sangat membantu "
+    "pengembangan fitur baru!\n\n"
+    "🏦 <b>Transfer Bank:</b>\n"
+    "  Bank Jago: 1234567890\n"
+    "  a.n. OprexDuit Dev\n\n"
+    "📱 <b>QRIS / E-Wallet:</b>\n"
+    "  Scan QRIS di web: oprexduit.vercel.app/donasi\n\n"
+    "Terima kasih banyak! 🙏"
+)
+
+
+def _send_with_donate_button(chat_id: int | str, text: str, parse_mode: str = "HTML") -> None:
+    """Send a message with a small donate inline button appended."""
+    keyboard = [[{"text": "💝 Donasi untuk OprexDuit", "callback_data": "donate_show"}]]
+    _send_keyboard(chat_id, text, keyboard, parse_mode)
+
+
 # ---------------------------------------------------------------------------
 # Main dispatcher
 # ---------------------------------------------------------------------------
@@ -150,8 +170,6 @@ def handle_update(update: dict, sb_client: Any) -> None:
 
     chat_id: int = message["chat"]["id"]
     text: str = (message.get("text") or "").strip()
-    if not text:
-        return
 
     from_data = message.get("from") or {}
     username: str = (
@@ -159,6 +177,18 @@ def handle_update(update: dict, sb_client: Any) -> None:
         or from_data.get("first_name")
         or str(chat_id)
     )
+
+    # Handle photo messages (OCR)
+    if message.get("photo") and not text:
+        caption = (message.get("caption") or "").strip()
+        photo_list = message["photo"]
+        # Get highest resolution photo (last in array)
+        best_photo = photo_list[-1]
+        _handle_photo_ocr(chat_id, best_photo["file_id"], caption, username, sb_client)
+        return
+
+    if not text:
+        return
 
     if text.startswith("/"):
         parts = text.split()
@@ -176,6 +206,127 @@ def handle_update(update: dict, sb_client: Any) -> None:
             _handle_lapor_input(chat_id, text, username, sb_client)
         else:
             _handle_free_text(chat_id, text, username, sb_client)
+
+
+def _handle_photo_ocr(chat_id: int, file_id: str, caption: str, username: str, sb_client: Any) -> None:
+    """Handle photo/screenshot OCR for transaction extraction."""
+    import base64
+    import httpx
+
+    _TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+
+    # Step 1: Tell user we're processing
+    send_message(chat_id, "📸 <b>Memproses gambar...</b>\nSedang menganalisis transaksi dari screenshot kamu.", parse_mode="HTML")
+
+    try:
+        # Step 2: Get file path from Telegram
+        with httpx.Client(timeout=30) as client:
+            file_info = client.get(f"https://api.telegram.org/bot{_TOKEN}/getFile?file_id={file_id}").json()
+        
+        if not file_info.get("ok"):
+            send_message(chat_id, "❌ Gagal mengambil file gambar. Coba kirim ulang ya.")
+            return
+        
+        file_path = file_info["result"]["file_path"]
+        
+        # Step 3: Download the file
+        with httpx.Client(timeout=30) as client:
+            img_response = client.get(f"https://api.telegram.org/file/bot{_TOKEN}/{file_path}")
+            img_bytes = img_response.content
+        
+        img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+
+        # Step 4: Call AI OCR
+        from app.ai_service import ocr_transaction_image
+        result = ocr_transaction_image(img_base64, caption)
+        
+        transactions = result.get("transactions", [])
+        bank_name = result.get("bank_name", "")
+        metadata_fields = result.get("metadata_fields", [])
+
+        if not transactions:
+            send_message(
+                chat_id,
+                "🔍 <b>Tidak ada transaksi terdeteksi</b>\n\n"
+                "Coba kirim screenshot yang lebih jelas, atau ketik manual:\n"
+                "<code>50rb makan siang</code>",
+                parse_mode="HTML",
+            )
+            return
+
+        # Step 5: Save transactions to DB
+        user_id = _get_user_id(chat_id, sb_client)
+        saved_count = 0
+        lines = []
+
+        for tx in transactions:
+            amount = float(tx.get("amount", 0))
+            if amount <= 0:
+                continue
+            
+            tx_type = tx.get("type", "expense")
+            desc = tx.get("description", "Transaksi")
+            category = tx.get("category", "Lainnya")
+            date = tx.get("date", _today_wib().isoformat())
+
+            if user_id and sb_client:
+                try:
+                    sb_client.table("transactions").insert({
+                        "user_id": user_id,
+                        "amount": amount,
+                        "type": tx_type,
+                        "description": desc,
+                        "category_raw": category,
+                        "date": date,
+                        "source": "telegram_ocr",
+                        "scope": "private",
+                    }).execute()
+                    saved_count += 1
+                except Exception as e:
+                    print(f"[ocr] DB insert error: {e}")
+
+            icon = "💰" if tx_type == "income" else "💸"
+            lines.append(f"  {icon} {desc}: Rp{amount:,.0f}")
+
+        # Step 6: Save bank metadata (for admin console)
+        if bank_name and metadata_fields and sb_client:
+            try:
+                sb_client.table("bank_ocr_metadata").upsert({
+                    "bank_name": bank_name,
+                    "detected_fields": metadata_fields,
+                    "sample_count": 1,
+                    "last_sample_at": _today_wib().isoformat(),
+                }, on_conflict="bank_name").execute()
+            except Exception:
+                pass  # Table might not exist yet
+
+        # Step 7: Send confirmation
+        bank_label = f" ({bank_name})" if bank_name else ""
+        msg = (
+            f"✅ <b>OCR Berhasil!{bank_label}</b>\n\n"
+            f"Terdeteksi {len(transactions)} transaksi:\n"
+            + "\n".join(lines) + "\n\n"
+        )
+        if saved_count > 0:
+            msg += f"💾 {saved_count} transaksi tersimpan ke database."
+        else:
+            msg += "⚠️ Transaksi tidak tersimpan karena akun belum terhubung.\nGunakan /start untuk menghubungkan."
+
+        # Add donation button
+        _send_with_donate_button(chat_id, msg)
+
+    except Exception as e:
+        print(f"[ocr] Error processing photo: {e}")
+        send_message(
+            chat_id,
+            "❌ <b>Gagal memproses gambar</b>\n\n"
+            "Kemungkinan penyebab:\n"
+            "• Gambar terlalu buram\n"
+            "• Format tidak didukung\n"
+            "• Server AI sedang sibuk\n\n"
+            "Coba kirim ulang atau ketik manual.",
+            parse_mode="HTML",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +505,8 @@ def _handle_command(
         _cmd_room(chat_id, args, username, user_id, sb_client)
     elif command in ("/hapus", "/delete"):
         _cmd_hapus(chat_id, user_id, sb_client)
+    elif command == "/donasi":
+        send_message(chat_id, _DONATE_TEXT, parse_mode="HTML")
     else:
         send_message(chat_id, "Perintah tidak dikenal. Ketik /menu untuk panduan.")
 
@@ -1725,6 +1878,10 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
                 send_message(chat_id, "\u2705 Transaksi berhasil dihapus!")
             except Exception as exc:
                 send_message(chat_id, f"\u26a0\ufe0f Gagal menghapus: {exc}")
+
+    elif data == "donate_show":
+        _answer_callback(cq_id, "💝 Terima kasih!")
+        send_message(chat_id, _DONATE_TEXT, parse_mode="HTML")
 
     else:
         _answer_callback(cq_id)

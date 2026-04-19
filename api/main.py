@@ -1025,16 +1025,118 @@ class AIChatRequest(BaseModel):
     history: list[dict[str, str]] = []
 
 @app.post("/ai/chat")
-def ai_chat(req: AIChatRequest):
-    """Obrolan interaktif dengan Asisten AI terkait keuangan user."""
+def ai_chat(req: AIChatRequest, request: Request):
+    """Obrolan interaktif dengan Asisten AI — jika user login, AI bisa akses data transaksi."""
+    # Optional auth — try to get user data if token present
+    user_data = None
+    try:
+        from app.auth import require_auth
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            user = require_auth(auth_header)
+            user_id = user.get("sub")
+            sb = _supabase()
+            if sb and user_id:
+                # Fetch recent transactions
+                tx_res = (
+                    sb.table("transactions")
+                    .select("amount,type,description,category_raw,date")
+                    .eq("user_id", user_id)
+                    .order("date", desc=True)
+                    .limit(30)
+                    .execute()
+                )
+                txs = tx_res.data or []
+                
+                # Build summary
+                total_income = sum(t["amount"] for t in txs if t.get("type") == "income")
+                total_expense = sum(t["amount"] for t in txs if t.get("type") == "expense")
+                
+                # Build by_category
+                cat_totals: dict[str, float] = {}
+                for t in txs:
+                    if t.get("type") == "expense":
+                        cat = t.get("category_raw") or "Lainnya"
+                        cat_totals[cat] = cat_totals.get(cat, 0) + t["amount"]
+                by_category = [
+                    {"kategori": k, "total": v, "pct": (v / total_expense * 100) if total_expense > 0 else 0}
+                    for k, v in sorted(cat_totals.items(), key=lambda x: -x[1])
+                ]
+                
+                # Build transaction list for AI context
+                transactions = [
+                    {
+                        "tanggal": t.get("date", ""),
+                        "deskripsi": t.get("description", ""),
+                        "debit": t["amount"] if t.get("type") == "expense" else 0,
+                        "kredit": t["amount"] if t.get("type") == "income" else 0,
+                        "kategori": t.get("category_raw", "Lainnya"),
+                        "tipe": t.get("type", "expense"),
+                    }
+                    for t in txs[:15]
+                ]
+                
+                user_data = {
+                    "summary": {
+                        "total_income": total_income,
+                        "total_expense": total_expense,
+                        "net_cashflow": total_income - total_expense,
+                        "tx_count": len(txs),
+                    },
+                    "by_category": by_category,
+                    "transactions": transactions,
+                }
+    except Exception:
+        pass  # No auth or invalid token — AI will work without user data
+
     try:
         from app.ai_service import get_ai_chat_response
-        reply = get_ai_chat_response(req.message, req.history)
+        reply = get_ai_chat_response(req.message, req.history, user_data=user_data)
         return {"reply": reply}
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+
+@app.post("/ai/ocr")
+async def ai_ocr(file: UploadFile = File(...)):
+    """OCR: Extract transactions from uploaded bank screenshot/receipt image."""
+    import base64
+    try:
+        contents = await file.read()
+        if len(contents) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="File terlalu besar (maks 10MB)")
+
+        img_base64 = base64.b64encode(contents).decode("utf-8")
+        
+        from app.ai_service import ocr_transaction_image
+        result = ocr_transaction_image(img_base64, caption=file.filename or "")
+
+        # Save bank metadata if detected
+        bank_name = result.get("bank_name", "")
+        metadata_fields = result.get("metadata_fields", [])
+        if bank_name and metadata_fields:
+            sb = _supabase()
+            if sb:
+                try:
+                    from datetime import datetime
+                    sb.table("bank_ocr_metadata").upsert({
+                        "bank_name": bank_name,
+                        "detected_fields": metadata_fields,
+                        "sample_count": 1,
+                        "last_sample_at": datetime.now().isoformat(),
+                    }, on_conflict="bank_name").execute()
+                except Exception:
+                    pass
+
+        return result
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OCR error: {str(e)}")
 
 
 # ---------------------------------------------------------------------------
@@ -1639,15 +1741,32 @@ def admin_stats(_: None = Depends(_verify_admin)):
         )
         transactions_month = tx_month.count if tx_month.count is not None else len(tx_month.data or [])
 
-        # Total income/expense this month
+        # Transaction source breakdown this month
         tx_month_data = (
             sb.table("transactions")
-            .select("amount,type")
+            .select("source")
             .gte("date", month_start)
             .execute()
         )
-        total_income = sum(t["amount"] for t in (tx_month_data.data or []) if t.get("type") == "income")
-        total_expense = sum(t["amount"] for t in (tx_month_data.data or []) if t.get("type") == "expense")
+        source_counts: dict[str, int] = {}
+        for t in (tx_month_data.data or []):
+            src = t.get("source") or "web"
+            source_counts[src] = source_counts.get(src, 0) + 1
+
+        # Transactions per day (last 7 days) for sparkline
+        tx_per_day = []
+        for i in range(6, -1, -1):
+            day = (today - timedelta(days=i)).isoformat()
+            day_res = (
+                sb.table("transactions")
+                .select("id", count="exact")
+                .eq("date", day)
+                .execute()
+            )
+            tx_per_day.append({
+                "date": day,
+                "count": day_res.count if day_res.count is not None else len(day_res.data or []),
+            })
 
         # Affiliate products
         products = sb.table("affiliate_products").select("id", count="exact").execute()
@@ -1673,13 +1792,17 @@ def admin_stats(_: None = Depends(_verify_admin)):
         except Exception:
             active_keys = 0
 
+        # OCR scans count
+        ocr_count = source_counts.get("telegram_ocr", 0)
+
         return {
             "user_count": user_count,
             "telegram_user_count": telegram_user_count,
             "transactions_today": transactions_today,
             "transactions_month": transactions_month,
-            "total_income_month": total_income,
-            "total_expense_month": total_expense,
+            "tx_by_source": source_counts,
+            "tx_per_day_7d": tx_per_day,
+            "ocr_scans_month": ocr_count,
             "affiliate_product_count": product_count,
             "report_count": report_count,
             "room_count": room_count,
@@ -1734,6 +1857,7 @@ def admin_list_users(
 @app.get("/admin/transactions", tags=["admin"])
 def admin_list_transactions(
     user_id: str = "",
+    search: str = "",
     type: str = "",
     date_from: str = "",
     date_to: str = "",
@@ -1741,7 +1865,7 @@ def admin_list_transactions(
     offset: int = 0,
     _: None = Depends(_verify_admin),
 ):
-    """Admin: list all transactions with filters."""
+    """Admin: list all transactions with filters + user info."""
     sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
@@ -1757,13 +1881,106 @@ def admin_list_transactions(
             q = q.gte("date", date_from)
         if date_to:
             q = q.lte("date", date_to)
+        if search:
+            q = q.ilike("description", f"%{search}%")
         q = q.order("date", desc=True).range(offset, offset + limit - 1)
         res = q.execute()
-        return {"transactions": res.data or [], "count": len(res.data or [])}
+        txs = res.data or []
+
+        # Enrich with user names
+        user_ids = list({t["user_id"] for t in txs if t.get("user_id")})
+        user_map: dict[str, str] = {}
+        if user_ids:
+            for uid in user_ids[:50]:  # batch
+                try:
+                    pr = sb.table("profiles").select("full_name").eq("id", uid).limit(1).execute()
+                    if pr.data:
+                        user_map[uid] = pr.data[0].get("full_name") or ""
+                except Exception:
+                    pass
+        
+        for t in txs:
+            t["user_name"] = user_map.get(t.get("user_id", ""), "")
+
+        return {"transactions": txs, "count": len(txs)}
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Admin: System Logs
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/logs", tags=["admin"])
+def admin_logs(
+    level: str = "",
+    source: str = "",
+    limit: int = 100,
+    offset: int = 0,
+    _: None = Depends(_verify_admin),
+):
+    """Admin: read system logs from system_logs table."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        q = sb.table("system_logs").select("*")
+        if level:
+            q = q.eq("level", level.upper())
+        if source:
+            q = q.eq("source", source)
+        q = q.order("timestamp", desc=True).range(offset, offset + limit - 1)
+        res = q.execute()
+        return {"logs": res.data or [], "count": len(res.data or [])}
+    except Exception:
+        # Table might not exist yet — return empty
+        return {"logs": [], "count": 0}
+
+
+@app.post("/admin/logs", tags=["admin"])  
+def admin_write_log(
+    request: Request,
+    _: None = Depends(_verify_admin),
+):
+    """Admin: write a system log entry (for testing)."""
+    import json
+    sb = _supabase()
+    if not sb:
+        return {"ok": False}
+    try:
+        body = json.loads(request._body) if hasattr(request, '_body') else {}
+        sb.table("system_logs").insert({
+            "level": body.get("level", "INFO"),
+            "source": body.get("source", "admin"),
+            "message": body.get("message", "Test log"),
+        }).execute()
+        return {"ok": True}
+    except Exception:
+        return {"ok": False}
+
+
+# ---------------------------------------------------------------------------
+# Admin: Bank OCR Metadata
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/ocr-metadata", tags=["admin"])
+def admin_ocr_metadata(_: None = Depends(_verify_admin)):
+    """Admin: list all detected bank OCR metadata."""
+    sb = _supabase()
+    if not sb:
+        return {"banks": []}
+    try:
+        res = (
+            sb.table("bank_ocr_metadata")
+            .select("*")
+            .order("last_sample_at", desc=True)
+            .execute()
+        )
+        return {"banks": res.data or []}
+    except Exception:
+        return {"banks": []}
 
 
 # ---------------------------------------------------------------------------
@@ -1775,3 +1992,4 @@ def admin_ai_logs(_: None = Depends(_verify_admin)):
     """Admin: return in-memory AI error/rate-limit log (last 100 events)."""
     from app.ai_service import get_ai_error_logs
     return {"logs": get_ai_error_logs()}
+

@@ -35,9 +35,20 @@ export function FloatingAIChat() {
     setLoading(true);
 
     try {
+      // Try to get auth token for personalized AI responses
+      let authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      try {
+        const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs");
+        const supabase = createClientComponentClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          authHeaders["Authorization"] = `Bearer ${session.access_token}`;
+        }
+      } catch {}
+
       const res = await fetch(`${API_URL}/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({ 
           message: msg,
           history: messages.filter(m => m.role !== "system").slice(-5) 
