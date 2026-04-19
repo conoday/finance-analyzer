@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Download, Heart, X, Copy, Check } from "lucide-react";
+import { MessageCircle, Download, Heart, X, Copy, Check, Cloud } from "lucide-react";
 import type { AnalysisResult } from "@/types";
 import { formatRupiah } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface SharePanelProps {
   data: AnalysisResult;
@@ -177,6 +180,8 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
    Main SharePanel component
    ───────────────────────────────────────────── */
 export function SharePanel({ data, onDonasi }: SharePanelProps & { onDonasi?: () => void }) {
+  const { user } = useAuth();
+  
   const handleWA = () => {
     const text = buildWAText(data);
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -184,6 +189,31 @@ export function SharePanel({ data, onDonasi }: SharePanelProps & { onDonasi?: ()
   };
 
   const handleExport = () => exportCSV(data);
+
+  const handleCloudExport = async () => {
+    try {
+      const { createClient } = await import("@/utils/supabase/client");
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        handleExport();
+        return;
+      }
+      const res = await fetch(`${API_URL}/export/csv`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error("Export gagal");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `oprexduit_transaksi_${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      handleExport();
+    }
+  };
 
   return (
     <>
@@ -208,12 +238,12 @@ export function SharePanel({ data, onDonasi }: SharePanelProps & { onDonasi?: ()
 
         {/* CSV Export */}
         <button
-          onClick={handleExport}
-          title="Export CSV"
+          onClick={user ? handleCloudExport : handleExport}
+          title={user ? "Export CSV (Cloud)" : "Export CSV"}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-200 border border-white/[0.08] hover:bg-white/5 transition-all"
         >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Export CSV</span>
+          {user ? <Cloud className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+          <span className="hidden sm:inline">{user ? "Export Cloud" : "Export CSV"}</span>
           <span className="sm:hidden">CSV</span>
         </button>
 

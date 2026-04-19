@@ -249,6 +249,62 @@ def ai_categorize(req: AICategorizeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
 
+# ---------------------------------------------------------------------------
+# Export endpoints
+# ---------------------------------------------------------------------------
+
+from fastapi.responses import StreamingResponse
+import io as _io
+
+@app.get("/export/csv", tags=["export"])
+def export_csv(
+    date_from: str = "",
+    date_to: str = "",
+    user: dict = Depends(require_auth),
+):
+    """Export user's transactions as CSV file."""
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+
+    user_id = user.get("sub")
+    try:
+        q = (
+            sb.table("transactions")
+            .select("date,description,amount,type,category_raw,scope,source")
+            .eq("user_id", user_id)
+            .order("date", desc=True)
+        )
+        if date_from:
+            q = q.gte("date", date_from)
+        if date_to:
+            q = q.lte("date", date_to)
+        res = q.execute()
+        rows = res.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="Tidak ada transaksi untuk diekspor.")
+
+    # Build CSV
+    output = _io.StringIO()
+    output.write("Tanggal,Jenis,Jumlah,Keterangan,Kategori,Cakupan,Sumber\n")
+    for r in rows:
+        jenis = "Pemasukan" if r.get("type") == "income" else "Pengeluaran"
+        scope = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}.get(r.get("scope", "private"), r.get("scope", ""))
+        source = r.get("source", "manual")
+        desc = str(r.get("description", "")).replace('"', '""')
+        cat = str(r.get("category_raw", "Lainnya")).replace('"', '""')
+        output.write(f'{r.get("date","")},{jenis},{r.get("amount",0)},"{desc}","{cat}",{scope},{source}\n')
+
+    output.seek(0)
+    return StreamingResponse(
+        _io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=oprexduit_transaksi.csv"},
+    )
+
 
 # ---------------------------------------------------------------------------
 # Shared Budget Room System

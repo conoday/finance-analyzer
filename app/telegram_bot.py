@@ -53,6 +53,13 @@ _SHOPPING_SESSIONS: dict[str, dict] = {}
 _SPLITBILL_SESSIONS: dict[str, dict] = {}
 _REPORT_SESSIONS: dict[str, dict] = {}
 
+# Scope labels (shared)
+_SCOPE_EMOJI = {"private": "\U0001f464", "couple": "\U0001f491", "group": "\U0001f465"}
+_SCOPE_LABEL = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
+
+# Budget alert threshold (80%)
+_BUDGET_ALERT_PCT = 80
+
 # ---------------------------------------------------------------------------
 # Telegram API helper
 # ---------------------------------------------------------------------------
@@ -450,6 +457,155 @@ def _cmd_link(chat_id: int | str, sb_client: Any) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Room Notification + Budget Alert helpers
+# ---------------------------------------------------------------------------
+
+def _notify_room_members(
+    user_id: str,
+    username: str,
+    scope: str,
+    tx_type: str,
+    amount: float,
+    description: str,
+    sb_client: Any,
+) -> None:
+    """Notify all other room members when a shared transaction is recorded.
+    
+    Only triggers for scope != 'private'. Finds all rooms the user belongs to,
+    then sends a Telegram message to every OTHER member's chat_id.
+    """
+    if scope == "private" or not sb_client:
+        return
+
+    try:
+        # Find rooms this user is in
+        memberships = (
+            sb_client.table("room_members")
+            .select("room_id")
+            .eq("member_id", user_id)
+            .execute()
+        )
+        room_ids = [m["room_id"] for m in (memberships.data or [])]
+        if not room_ids:
+            return
+
+        # For each room, find other members and their chat_ids
+        for rid in room_ids:
+            members_res = (
+                sb_client.table("room_members")
+                .select("member_id,display_name")
+                .eq("room_id", rid)
+                .neq("member_id", user_id)
+                .execute()
+            )
+            other_members = members_res.data or []
+
+            for member in other_members:
+                mid = member["member_id"]
+                # Lookup their telegram_chat_id
+                try:
+                    profile_res = (
+                        sb_client.table("profiles")
+                        .select("telegram_chat_id")
+                        .eq("id", mid)
+                        .limit(1)
+                        .execute()
+                    )
+                    rows = profile_res.data or []
+                    if not rows or not rows[0].get("telegram_chat_id"):
+                        continue
+
+                    their_chat_id = rows[0]["telegram_chat_id"]
+                    scope_label = _SCOPE_LABEL.get(scope, scope.title())
+                    scope_emoji = _SCOPE_EMOJI.get(scope, "")
+                    tx_icon = "\U0001f4b0" if tx_type == "income" else "\U0001f4b8"
+                    tx_label = "Pemasukan" if tx_type == "income" else "Pengeluaran"
+
+                    send_message(
+                        their_chat_id,
+                        f"\U0001f514 <b>Notifikasi Room</b>\n\n"
+                        f"{scope_emoji} <b>{username}</b> menambahkan {tx_label.lower()} baru:\n\n"
+                        f"{tx_icon} {tx_label}: <b>{_fmt(amount)}</b>\n"
+                        f"\U0001f4dd Keterangan: {description}\n"
+                        f"\U0001f465 Cakupan: {scope_label}\n\n"
+                        f"<i>Lihat detail di /room info atau di web dashboard.</i>",
+                    )
+                except Exception as exc:
+                    print(f"[room_notify] Gagal kirim notif ke {mid}: {exc}")
+
+    except Exception as exc:
+        print(f"[room_notify] Error: {exc}")
+
+
+def _check_budget_alert(
+    chat_id: int | str,
+    user_id: str,
+    category: str,
+    sb_client: Any,
+) -> None:
+    """Check if user's spending in a category has exceeded the budget threshold.
+    
+    Sends an alert if spending >= 80% of set budget for that category.
+    """
+    if not sb_client:
+        return
+    try:
+        # Check if user has budget set
+        budget_res = (
+            sb_client.table("budgets")
+            .select("limits")
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        if not budget_res.data:
+            return
+
+        limits = budget_res.data.get("limits") or {}
+        cat_limit = limits.get(category, 0)
+        if cat_limit <= 0:
+            return
+
+        # Calculate spending this month
+        today = _today_wib()
+        month_start = today.replace(day=1).isoformat()
+        tx_res = (
+            sb_client.table("transactions")
+            .select("amount")
+            .eq("user_id", user_id)
+            .eq("type", "expense")
+            .eq("category_raw", category)
+            .gte("date", month_start)
+            .execute()
+        )
+        total_spent = sum(t["amount"] for t in (tx_res.data or []))
+        pct = (total_spent / cat_limit * 100) if cat_limit > 0 else 0
+
+        if pct >= _BUDGET_ALERT_PCT:
+            bar = _progress_bar(pct)
+            if pct >= 100:
+                emoji = "\U0001f534"
+                level = "MELAMPAUI"
+            elif pct >= 90:
+                emoji = "\U0001f7e1"
+                level = "MENDEKATI"
+            else:
+                emoji = "\U0001f7e0"
+                level = "HAMPIR"
+
+            send_message(
+                chat_id,
+                f"{emoji} <b>Peringatan Budget!</b>\n\n"
+                f"Kategori <b>{category}</b> sudah {level} batas:\n"
+                f"{bar} {pct:.0f}%\n"
+                f"{_fmt(total_spent)} / {_fmt(cat_limit)}\n\n"
+                f"<i>Cek detail budget: /budget</i>",
+            )
+    except Exception:
+        pass  # Budget alert is non-critical, don't break the flow
+
+
 def _cmd_catat(
     chat_id: int | str,
     text: str,
@@ -530,6 +686,10 @@ def _save_and_confirm(
             _send_keyboard(chat_id, msg, keyboard)
         else:
             send_message(chat_id, msg)
+
+        # Budget alert: check if spending exceeded threshold
+        if parsed.type == "expense":
+            _check_budget_alert(chat_id, user_id, parsed.category_hint or "Lainnya", sb_client)
             
     except Exception as exc:
         send_message(chat_id, f"\u26a0\ufe0f Gagal menyimpan: {exc}")
@@ -1397,8 +1557,6 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         if len(parts) == 4:
             new_scope = parts[2]
             tx_id = parts[3]
-            _SCOPE_EMOJI = {"private": "\U0001f464", "couple": "\U0001f491", "group": "\U0001f465"}
-            _SCOPE_LABEL = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
             try:
                 sb_client.table("transactions").update({"scope": new_scope}).eq("id", tx_id).execute()
                 emoji = _SCOPE_EMOJI.get(new_scope, "")
@@ -1410,6 +1568,24 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
                     f"Transaksi ini sekarang tercatat sebagai pengeluaran <b>{label}</b>.\n"
                     + ("Transaksi akan muncul di laporan bersama room kamu." if new_scope != "private" else "Transaksi ini hanya terlihat oleh kamu."),
                 )
+
+                # Notify room members if scope is shared
+                if new_scope != "private":
+                    user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+                    if user_id:
+                        # Fetch tx details for notification
+                        tx_res = sb_client.table("transactions").select("amount,type,description").eq("id", tx_id).maybe_single().execute()
+                        if tx_res.data:
+                            tx = tx_res.data
+                            _notify_room_members(
+                                user_id=user_id,
+                                username=username,
+                                scope=new_scope,
+                                tx_type=tx.get("type", "expense"),
+                                amount=tx.get("amount", 0),
+                                description=tx.get("description", ""),
+                                sb_client=sb_client,
+                            )
             except Exception:
                 _answer_callback(cq_id, "Gagal mengubah scope.")
         else:
