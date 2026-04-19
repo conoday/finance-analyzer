@@ -1346,6 +1346,61 @@ def admin_delete_api_key(key_id: str, _: None = Depends(_verify_admin)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/admin/api-keys/reset-rate-limits", tags=["admin"])
+def admin_reset_all_rate_limits(_: None = Depends(_verify_admin)):
+    """Admin: reset semua key yang is_rate_limited=true agar bisa dipakai lagi.
+    
+    Berguna setelah fix bug (misal base_url salah) agar key-key yang
+    sebelumnya ditandai rate-limited karena error endpoint bisa aktif kembali.
+    """
+    sb = _supabase()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database tidak tersambung.")
+    try:
+        res = (
+            sb.table("ai_api_keys")
+            .update({"is_rate_limited": False, "rate_limited_at": None})
+            .eq("is_rate_limited", True)
+            .execute()
+        )
+        count = len(res.data or [])
+        # Invalidate all provider caches
+        from app.ai_service import _invalidate_cache
+        for p in ("glm", "deepseek", "gemini"):
+            _invalidate_cache(p)
+        return {"ok": True, "reset_count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Auto-reset rate-limited keys on startup (self-healing setelah deploy)
+@app.on_event("startup")
+async def _startup_reset_rate_limits():
+    """Reset semua rate-limited keys saat server start.
+    
+    Ini penting karena rate-limit biasanya temporary (kecuali key benar-benar habis).
+    Pada setiap deploy/restart, kita beri kesempatan lagi ke semua key.
+    """
+    sb = _supabase()
+    if not sb:
+        return
+    try:
+        res = (
+            sb.table("ai_api_keys")
+            .update({"is_rate_limited": False, "rate_limited_at": None})
+            .eq("is_rate_limited", True)
+            .execute()
+        )
+        count = len(res.data or [])
+        if count > 0:
+            print(f"[startup] Auto-reset {count} rate-limited AI key(s).")
+            from app.ai_service import _invalidate_cache
+            for p in ("glm", "deepseek", "gemini"):
+                _invalidate_cache(p)
+    except Exception as exc:
+        print(f"[startup] Failed to reset rate-limited keys: {exc}")
+
+
 # ---------------------------------------------------------------------------
 # Transaction management
 # ---------------------------------------------------------------------------

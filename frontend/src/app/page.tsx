@@ -60,6 +60,9 @@ export default function Home() {
     }
   }, [user, data, status, analyzeMe]);
 
+  // True jika backend mengembalikan empty analysis (0 transaksi)
+  const isEmptyCloud = !!(data && (data as any).message && (data.summary?.tx_count === 0 || data.summary?.total_expense === 0));
+
 
   return (
     <div className="relative min-h-screen bg-mesh overflow-x-hidden">
@@ -212,6 +215,24 @@ export default function Home() {
               transition={{ duration: 0.5 }}
               className="pt-6 space-y-5"
             >
+              {/* Empty state — user baru, belum ada transaksi */}
+              {isEmptyCloud ? (
+                <div className="text-center py-16 px-4">
+                  <div className="text-5xl mb-4">📝</div>
+                  <h2 className="text-xl font-semibold text-slate-800">Belum ada transaksi</h2>
+                  <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
+                    Catat pengeluaran pertamamu lewat Telegram atau form catat cepat di bawah, lalu kembali ke sini untuk melihat dashboard analisismu.
+                  </p>
+                  <button
+                    onClick={reset}
+                    className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105"
+                    style={{ background: "#0f766e" }}
+                  >
+                    Mulai Catat
+                  </button>
+                </div>
+              ) : (
+              <>
               {/* Greeting */}
               <div>
                 <h2 className="text-xl font-semibold text-slate-800">
@@ -334,6 +355,8 @@ export default function Home() {
 
               {/* Share panel (floating bottom center) */}
               <SharePanel data={data} onDonasi={() => setShowDonasi(true)} />
+              </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

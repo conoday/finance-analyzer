@@ -49,7 +49,16 @@ export function FloatingAIChat() {
       
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch (err: any) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "⚠️ Maaf, terjadi kesalahan atau API limit." }]);
+      const msg = err?.message ?? "";
+      let reply: string;
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+        reply = "⚠️ Tidak bisa terhubung ke server. Periksa koneksi internet atau coba lagi nanti.";
+      } else if (msg.includes("503") || msg.includes("over-limit") || msg.includes("rate") || msg.includes("quota")) {
+        reply = "⏳ Sistem AI sedang sibuk atau over-limit. Coba lagi dalam beberapa menit.";
+      } else {
+        reply = "⚠️ Maaf, terjadi kesalahan pada sistem. Tim kami sedang memeriksanya.";
+      }
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } finally {
       setLoading(false);
     }

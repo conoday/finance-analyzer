@@ -46,3 +46,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Scratch / dev-only scripts (jangan commit)
+scratch*.py
+test_*.py
