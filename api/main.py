@@ -193,20 +193,115 @@ def analyze_me(
         }
     
     df = pd.DataFrame(rows)
+    
+    # Map DB columns to pipeline-compatible columns
+    # Pipeline expects: tanggal, deskripsi, debit, kredit, tipe
+    # DB has: date, description, amount, type, category_raw
     df = df.rename(columns={
-        'date': 'Tanggal',
-        'description': 'Keterangan',
-        'amount': 'Nominal',
+        'date': 'tanggal',
+        'description': 'deskripsi',
+        'category_raw': 'kategori',
     })
     
-    def adjust_nominal(row):
-        if row['type'] == 'expense':
-            return -abs(row['Nominal'])
-        return row['Nominal']
+    # Split amount into debit/kredit based on type
+    df['debit'] = df.apply(
+        lambda r: abs(float(r.get('amount', 0))) if r.get('type') == 'expense' else 0.0,
+        axis=1
+    )
+    df['kredit'] = df.apply(
+        lambda r: abs(float(r.get('amount', 0))) if r.get('type') == 'income' else 0.0,
+        axis=1
+    )
+    df['tipe'] = df['type']
     
-    df['Nominal'] = df.apply(adjust_nominal, axis=1)
+    # Parse tanggal
+    df['tanggal'] = pd.to_datetime(df['tanggal'], errors='coerce')
+    df = df.dropna(subset=['tanggal']).sort_values('tanggal').reset_index(drop=True)
+    
+    if df.empty:
+        return {
+            "summary": {
+                "total_income": 0, "total_expense": 0, "net_cashflow": 0,
+                "avg_daily_expense": 0, "transaction_count": 0,
+            },
+            "by_category": [], "monthly": [], "forecast": [],
+            "daily_trend": [], "raw_data": [],
+            "message": "Belum ada transaksi valid.",
+        }
 
-    result = run_pipeline(df, forecast_periods=forecast_periods, forecast_method=forecast_method)
+    # Skip normalize_columns and parse_amount_columns since we already set them up
+    # Go directly to categorize + insights
+    from app.category import categorize_transactions
+    from app.insights import (
+        compute_summary, spending_by_category, monthly_trend,
+        top_merchants, income_sources,
+    )
+    from app.timeseries import prepare_timeseries, forecast_cashflow
+    from app.subscriptions import detect_subscriptions, total_monthly_subscription
+    from app.health import compute_health_score
+    from app.storytelling import generate_monthly_stories, generate_overall_story
+
+    # Categorize (only if 'kategori' not already set or is 'Lainnya')
+    df = categorize_transactions(df)
+
+    summary = compute_summary(df)
+    by_category = spending_by_category(df)
+    monthly = monthly_trend(df)
+    merchants = top_merchants(df, n=10)
+    income_src = income_sources(df, n=5)
+
+    ts = prepare_timeseries(df)
+    if len(ts) < 7:
+        forecast_df = pd.DataFrame()
+    else:
+        try:
+            forecast_df = forecast_cashflow(ts, periods=forecast_periods, method=forecast_method)
+        except Exception:
+            forecast_df = pd.DataFrame()
+
+    subscriptions = detect_subscriptions(df)
+    sub_total_monthly = total_monthly_subscription(subscriptions)
+
+    health_report = compute_health_score(
+        summary=summary, monthly=monthly,
+        by_category=by_category, subscription_total=sub_total_monthly,
+    )
+    monthly_stories = generate_monthly_stories(df, monthly, by_category)
+    overall_story = generate_overall_story(summary, monthly, by_category, subscriptions)
+
+    category_baseline = {
+        row["kategori"]: row["total"] for _, row in by_category.iterrows()
+    } if not by_category.empty else {}
+
+    # Build transaction list for frontend
+    transactions = []
+    for _, row in df.iterrows():
+        transactions.append({
+            "tanggal": row["tanggal"].strftime("%Y-%m-%d") if pd.notna(row["tanggal"]) else "",
+            "deskripsi": str(row.get("deskripsi", "")),
+            "debit": float(row.get("debit", 0)),
+            "kredit": float(row.get("kredit", 0)),
+            "kategori": str(row.get("kategori", "Lainnya")),
+            "tipe": str(row.get("tipe", "")),
+        })
+
+    result = {
+        "summary": summary,
+        "by_category": by_category.to_dict("records") if not by_category.empty else [],
+        "monthly": monthly.to_dict("records") if not monthly.empty else [],
+        "top_merchants": merchants.to_dict("records") if not merchants.empty else [],
+        "income_src": income_src.to_dict("records") if not income_src.empty else [],
+        "timeseries": ts.to_dict("records") if not ts.empty else [],
+        "forecast": forecast_df.to_dict("records") if not forecast_df.empty else [],
+        "subscriptions": subscriptions.to_dict("records") if not subscriptions.empty else [],
+        "sub_total_monthly": float(sub_total_monthly),
+        "health_report": health_report,
+        "monthly_stories": monthly_stories,
+        "overall_story": overall_story,
+        "category_baseline": category_baseline,
+        "transactions": transactions,
+        "errors": [],
+    }
     return _serialize(result)
 
 

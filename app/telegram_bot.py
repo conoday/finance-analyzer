@@ -461,6 +461,36 @@ def _cmd_link(chat_id: int | str, sb_client: Any) -> None:
 # Room Notification + Budget Alert helpers
 # ---------------------------------------------------------------------------
 
+def _get_room_member_ids(user_id: str, sb_client: Any) -> list[str]:
+    """Get all member IDs from rooms this user belongs to (including self).
+    Used to include shared transactions in reports."""
+    if not sb_client:
+        return [user_id]
+    try:
+        memberships = (
+            sb_client.table("room_members")
+            .select("room_id")
+            .eq("member_id", user_id)
+            .execute()
+        )
+        room_ids = [m["room_id"] for m in (memberships.data or [])]
+        if not room_ids:
+            return [user_id]
+
+        all_ids = {user_id}
+        for rid in room_ids:
+            members_res = (
+                sb_client.table("room_members")
+                .select("member_id")
+                .eq("room_id", rid)
+                .execute()
+            )
+            for m in (members_res.data or []):
+                all_ids.add(m["member_id"])
+        return list(all_ids)
+    except Exception:
+        return [user_id]
+
 def _notify_room_members(
     user_id: str,
     username: str,
@@ -707,14 +737,36 @@ def _cmd_ringkasan(
     today = _today_wib().isoformat()
 
     try:
+        # Own transactions
         res = (
             sb_client.table("transactions")
-            .select("amount,type,description,category_raw")
+            .select("amount,type,description,category_raw,scope")
             .eq("user_id", user_id)
             .eq("date", today)
             .execute()
         )
         txs = res.data or []
+        for t in txs:
+            t["_from"] = "self"
+
+        # Shared transactions from room members
+        room_member_ids = _get_room_member_ids(user_id, sb_client)
+        other_ids = [mid for mid in room_member_ids if mid != user_id]
+        for mid in other_ids:
+            try:
+                other_res = (
+                    sb_client.table("transactions")
+                    .select("amount,type,description,category_raw,scope")
+                    .eq("user_id", mid)
+                    .in_("scope", ["couple", "group"])
+                    .eq("date", today)
+                    .execute()
+                )
+                for t in (other_res.data or []):
+                    t["_from"] = "room"
+                    txs.append(t)
+            except Exception:
+                pass
 
         if not txs:
             send_message(
@@ -734,16 +786,26 @@ def _cmd_ringkasan(
             reverse=True,
         )
 
+        own_count = sum(1 for t in txs if t["_from"] == "self")
+        room_count = sum(1 for t in txs if t["_from"] == "room")
+
         lines = [f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({_today_wib().strftime('%d %b %Y')})\n"]
         lines.append(f"\U0001f4b0 Pemasukan : <b>{_fmt(total_income)}</b>")
         lines.append(f"\U0001f4b8 Pengeluaran: <b>{_fmt(total_expense)}</b>")
         _net_icon = "\U0001f4c8" if net >= 0 else "\U0001f4c9"
         lines.append(f"{_net_icon} Net       : <b>{_fmt(net)}</b>")
+        if room_count > 0:
+            lines.append(f"\U0001f465 Incl. {room_count} transaksi bersama dari room")
 
         if expenses:
             lines.append(f"\n<b>Top pengeluaran ({len(expenses)} transaksi):</b>")
             for tx in expenses[:5]:
-                lines.append(f"\u2022 {tx['description']} - {_fmt(tx['amount'])}")
+                scope_tag = ""
+                if tx.get("_from") == "room":
+                    scope_tag = f" \U0001f465"
+                elif tx.get("scope") in ("couple", "group"):
+                    scope_tag = f" {_SCOPE_EMOJI.get(tx['scope'], '')}"
+                lines.append(f"\u2022 {tx['description']} - {_fmt(tx['amount'])}{scope_tag}")
             if len(expenses) > 5:
                 lines.append(f"  ... dan {len(expenses) - 5} lainnya")
 
@@ -766,6 +828,7 @@ def _cmd_laporan(
     month_start = today.replace(day=1).isoformat()
 
     try:
+        # Own transactions
         res = (
             sb_client.table("transactions")
             .select("amount,type,category_raw,scope")
@@ -775,6 +838,28 @@ def _cmd_laporan(
             .execute()
         )
         txs = res.data or []
+        for t in txs:
+            t["_from"] = "self"
+
+        # Shared transactions from room members (couple/group only)
+        room_member_ids = _get_room_member_ids(user_id, sb_client)
+        other_ids = [mid for mid in room_member_ids if mid != user_id]
+        for mid in other_ids:
+            try:
+                other_res = (
+                    sb_client.table("transactions")
+                    .select("amount,type,category_raw,scope")
+                    .eq("user_id", mid)
+                    .in_("scope", ["couple", "group"])
+                    .gte("date", month_start)
+                    .lte("date", today.isoformat())
+                    .execute()
+                )
+                for t in (other_res.data or []):
+                    t["_from"] = "room"
+                    txs.append(t)
+            except Exception:
+                pass
 
         total_income = sum(t["amount"] for t in txs if t["type"] == "income")
         total_expense = sum(t["amount"] for t in txs if t["type"] == "expense")
@@ -791,13 +876,17 @@ def _cmd_laporan(
 
         top_cats = sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        _SCOPE_LABELS = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
+        own_count = sum(1 for t in txs if t["_from"] == "self")
+        room_count = sum(1 for t in txs if t["_from"] == "room")
+
         lines = [f"\U0001f4c5 <b>Laporan Bulan Ini</b> ({today.strftime('%B %Y')})\n"]
         lines.append(f"\U0001f4b0 Pemasukan : <b>{_fmt(total_income)}</b>")
         lines.append(f"\U0001f4b8 Pengeluaran: <b>{_fmt(total_expense)}</b>")
         _net_icon2 = "\U0001f4c8" if net >= 0 else "\U0001f4c9"
         lines.append(f"{_net_icon2} Net       : <b>{_fmt(net)}</b>")
         lines.append(f"\U0001f4dd Total transaksi: {len(txs)}")
+        if room_count > 0:
+            lines.append(f"\U0001f465 Termasuk {room_count} transaksi bersama dari room")
 
         if top_cats:
             lines.append("\n<b>Top Kategori Pengeluaran:</b>")
@@ -809,7 +898,7 @@ def _cmd_laporan(
         if len(scope_totals) > 1 or (scope_totals and "private" not in scope_totals):
             lines.append("\n<b>Berdasarkan Cakupan:</b>")
             for scope, total in sorted(scope_totals.items(), key=lambda x: x[1], reverse=True):
-                label = _SCOPE_LABELS.get(scope, scope.title())
+                label = _SCOPE_LABEL.get(scope, scope.title())
                 pct = (total / total_expense * 100) if total_expense > 0 else 0
                 lines.append(f"\u2022 {label}: {_fmt(total)} ({pct:.0f}%)")
 

@@ -610,3 +610,54 @@ def get_ai_chat_response(message: str, history: list[dict[str, str]] = []) -> st
             return "Mohon maaf, sistem AI sedang over-limit atau kunci belum tersedia. Silakan cek Admin Console."
         raise e
 
+
+def get_ai_chat_response(
+    message: str,
+    history: list[dict[str, str]] | None = None,
+) -> str:
+    """
+    Obrolan interaktif dengan AI asisten keuangan.
+    
+    Args:
+        message: Pesan terbaru dari user
+        history: Riwayat chat sebelumnya [{role, content}, ...]
+    
+    Returns:
+        str: Balasan AI
+    """
+    system_prompt = (
+        "Kamu adalah Oprex AI, asisten keuangan cerdas dari OprexDuit. "
+        "Kamu membantu pengguna dengan pertanyaan seputar keuangan pribadi, "
+        "budgeting, investasi, dan tips hemat. "
+        "Gaya bicaramu santai tapi informatif, dalam Bahasa Indonesia. "
+        "Jika ditanya hal di luar topik keuangan, arahkan kembali ke topik "
+        "pengelolaan keuangan dengan sopan."
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Add history (limit to last 8 messages for context window)
+    if history:
+        for h in history[-8:]:
+            role = h.get("role", "user")
+            if role in ("user", "assistant"):
+                messages.append({"role": role, "content": h.get("content", "")})
+
+    messages.append({"role": "user", "content": message})
+
+    def _do(client, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=500,
+            temperature=0.6,
+        )
+        return response.choices[0].message.content or "Maaf, saya tidak bisa menjawab saat ini."
+
+    try:
+        return _call_with_fallback(_do)
+    except Exception as e:
+        err_str = str(e).lower()
+        if any(q in err_str for q in _QUOTA_ERRORS) or "no keys available" in err_str:
+            return "\u23f3 Sistem AI sedang sibuk. Coba lagi dalam beberapa menit ya!"
+        raise e
