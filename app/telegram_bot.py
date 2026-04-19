@@ -53,9 +53,8 @@ _SHOPPING_SESSIONS: dict[str, dict] = {}
 _SPLITBILL_SESSIONS: dict[str, dict] = {}
 _REPORT_SESSIONS: dict[str, dict] = {}
 
-# Scope labels (shared)
-_SCOPE_EMOJI = {"private": "\U0001f464", "couple": "\U0001f491", "group": "\U0001f465"}
 _SCOPE_LABEL = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
+_SCOPE_EMOJI = {"private": "\U0001f464", "couple": "\U0001f491", "group": "\U0001f465"}
 
 # Budget alert threshold (80%)
 _BUDGET_ALERT_PCT = 80
@@ -581,19 +580,19 @@ def _check_budget_alert(
     if not sb_client:
         return
     try:
-        # Check if user has budget set
+        # Check if user has budget set for this category
         budget_res = (
             sb_client.table("budgets")
-            .select("limits")
+            .select("monthly_limit")
             .eq("user_id", user_id)
+            .eq("category", category)
             .maybe_single()
             .execute()
         )
         if not budget_res.data:
             return
 
-        limits = budget_res.data.get("limits") or {}
-        cat_limit = limits.get(category, 0)
+        cat_limit = float(budget_res.data.get("monthly_limit", 0))
         if cat_limit <= 0:
             return
 

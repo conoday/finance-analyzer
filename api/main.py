@@ -302,7 +302,17 @@ def analyze_me(
         "transactions": transactions,
         "errors": [],
     }
-    return _serialize(result)
+    # Already serialized to dicts/lists — just clean NaN/Inf
+    import json, math
+    def _clean(obj):
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return 0
+        if isinstance(obj, dict):
+            return {k: _clean(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_clean(v) for v in obj]
+        return obj
+    return _clean(result)
 
 
 # ---------------------------------------------------------------------------

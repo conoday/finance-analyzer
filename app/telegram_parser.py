@@ -31,12 +31,14 @@ class ParsedTx:
 # ---------------------------------------------------------------------------
 
 _MULTIPLIERS = {
-    "rb":   1_000,
-    "ribu": 1_000,
-    "k":    1_000,
-    "jt":   1_000_000,
-    "juta": 1_000_000,
-    "m":    1_000_000,
+    "rb":    1_000,
+    "rbu":   1_000,
+    "rebu":  1_000,
+    "ribu":  1_000,
+    "k":     1_000,
+    "jt":    1_000_000,
+    "juta":  1_000_000,
+    "m":     1_000_000,
 }
 
 
@@ -150,21 +152,19 @@ def parse_transaction(text: str) -> Optional[ParsedTx]:
     amount_ends_idx: int = -1
 
     for i, tok in enumerate(tokens):
-        combined_tok = tok
-        lookahead = 0
+        # Try combined with next token first (e.g. "27 rebu", "100 k")
         if i + 1 < len(tokens):
             next_t = tokens[i+1].lower()
             if next_t in _MULTIPLIERS:
                 combined_tok = tok + next_t
-                lookahead = 1
+                amt = parse_amount(combined_tok)
+                if amt is not None and amt > 0:
+                    amount = amt
+                    amount_idx = i
+                    amount_ends_idx = i + 1
+                    break
 
-        amt = parse_amount(combined_tok)
-        if amt is not None and amt > 0:
-            amount = amt
-            amount_idx = i
-            amount_ends_idx = i + lookahead
-            break
-
+        # Try single token (e.g. "50rb", "25000")
         amt = parse_amount(tok)
         if amt is not None and amt > 0:
             amount = amt

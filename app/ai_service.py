@@ -27,8 +27,8 @@ from typing import Any
 
 _PROVIDERS: dict[str, dict] = {
     "glm": {
-        # api.z.ai OpenAI-compatible proxy (sesuai key yang dipakai)
-        "base_url": os.environ.get("GLM_BASE_URL", "https://api.z.ai/api/openai/v1"),
+        # api.z.ai Anthropic-compatible endpoint (proven working with test_glm.py)
+        "base_url": os.environ.get("GLM_BASE_URL", "https://api.z.ai/api/anthropic"),
         "model":    os.environ.get("GLM_MODEL", "glm-4.7"),
         "vision_model": os.environ.get("GLM_VISION_MODEL", "glm-4v-flash"),
         # Fallback env vars (dipakai jika DB kosong)
@@ -199,22 +199,16 @@ def _get_provider_keys_with_id(provider_name: str) -> list[dict]:
 
 def _get_client(api_key: str | None = None):
     """
-    Buat OpenAI client sesuai AI_PROVIDER di env.
-
-    Untuk GLM: jika api_key di-pass, pakai key itu (digunakan saat fallback).
-    Jika tidak di-pass, pakai key pertama yang tersedia.
-
-    Catatan: api.z.ai proxy menerima key via 'Authorization: Bearer'
-    (OpenAI-style) pada endpoint /api/openai/v1. Jika endpoint butuh
-    header x-api-key (Anthropic-style), kita kirim dua-duanya.
+    Return (client_or_caller, model) for the current AI_PROVIDER.
+    
+    For GLM via api.z.ai: returns an AnthropicCaller wrapper that uses httpx
+    to call the Anthropic-compatible endpoint (proven working with test_glm.py).
+    For other providers: returns standard OpenAI client.
     """
-    from openai import OpenAI
-
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
     cfg = _PROVIDERS.get(provider_name, _PROVIDERS["glm"])
 
     if api_key is None:
-        # Ambil key pertama yang terisi
         for env in cfg["key_envs"]:
             api_key = os.environ.get(env, "").strip()
             if api_key:
@@ -229,18 +223,99 @@ def _get_client(api_key: str | None = None):
 
     base_url = cfg["base_url"]
 
-    # Untuk proxy api.z.ai — tambahkan header Anthropic-style sebagai fallback
-    extra_headers = {}
-    if "api.z.ai" in base_url:
-        extra_headers["x-api-key"] = api_key
-        extra_headers["anthropic-version"] = "2023-06-01"
+    # Use Anthropic-style httpx wrapper for api.z.ai
+    if "api.z.ai" in base_url and "anthropic" in base_url:
+        return _AnthropicCaller(base_url, api_key), cfg["model"]
 
+    # Standard OpenAI client for other providers
+    from openai import OpenAI
     client = OpenAI(
         api_key=api_key,
         base_url=base_url,
-        default_headers=extra_headers if extra_headers else None,
     )
     return client, cfg["model"]
+
+
+class _AnthropicCaller:
+    """Wrapper that mimics OpenAI client interface but calls Anthropic-compatible API."""
+    
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.chat = self  # self.chat.completions.create
+        self.completions = self
+
+    def create(self, *, model: str, messages: list, max_tokens: int = 500,
+               temperature: float = 0.6, response_format: dict | None = None, **kwargs):
+        import httpx, json as _json
+        
+        # Extract system message
+        system_text = ""
+        user_messages = []
+        for m in messages:
+            if m["role"] == "system":
+                system_text = m["content"]
+            else:
+                user_messages.append({"role": m["role"], "content": m["content"]})
+        
+        # If response_format is json_object, add instruction to system
+        if response_format and response_format.get("type") == "json_object":
+            system_text += "\n\nIMPORTANT: Respond ONLY with valid JSON. No other text."
+
+        payload = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": user_messages if user_messages else [{"role": "user", "content": messages[-1]["content"]}],
+        }
+        if system_text:
+            payload["system"] = system_text
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+        }
+
+        with httpx.Client(timeout=60) as client:
+            resp = client.post(
+                f"{self.base_url}/v1/messages",
+                json=payload,
+                headers=headers,
+            )
+            data = resp.json()
+
+        # Convert Anthropic response to OpenAI-like structure
+        content = ""
+        if "content" in data and isinstance(data["content"], list):
+            for block in data["content"]:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    content = block["text"]
+                    break
+        elif "content" in data and isinstance(data["content"], str):
+            content = data["content"]
+
+        if not content and data.get("error"):
+            raise RuntimeError(f"API error: {data['error']}")
+        if not content:
+            print(f"[ai_service] Unexpected response: {_json.dumps(data)[:500]}")
+
+        # Return OpenAI-like response object
+        return _SimpleResponse(content)
+
+
+class _SimpleMessage:
+    def __init__(self, content: str):
+        self.content = content
+
+class _SimpleChoice:
+    def __init__(self, content: str):
+        self.message = _SimpleMessage(content)
+
+class _SimpleResponse:
+    """Mimics OpenAI ChatCompletion so _extract_content() works."""
+    def __init__(self, content: str):
+        self.choices = [_SimpleChoice(content)] if content else []
 
 
 def _call_with_fallback(fn, **kwargs):
