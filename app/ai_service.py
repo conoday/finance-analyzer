@@ -27,10 +27,12 @@ from typing import Any
 
 _PROVIDERS: dict[str, dict] = {
     "glm": {
-        "base_url": "https://open.bigmodel.cn/api/paas/v4/",
-        "model":    "glm-4.6",
+        # api.z.ai OpenAI-compatible proxy (sesuai key yang dipakai)
+        "base_url": os.environ.get("GLM_BASE_URL", "https://api.z.ai/api/openai/v1"),
+        "model":    os.environ.get("GLM_MODEL", "glm-4.7"),
+        "vision_model": os.environ.get("GLM_VISION_MODEL", "glm-4v-flash"),
         # Fallback env vars (dipakai jika DB kosong)
-        "key_envs": ["GLM_API_KEY", "GLM_API_KEY_2", "GLM_API_KEY_3"],
+        "key_envs": ["GLM_API_KEY", "GLM_API_KEY_2", "GLM_API_KEY_3", "GLM_API_KEY_4", "GLM_API_KEY_5"],
     },
     "deepseek": {
         "base_url": "https://api.deepseek.com/v1",
@@ -185,6 +187,10 @@ def _get_client(api_key: str | None = None):
 
     Untuk GLM: jika api_key di-pass, pakai key itu (digunakan saat fallback).
     Jika tidak di-pass, pakai key pertama yang tersedia.
+
+    Catatan: api.z.ai proxy menerima key via 'Authorization: Bearer'
+    (OpenAI-style) pada endpoint /api/openai/v1. Jika endpoint butuh
+    header x-api-key (Anthropic-style), kita kirim dua-duanya.
     """
     from openai import OpenAI
 
@@ -205,7 +211,20 @@ def _get_client(api_key: str | None = None):
             f"Set salah satu env var berikut di Render: {envs}"
         )
 
-    return OpenAI(api_key=api_key, base_url=cfg["base_url"]), cfg["model"]
+    base_url = cfg["base_url"]
+
+    # Untuk proxy api.z.ai — tambahkan header Anthropic-style sebagai fallback
+    extra_headers = {}
+    if "api.z.ai" in base_url:
+        extra_headers["x-api-key"] = api_key
+        extra_headers["anthropic-version"] = "2023-06-01"
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        default_headers=extra_headers if extra_headers else None,
+    )
+    return client, cfg["model"]
 
 
 def _call_with_fallback(fn, **kwargs):
@@ -441,8 +460,11 @@ def parse_receipt_image(image_bytes: bytes, content_type: str) -> dict:
     )
 
     def _do(client, model):
-        # GLM pakai model vision khusus
-        used_model = "glm-4v-flash" if provider_name == "glm" else model
+        # GLM pakai model vision khusus (configurable via env var)
+        if provider_name == "glm":
+            used_model = _PROVIDERS["glm"].get("vision_model", "glm-4v-flash")
+        else:
+            used_model = model
         response = client.chat.completions.create(
             model=used_model,
             messages=[{
