@@ -167,7 +167,7 @@ def handle_update(update: dict, sb_client: Any) -> None:
         elif str(chat_id) in _SHOPPING_SESSIONS:
             _handle_shopping_input(chat_id, text, username, sb_client)
         elif str(chat_id) in _REPORT_SESSIONS:
-            _handle_lapor_input(chat_id, text, username)
+            _handle_lapor_input(chat_id, text, username, sb_client)
         else:
             _handle_free_text(chat_id, text, username, sb_client)
 
@@ -333,8 +333,8 @@ def _handle_command(
         _cmd_budget(chat_id, user_id, sb_client)
     elif command in ("/belanja", "/shop"):
         _cmd_belanja_start(chat_id)
-    elif command in ("/bantuan", "/help"):
-        _cmd_bantuan(chat_id, sb_client)
+    elif command in ("/bantuan", "/help", "/menu"):
+        _cmd_menu(chat_id, sb_client)
     elif command == "/batal":
         _SHOPPING_SESSIONS.pop(str(chat_id), None)
         _SPLITBILL_SESSIONS.pop(str(chat_id), None)
@@ -349,7 +349,7 @@ def _handle_command(
     elif command in ("/hapus", "/delete"):
         _cmd_hapus(chat_id, user_id, sb_client)
     else:
-        send_message(chat_id, "Perintah tidak dikenal. Ketik /bantuan untuk panduan.")
+        send_message(chat_id, "Perintah tidak dikenal. Ketik /menu untuk panduan.")
 
 
 def _handle_free_text(chat_id: int | str, text: str, username: str, sb_client: Any) -> None:
@@ -383,14 +383,14 @@ def _handle_free_text(chat_id: int | str, text: str, username: str, sb_client: A
     else:
         send_message(
             chat_id,
-            "💡 <b>Ups, formatnya kurang tepat!</b>\n\n"
+            "\U0001f4a1 <b>Ups, formatnya kurang tepat!</b>\n\n"
             "Jika kamu ingin <b>mencatat transaksi</b>, pastikan sertakan nominal angkanya.\n"
             "Contoh penyebutan:\n"
-            "• <code>50rb makan siang</code>\n"
-            "• <code>+2jt gaji bulanan</code>\n\n"
-            "🤖 Jika kamu ingin diskusi analisa keuangan, silakan gunakan fitur fitur <b>AI Chat</b> di web-dashboard!\n\n"
-            "Ketik /bantuan untuk melihat daftar menu.",
+            "\u2022 <code>50rb makan siang</code>\n"
+            "\u2022 <code>+2jt gaji bulanan</code>\n\n"
+            "\U0001f916 Untuk analisa keuangan lebih detail, akses <b>AI Chat</b> di web-dashboard!\n",
         )
+        _show_menu(chat_id, sb_client, prefix="\U0001f4f1 <b>Menu:</b>")
 
 
 # ---------------------------------------------------------------------------
@@ -412,12 +412,12 @@ def _cmd_start(chat_id: int | str, user_id: Optional[str], username: str, sb_cli
             "\U0001f4dd Catat pengeluaran:\n"
             "  <code>50rb makan siang</code>\n"
             "  <code>25000 bensin</code>\n\n"
-            "\U0001f6cd\ufe0f Mau belanja hemat? Ketik /belanja\n\n"
+            "\U0001f6cd Mau belanja hemat? Ketik /belanja\n\n"
             "\U0001f4ca Perintah lainnya:\n"
             "  /ringkasan - Ringkasan hari ini\n"
             "  /laporan   - Laporan bulan ini\n"
             "  /budget    - Cek budget\n"
-            "  /bantuan   - Panduan lengkap\n\n"
+            "  /menu      - Menu lengkap\n\n"
             f"{link_info}",
         )
     else:
@@ -523,7 +523,7 @@ def _save_and_confirm(
         if tx_id:
             keyboard = [[
                 {"text": "\U0001f464 Pribadi", "callback_data": f"tx:scope:private:{tx_id}"},
-                {"text": "\U0001f469\u200d\u2764\ufe0f\u200d\U0001f468 Pasangan", "callback_data": f"tx:scope:couple:{tx_id}"},
+                {"text": "\U0001f491 Pasangan", "callback_data": f"tx:scope:couple:{tx_id}"},
                 {"text": "\U0001f465 Grup", "callback_data": f"tx:scope:group:{tx_id}"},
             ]]
             msg += "\n\nAtur cakupan pengeluaran ini:"
@@ -608,7 +608,7 @@ def _cmd_laporan(
     try:
         res = (
             sb_client.table("transactions")
-            .select("amount,type,category_raw")
+            .select("amount,type,category_raw,scope")
             .eq("user_id", user_id)
             .gte("date", month_start)
             .lte("date", today.isoformat())
@@ -621,13 +621,17 @@ def _cmd_laporan(
         net = total_income - total_expense
 
         cat_totals: dict[str, float] = {}
+        scope_totals: dict[str, float] = {}
         for tx in txs:
             if tx["type"] == "expense":
                 cat = tx.get("category_raw") or "Lainnya"
                 cat_totals[cat] = cat_totals.get(cat, 0) + tx["amount"]
+                scope = tx.get("scope") or "private"
+                scope_totals[scope] = scope_totals.get(scope, 0) + tx["amount"]
 
         top_cats = sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:5]
 
+        _SCOPE_LABELS = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
         lines = [f"\U0001f4c5 <b>Laporan Bulan Ini</b> ({today.strftime('%B %Y')})\n"]
         lines.append(f"\U0001f4b0 Pemasukan : <b>{_fmt(total_income)}</b>")
         lines.append(f"\U0001f4b8 Pengeluaran: <b>{_fmt(total_expense)}</b>")
@@ -640,6 +644,14 @@ def _cmd_laporan(
             for cat, total in top_cats:
                 pct = (total / total_expense * 100) if total_expense > 0 else 0
                 lines.append(f"\u2022 {cat}: {_fmt(total)} ({pct:.0f}%)")
+
+        # Scope breakdown
+        if len(scope_totals) > 1 or (scope_totals and "private" not in scope_totals):
+            lines.append("\n<b>Berdasarkan Cakupan:</b>")
+            for scope, total in sorted(scope_totals.items(), key=lambda x: x[1], reverse=True):
+                label = _SCOPE_LABELS.get(scope, scope.title())
+                pct = (total / total_expense * 100) if total_expense > 0 else 0
+                lines.append(f"\u2022 {label}: {_fmt(total)} ({pct:.0f}%)")
 
         send_message(chat_id, "\n".join(lines))
 
@@ -709,7 +721,13 @@ def _cmd_budget(
         send_message(chat_id, f"\u26a0\ufe0f Gagal mengambil data budget: {exc}")
 
 
-def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
+def _cmd_menu(chat_id: int | str, sb_client: Any = None) -> None:
+    """Show interactive menu. Replaces old /bantuan."""
+    _show_menu(chat_id, sb_client)
+
+
+def _show_menu(chat_id: int | str, sb_client: Any = None, prefix: str = "") -> None:
+    """Send the interactive menu keyboard. Called after actions too."""
     linked = _is_linked_to_web(chat_id, sb_client) if sb_client else False
     link_text = "\u2705 Sudah Terhubung Web" if linked else "\U0001f517 Hubungkan Akun Web"
     link_data = "cmd:noop" if linked else "cmd:link"
@@ -721,16 +739,14 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
         ],
         [
             {"text": "\U0001f4b0 Budget", "callback_data": "cmd:budget"},
-            {"text": "\U0001f6cd\ufe0f Belanja AI", "callback_data": "cmd:belanja"},
+            {"text": "\U0001f6cd Belanja AI", "callback_data": "cmd:belanja"},
         ],
         [
             {"text": "\U0001f465 Room", "callback_data": "cmd:room"},
             {"text": "\U0001f5d1 Hapus Transaksi", "callback_data": "cmd:hapus"},
         ],
         [
-            {"text": "\U0001f91d Patungan (Split Bill)", "callback_data": "cmd:splitbill"},
-        ],
-        [
+            {"text": "\U0001f91d Patungan", "callback_data": "cmd:splitbill"},
             {"text": link_text, "callback_data": link_data},
         ],
         [
@@ -738,21 +754,14 @@ def _cmd_bantuan(chat_id: int | str, sb_client: Any = None) -> None:
         ],
     ]
 
-    _send_keyboard(
-        chat_id,
-        "<b>\U0001f4f1 OprexDuit Bot - Panduan</b>\n\n"
-        "<b>Catat Transaksi (kirim teks langsung):</b>\n"
+    header = prefix or (
+        "<b>\U0001f4f1 OprexDuit Menu</b>\n\n"
+        "<b>Catat Transaksi:</b> kirim teks langsung\n"
         "\u2022 <code>50rb makan siang</code>\n"
-        "\u2022 <code>catat 25000 bensin</code>\n"
         "\u2022 <code>+2jt gaji bulan ini</code>\n\n"
-        "<b>Format Jumlah:</b>\n"
-        "\u2022 <code>50rb</code> = Rp50.000\n"
-        "\u2022 <code>1.5jt</code> = Rp1.500.000\n"
-        "\u2022 <code>500000</code> = Rp500.000\n"
-        "\u2022 Awali <code>+</code> untuk pemasukan\n\n"
-        "<b>Pilih Menu Interaktif di Bawah Ini:</b>",
-        keyboard
+        "<b>Pilih menu di bawah:</b>"
     )
+    _send_keyboard(chat_id, header, keyboard)
 
 
 # ---------------------------------------------------------------------------
@@ -906,7 +915,7 @@ def _room_join(chat_id: int | str, code: str, username: str, sb_client: Any) -> 
 
 
 def _room_info(chat_id: int | str, user_id: str, sb_client: Any) -> None:
-    """Show info about all rooms the user is a member of."""
+    """Show info about all rooms the user is a member of, including shared spending."""
     if not sb_client:
         send_message(chat_id, "\u26a0\ufe0f Database tidak tersambung.")
         return
@@ -928,19 +937,56 @@ def _room_info(chat_id: int | str, user_id: str, sb_client: Any) -> None:
             )
             return
 
+        today = _today_wib()
+        month_start = today.replace(day=1).isoformat()
+
         lines = ["\U0001f465 <b>Room Kamu:</b>\n"]
-        for rid in room_ids[:5]:  # Max 5
+        for rid in room_ids[:5]:
             room_res = sb_client.table("rooms").select("*").eq("room_id", rid).maybe_single().execute()
             if not room_res.data:
                 continue
             r = room_res.data
-            members_res = sb_client.table("room_members").select("display_name").eq("room_id", rid).execute()
-            members = [m["display_name"] for m in (members_res.data or [])]
-            lines.append(
+            members_res = sb_client.table("room_members").select("member_id,display_name").eq("room_id", rid).execute()
+            members_data = members_res.data or []
+            member_names = [m["display_name"] for m in members_data]
+            member_ids = [m["member_id"] for m in members_data]
+
+            # Fetch shared spending (scope=couple/group) for members this month
+            room_spending: dict[str, float] = {}
+            total_room_expense = 0.0
+            for mid in member_ids:
+                try:
+                    tx_res = (
+                        sb_client.table("transactions")
+                        .select("amount,type,scope")
+                        .eq("user_id", mid)
+                        .eq("type", "expense")
+                        .in_("scope", ["couple", "group"])
+                        .gte("date", month_start)
+                        .execute()
+                    )
+                    for tx in (tx_res.data or []):
+                        name = next((m["display_name"] for m in members_data if m["member_id"] == mid), "?")
+                        room_spending[name] = room_spending.get(name, 0) + tx["amount"]
+                        total_room_expense += tx["amount"]
+                except Exception:
+                    pass
+
+            room_info = (
                 f"\u2022 <b>{r.get('plan_type', 'couple').title()}</b>\n"
                 f"  Kode: <code>{r.get('invite_code', '-')}</code>\n"
-                f"  Anggota: {', '.join(members)}"
+                f"  Anggota: {', '.join(member_names)}"
             )
+
+            if total_room_expense > 0:
+                room_info += f"\n\n  \U0001f4b8 <b>Pengeluaran Bersama ({today.strftime('%b %Y')}):</b>\n"
+                room_info += f"  Total: <b>{_fmt(total_room_expense)}</b>\n"
+                for name, amount in sorted(room_spending.items(), key=lambda x: x[1], reverse=True):
+                    room_info += f"  \u2022 {name}: {_fmt(amount)}\n"
+            else:
+                room_info += "\n  \U0001f4ad Belum ada pengeluaran bersama bulan ini."
+
+            lines.append(room_info)
 
         send_message(chat_id, "\n\n".join(lines))
     except Exception as exc:
@@ -996,21 +1042,36 @@ def _cmd_lapor_start(chat_id: int | str) -> None:
     _REPORT_SESSIONS[str(chat_id)] = {"step": "waiting_feedback"}
     send_message(
         chat_id,
-        "🚨 <b>Lapor Bug / Kendala</b>\n\nSilakan ketikkan masalah atau bug yang kamu alami. Nanti tim OprexDuit akan mengeceknya.\n\nKetik /batal jika tidak jadi melapor."
+        "\U0001f6a8 <b>Lapor Bug / Kendala</b>\n\nSilakan ketikkan masalah atau bug yang kamu alami. Nanti tim OprexDuit akan mengeceknya.\n\nKetik /batal jika tidak jadi melapor."
     )
 
-def _handle_lapor_input(chat_id: int | str, text: str, username: str) -> None:
+def _handle_lapor_input(chat_id: int | str, text: str, username: str, sb_client: Any = None) -> None:
     session = _REPORT_SESSIONS.get(str(chat_id))
     if not session:
         return
     
-    # Store to backend log for now
+    # Try to save to Supabase for admin console
+    saved_to_db = False
+    if sb_client:
+        try:
+            sb_client.table("bug_reports").insert({
+                "telegram_chat_id": str(chat_id),
+                "username": username,
+                "message": text[:2000],
+                "status": "open",
+                "created_at": _now_wib().isoformat(),
+            }).execute()
+            saved_to_db = True
+        except Exception as exc:
+            print(f"[bug_report] Gagal simpan ke DB: {exc}")
+    
+    # Always log to stdout as backup
     print("====================================================")
     print(f"[BUG REPORT] From user {username} ({chat_id}):")
     print(f"{text}")
     print("====================================================")
     
-    send_message(chat_id, "✅ Laporanmu sudah diteruskan ke tim pengembang kami (OprexDuit Admin Console). Terima kasih!")
+    send_message(chat_id, "\u2705 Laporanmu sudah diteruskan ke tim pengembang OprexDuit. Terima kasih!")
     _REPORT_SESSIONS.pop(str(chat_id), None)
 
 # ---------------------------------------------------------------------------
@@ -1277,16 +1338,19 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         _answer_callback(cq_id)
         user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
         _cmd_ringkasan(chat_id, user_id, sb_client)
+        _show_menu(chat_id, sb_client, prefix="\U0001f4f1 <b>Menu:</b>")
         
     elif data == "cmd:laporan":
         _answer_callback(cq_id)
         user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
         _cmd_laporan(chat_id, user_id, sb_client)
+        _show_menu(chat_id, sb_client, prefix="\U0001f4f1 <b>Menu:</b>")
         
     elif data == "cmd:budget":
         _answer_callback(cq_id)
         user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
         _cmd_budget(chat_id, user_id, sb_client)
+        _show_menu(chat_id, sb_client, prefix="\U0001f4f1 <b>Menu:</b>")
         
     elif data == "cmd:belanja":
         _answer_callback(cq_id)
@@ -1333,12 +1397,19 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         if len(parts) == 4:
             new_scope = parts[2]
             tx_id = parts[3]
+            _SCOPE_EMOJI = {"private": "\U0001f464", "couple": "\U0001f491", "group": "\U0001f465"}
+            _SCOPE_LABEL = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
             try:
                 sb_client.table("transactions").update({"scope": new_scope}).eq("id", tx_id).execute()
-                _answer_callback(cq_id, f"Scope diubah menjadi {new_scope.title()}!")
-                
-                # Optional: Edit original message to remove buttons
-                # But telegram API call needs message_id. We'll skip editing for now.
+                emoji = _SCOPE_EMOJI.get(new_scope, "")
+                label = _SCOPE_LABEL.get(new_scope, new_scope.title())
+                _answer_callback(cq_id, f"Cakupan diubah ke {label}!")
+                send_message(
+                    chat_id,
+                    f"{emoji} <b>Cakupan diperbarui!</b>\n\n"
+                    f"Transaksi ini sekarang tercatat sebagai pengeluaran <b>{label}</b>.\n"
+                    + ("Transaksi akan muncul di laporan bersama room kamu." if new_scope != "private" else "Transaksi ini hanya terlihat oleh kamu."),
+                )
             except Exception:
                 _answer_callback(cq_id, "Gagal mengubah scope.")
         else:

@@ -12,3 +12,5 @@ supabase
 PyJWT[crypto]
 # HTTP client (used by Telegram bot to call Telegram API)
 httpx
+# AI provider (OpenAI-compatible client for GLM/DeepSeek/Gemini)
+openai
