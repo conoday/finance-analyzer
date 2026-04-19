@@ -804,60 +804,75 @@ def get_ai_chat_response(
 
 
 def _repair_json(raw: str) -> str:
-    """Fix common AI-generated JSON issues before parsing."""
+    """Aggressively fix common AI-generated JSON issues before parsing."""
     import re
+    # Remove markdown code fences
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
     # Remove single-line comments (// ...)
     raw = re.sub(r'//[^\n]*', '', raw)
-    # Remove trailing commas before } or ]
+    # Remove multi-line comments (/* ... */)
+    raw = re.sub(r'/\*.*?\*/', '', raw, flags=re.DOTALL)
+    # Remove trailing commas before } or ] (handles whitespace/newlines)
     raw = re.sub(r',\s*([}\]])', r'\1', raw)
-    # Replace single quotes with double quotes (but not inside strings)
-    # Simple heuristic: only if the line looks like a key-value pair with single quotes
-    raw = re.sub(r"(?<![\\])'([^']*)'(?=\s*:)", r'"\1"', raw)
+    # Remove any text before the first { or after the last }
+    first_brace = raw.find('{')
+    last_brace = raw.rfind('}')
+    if first_brace != -1 and last_brace != -1:
+        raw = raw[first_brace:last_brace + 1]
     return raw.strip()
+
+
+def _safe_json_parse(raw: str) -> dict:
+    """Parse JSON string with repair fallback."""
+    import json as _json
+    import re
+    repaired = _repair_json(raw)
+    try:
+        return _json.loads(repaired)
+    except _json.JSONDecodeError:
+        # Last resort: try to extract just the transactions array
+        print(f"[ocr] JSON repair failed, trying regex fallback. First 300 chars: {repaired[:300]}")
+        m = re.search(r'"transactions"\s*:\s*\[([^\]]*)\]', repaired, re.DOTALL)
+        bank_m = re.search(r'"bank_name"\s*:\s*"([^"]*)"', repaired)
+        if m:
+            tx_raw = "[" + m.group(1) + "]"
+            tx_raw = re.sub(r',\s*([}\]])', r'\1', tx_raw)
+            try:
+                txs = _json.loads(tx_raw)
+                return {
+                    "bank_name": bank_m.group(1) if bank_m else "",
+                    "transactions": txs,
+                    "metadata_fields": [],
+                }
+            except _json.JSONDecodeError:
+                pass
+        raise
 
 
 def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
     """
     OCR extract transactions from a bank screenshot / receipt image.
-    Uses OpenAI SDK via _call_with_fallback (same pattern as parse_receipt_image).
-    
-    Returns:
-        {
-            "transactions": [{"date", "description", "amount", "type", "category"}],
-            "bank_name": str,
-            "metadata_fields": [str]  # fields detected in the image
-        }
+    Uses OpenAI SDK via _call_with_fallback.
     """
-    import json as _json
-
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
     image_url = f"data:image/jpeg;base64,{image_base64}"
 
     system_prompt = (
-        "Kamu adalah OCR specialist untuk transaksi keuangan Indonesia.\n\n"
-        "ATURAN KETAT:\n"
-        "1. HANYA ekstrak transaksi yang BENAR-BENAR TERLIHAT di gambar. "
-        "JANGAN mengarang, menebak, atau menambahkan transaksi yang tidak ada.\n"
-        "2. Jika gambar menunjukkan DETAIL 1 transaksi, kembalikan HANYA 1 transaksi.\n"
-        "3. Jika gambar menunjukkan DAFTAR/MUTASI, ekstrak semua yang terlihat.\n"
-        "4. Identifikasi nama bank/e-wallet dari gambar.\n"
-        "5. Untuk nominal, gunakan angka bulat TANPA titik/koma (50000 bukan 50.000).\n"
-        "6. Identifikasi field metadata yang terlihat (no_referensi, saldo, nama_pengirim, dll).\n\n"
-        "Kembalikan HANYA JSON valid:\n"
-        "{\n"
-        '  "bank_name": "nama bank/e-wallet",\n'
-        '  "metadata_fields": ["field1", "field2"],\n'
-        '  "transactions": [\n'
-        '    {"date": "2025-01-15", "description": "Transfer ke ...", '
-        '"amount": 50000, "type": "expense", "category": "Transfer"}\n'
-        "  ]\n"
-        "}\n"
-        "Jika tidak ada transaksi terlihat, kembalikan transactions: []."
+        "Kamu OCR transaksi keuangan Indonesia. "
+        "Ekstrak HANYA transaksi yang TERLIHAT di gambar. "
+        "JANGAN mengarang transaksi yang tidak ada. "
+        "Jika gambar menunjukkan 1 detail transaksi, kembalikan tepat 1 transaksi.\n\n"
+        "Kembalikan JSON SINGKAT tanpa komentar:\n"
+        '{"bank_name":"Bank Jago","metadata_fields":["no_ref","saldo"],'
+        '"transactions":[{"date":"2026-04-19","description":"MyTelkomsel Apps",'
+        '"amount":20000,"type":"expense","category":"Tagihan"}]}'
     )
 
-    user_text = "Baca gambar ini dan ekstrak HANYA transaksi yang terlihat."
+    user_text = "Ekstrak transaksi dari gambar ini."
     if caption:
-        user_text += f"\nKonteks: {caption}"
+        user_text += f" Konteks: {caption}"
 
     def _do(client, model):
         if provider_name == "glm":
@@ -873,17 +888,12 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
                     {"type": "text", "text": user_text},
                 ]},
             ],
-            max_tokens=1500,
-            temperature=0.1,
+            max_tokens=800,
+            temperature=0.05,
         )
         raw = _extract_content(response)
-        # Strip markdown code fences if present
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        # Repair common AI JSON issues (trailing commas, etc.)
-        raw = _repair_json(raw)
-        return _json.loads(raw)
+        print(f"[ocr] Raw AI response (first 500): {raw[:500]}")
+        return _safe_json_parse(raw)
 
     try:
         result = _call_with_fallback(_do)
@@ -895,4 +905,5 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
     except Exception as e:
         print(f"[ocr] Error: {e}")
         return {"transactions": [], "bank_name": "", "metadata_fields": []}
+
 
