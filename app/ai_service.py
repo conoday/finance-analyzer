@@ -777,7 +777,7 @@ def get_ai_chat_response(
 def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
     """
     OCR extract transactions from a bank screenshot / receipt image.
-    Uses GLM vision model via Anthropic-compatible API.
+    Uses OpenAI SDK via _call_with_fallback (same pattern as parse_receipt_image).
     
     Returns:
         {
@@ -787,101 +787,68 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
         }
     """
     import json as _json
-    import httpx
 
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
-    cfg = _PROVIDERS.get(provider_name, _PROVIDERS["glm"])
-    
-    # Get API key
-    keys = _get_provider_keys_with_id(provider_name)
-    if not keys:
-        raise ValueError("No API keys available for OCR")
-    api_key = keys[0]["api_key"]
-    
-    vision_model = cfg.get("vision_model", "glm-4.7")
-    base_url = cfg["base_url"].rstrip("/")
+    image_url = f"data:image/jpeg;base64,{image_base64}"
 
     system_prompt = (
-        "Kamu adalah OCR specialist untuk transaksi keuangan Indonesia. "
-        "Analisis gambar ini dan ekstrak SEMUA transaksi yang terlihat.\n\n"
-        "PENTING:\n"
-        "- Identifikasi nama bank/e-wallet dari gambar (misal: Bank Jago, BCA, GoPay, dll)\n"
-        "- Ekstrak setiap transaksi: tanggal, deskripsi, nominal, tipe (income/expense)\n"
-        "- Identifikasi field metadata yang tersedia (misal: no_referensi, saldo, nama_pengirim, dll)\n"
-        "- Untuk nominal, SELALU gunakan angka bulat tanpa titik/koma (misal: 50000 bukan 50.000)\n\n"
-        "Kembalikan HANYA JSON valid dengan format:\n"
+        "Kamu adalah OCR specialist untuk transaksi keuangan Indonesia.\n\n"
+        "ATURAN KETAT:\n"
+        "1. HANYA ekstrak transaksi yang BENAR-BENAR TERLIHAT di gambar. "
+        "JANGAN mengarang, menebak, atau menambahkan transaksi yang tidak ada.\n"
+        "2. Jika gambar menunjukkan DETAIL 1 transaksi, kembalikan HANYA 1 transaksi.\n"
+        "3. Jika gambar menunjukkan DAFTAR/MUTASI, ekstrak semua yang terlihat.\n"
+        "4. Identifikasi nama bank/e-wallet dari gambar.\n"
+        "5. Untuk nominal, gunakan angka bulat TANPA titik/koma (50000 bukan 50.000).\n"
+        "6. Identifikasi field metadata yang terlihat (no_referensi, saldo, nama_pengirim, dll).\n\n"
+        "Kembalikan HANYA JSON valid:\n"
         "{\n"
         '  "bank_name": "nama bank/e-wallet",\n'
-        '  "metadata_fields": ["field1", "field2", ...],\n'
+        '  "metadata_fields": ["field1", "field2"],\n'
         '  "transactions": [\n'
-        '    {"date": "2025-01-15", "description": "Transfer ke ...", "amount": 50000, "type": "expense", "category": "Transfer"},\n'
-        "    ...\n"
+        '    {"date": "2025-01-15", "description": "Transfer ke ...", '
+        '"amount": 50000, "type": "expense", "category": "Transfer"}\n'
         "  ]\n"
         "}\n"
-        "Jika tidak ada transaksi yang ditemukan, kembalikan transactions kosong []."
+        "Jika tidak ada transaksi terlihat, kembalikan transactions: []."
     )
 
-    user_content = []
+    user_text = "Baca gambar ini dan ekstrak HANYA transaksi yang terlihat."
     if caption:
-        user_content.append({"type": "text", "text": f"Konteks: {caption}"})
-    user_content.append({
-        "type": "image",
-        "source": {
-            "type": "base64",
-            "media_type": "image/jpeg",
-            "data": image_base64,
-        }
-    })
+        user_text += f"\nKonteks: {caption}"
 
-    payload = {
-        "model": vision_model,
-        "max_tokens": 1500,
-        "temperature": 0.1,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_content}],
-    }
-
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-    }
+    def _do(client, model):
+        if provider_name == "glm":
+            used_model = _PROVIDERS["glm"].get("vision_model", "glm-4.7")
+        else:
+            used_model = model
+        response = client.chat.completions.create(
+            model=used_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                    {"type": "text", "text": user_text},
+                ]},
+            ],
+            max_tokens=1500,
+            temperature=0.1,
+        )
+        raw = _extract_content(response)
+        # Strip markdown code fences if present
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        return _json.loads(raw)
 
     try:
-        with httpx.Client(timeout=60) as client:
-            resp = client.post(
-                f"{base_url}/v1/messages",
-                json=payload,
-                headers=headers,
-            )
-            data = resp.json()
-
-        # Extract text content
-        content = ""
-        if "content" in data and isinstance(data["content"], list):
-            for block in data["content"]:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    content = block["text"]
-                    break
-
-        if not content:
-            print(f"[ocr] No content in response: {_json.dumps(data)[:500]}")
-            return {"transactions": [], "bank_name": "", "metadata_fields": []}
-
-        # Parse JSON from response (may be wrapped in ```json ... ```)
-        content = content.strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        
-        result = _json.loads(content)
+        result = _call_with_fallback(_do)
         return {
             "transactions": result.get("transactions", []),
             "bank_name": result.get("bank_name", ""),
             "metadata_fields": result.get("metadata_fields", []),
         }
-    except _json.JSONDecodeError as e:
-        print(f"[ocr] JSON parse error: {e}, content: {content[:300]}")
-        return {"transactions": [], "bank_name": "", "metadata_fields": []}
     except Exception as e:
         print(f"[ocr] Error: {e}")
-        raise
+        return {"transactions": [], "bank_name": "", "metadata_fields": []}
+
