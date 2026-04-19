@@ -158,6 +158,22 @@ def get_ai_error_logs() -> list[dict]:
 _QUOTA_ERRORS = ("rate_limit", "quota", "insufficient_quota", "exceeded", "429")
 
 
+def _extract_content(response, fallback: str = "{}") -> str:
+    """Safely extract message content from OpenAI-compatible response.
+    api.z.ai proxy sometimes returns None for choices or message."""
+    try:
+        if not response or not getattr(response, 'choices', None):
+            print(f"[ai_service] Empty response: {response}")
+            return fallback
+        choice = response.choices[0]
+        if not choice or not getattr(choice, 'message', None):
+            print(f"[ai_service] Empty choice: {choice}")
+            return fallback
+        return choice.message.content or fallback
+    except (IndexError, AttributeError, TypeError) as exc:
+        print(f"[ai_service] Response parse error: {exc}")
+        return fallback
+
 
 def _get_provider_keys_with_id(provider_name: str) -> list[dict]:
     """
@@ -328,7 +344,7 @@ def get_ai_insight(
             temperature=0.4,
             response_format={"type": "json_object"},
         )
-        raw = response.choices[0].message.content or "{}"
+        raw = _extract_content(response)
         return json.loads(raw)
 
     parsed = _call_with_fallback(_do)
@@ -408,7 +424,7 @@ def get_financial_plan(
             temperature=0.5,
             response_format={"type": "json_object"},
         )
-        raw = response.choices[0].message.content or "{}"
+        raw = _extract_content(response)
         return json.loads(raw)
 
     parsed = _call_with_fallback(_do)
@@ -478,7 +494,7 @@ def parse_receipt_image(image_bytes: bytes, content_type: str) -> dict:
             temperature=0.1,
             response_format={"type": "json_object"},
         )
-        raw = response.choices[0].message.content or "{}"
+        raw = _extract_content(response)
         return json.loads(raw)
 
     parsed = _call_with_fallback(_do)
@@ -523,7 +539,7 @@ def ai_categorize(description: str) -> dict[str, str]:
             temperature=0.1,
             response_format={"type": "json_object"},
         )
-        raw = response.choices[0].message.content or "{}"
+        raw = _extract_content(response)
         return json.loads(raw)
 
     parsed = _call_with_fallback(_do)
@@ -563,7 +579,7 @@ def parse_split_bill_text(text: str) -> list[dict]:
             temperature=0.1,
             response_format={"type": "json_object"},
         )
-        raw = response.choices[0].message.content or "{}"
+        raw = _extract_content(response)
         return json.loads(raw)
 
     parsed = _call_with_fallback(_do)
@@ -600,7 +616,7 @@ def get_ai_chat_response(message: str, history: list[dict[str, str]] = []) -> st
             max_tokens=600,
             temperature=0.7,
         )
-        return response.choices[0].message.content or "Maaf, aku tidak bisa menjawab saat ini."
+        return _extract_content(response, fallback="Maaf, aku tidak bisa menjawab saat ini.")
 
     try:
         return _call_with_fallback(_do)
@@ -652,7 +668,7 @@ def get_ai_chat_response(
             max_tokens=500,
             temperature=0.6,
         )
-        return response.choices[0].message.content or "Maaf, saya tidak bisa menjawab saat ini."
+        return _extract_content(response, fallback="Maaf, saya tidak bisa menjawab saat ini.")
 
     try:
         return _call_with_fallback(_do)

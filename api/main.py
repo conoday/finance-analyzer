@@ -231,15 +231,15 @@ def analyze_me(
 
     # Skip normalize_columns and parse_amount_columns since we already set them up
     # Go directly to categorize + insights
-    from app.category import categorize_transactions
+    from app.categorizer import categorize_transactions
     from app.insights import (
         compute_summary, spending_by_category, monthly_trend,
         top_merchants, income_sources,
     )
-    from app.timeseries import prepare_timeseries, forecast_cashflow
-    from app.subscriptions import detect_subscriptions, total_monthly_subscription
-    from app.health import compute_health_score
-    from app.storytelling import generate_monthly_stories, generate_overall_story
+    from app.forecasting import prepare_timeseries, forecast_cashflow
+    from app.subscription import detect_subscriptions, total_monthly_subscription
+    from app.health_score import compute_health_score
+    from app.story import generate_monthly_stories, generate_overall_story
 
     # Categorize (only if 'kategori' not already set or is 'Lainnya')
     df = categorize_transactions(df)
