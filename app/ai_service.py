@@ -247,7 +247,7 @@ class _AnthropicCaller:
 
     def create(self, *, model: str, messages: list, max_tokens: int = 500,
                temperature: float = 0.6, response_format: dict | None = None, **kwargs):
-        import httpx, json as _json
+        import httpx, json as _json, re
         
         # Extract system message
         system_text = ""
@@ -256,7 +256,36 @@ class _AnthropicCaller:
             if m["role"] == "system":
                 system_text = m["content"]
             else:
-                user_messages.append({"role": m["role"], "content": m["content"]})
+                # Convert OpenAI-style multimodal content to Anthropic format
+                content = m["content"]
+                if isinstance(content, list):
+                    converted = []
+                    for block in content:
+                        if block.get("type") == "image_url":
+                            # Convert data:image/jpeg;base64,... → Anthropic image block
+                            url = block["image_url"]["url"]
+                            match = re.match(r"data:(image/\w+);base64,(.+)", url, re.DOTALL)
+                            if match:
+                                converted.append({
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": match.group(1),
+                                        "data": match.group(2),
+                                    }
+                                })
+                            else:
+                                # URL-based image (not base64)
+                                converted.append({
+                                    "type": "image",
+                                    "source": {"type": "url", "url": url}
+                                })
+                        elif block.get("type") == "text":
+                            converted.append({"type": "text", "text": block["text"]})
+                        else:
+                            converted.append(block)
+                    content = converted
+                user_messages.append({"role": m["role"], "content": content})
         
         # If response_format is json_object, add instruction to system
         if response_format and response_format.get("type") == "json_object":
