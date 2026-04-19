@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-19 (rev 8)
+> Last updated: 2026-04-19 (rev 9)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Commit | ✅ 69af232 (2026-04-19) | feat: AI + OCR + Admin v2 + Donasi |
+| Last Commit | ✅ 72d9961 (2026-04-19) | fix: OCR model, dark text, menu donasi, SmartInput OCR |
 
 ---
 
