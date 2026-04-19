@@ -803,6 +803,19 @@ def get_ai_chat_response(
         raise e
 
 
+def _repair_json(raw: str) -> str:
+    """Fix common AI-generated JSON issues before parsing."""
+    import re
+    # Remove single-line comments (// ...)
+    raw = re.sub(r'//[^\n]*', '', raw)
+    # Remove trailing commas before } or ]
+    raw = re.sub(r',\s*([}\]])', r'\1', raw)
+    # Replace single quotes with double quotes (but not inside strings)
+    # Simple heuristic: only if the line looks like a key-value pair with single quotes
+    raw = re.sub(r"(?<![\\])'([^']*)'(?=\s*:)", r'"\1"', raw)
+    return raw.strip()
+
+
 def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
     """
     OCR extract transactions from a bank screenshot / receipt image.
@@ -868,6 +881,8 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        # Repair common AI JSON issues (trailing commas, etc.)
+        raw = _repair_json(raw)
         return _json.loads(raw)
 
     try:
