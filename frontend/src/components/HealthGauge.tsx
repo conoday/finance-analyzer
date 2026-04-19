@@ -29,7 +29,7 @@ export function HealthGauge({ report }: HealthGaugeProps) {
     >
       {/* Score circle */}
       <div className="glass rounded-2xl border border-white/[0.06] p-8 flex flex-col items-center gap-4">
-        <h2 className="text-sm font-semibold text-slate-300">Financial Health Score</h2>
+        <h2 className="text-sm font-semibold text-slate-700">Financial Health Score</h2>
         <div className="relative w-40 h-40">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 140 140">
             {/* Background ring */}
@@ -59,12 +59,12 @@ export function HealthGauge({ report }: HealthGaugeProps) {
             <span className="text-sm text-slate-500">{score.toFixed(0)}/100</span>
           </div>
         </div>
-        <p className="text-center text-slate-300 text-sm font-medium">{report.headline}</p>
+        <p className="text-center text-slate-700 text-sm font-medium">{report.headline}</p>
       </div>
 
       {/* Dimensions */}
       <div className="glass rounded-2xl border border-white/[0.06] p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-4">Dimensi Kesehatan</h3>
+        <h3 className="text-sm font-semibold text-slate-700 mb-4">Dimensi Kesehatan</h3>
         <div className="space-y-3">
           {report.dimensions.map((dim) => (
             <div key={dim.name} className="space-y-1">
@@ -90,7 +90,7 @@ export function HealthGauge({ report }: HealthGaugeProps) {
 
       {/* Tips */}
       <div className="glass rounded-2xl border border-white/[0.06] p-5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-4">Saran Perbaikan</h3>
+        <h3 className="text-sm font-semibold text-slate-700 mb-4">Saran Perbaikan</h3>
         <ul className="space-y-3">
           {report.tips.map((tip, i) => (
             <motion.li

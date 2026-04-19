@@ -1171,7 +1171,8 @@ def _show_menu(chat_id: int | str, sb_client: Any = None, prefix: str = "") -> N
             {"text": link_text, "callback_data": link_data},
         ],
         [
-            {"text": "\U0001f6a8 Lapor Bug", "callback_data": "cmd:lapor"},
+            {"text": "\U0001f4dd Lapor Bug", "callback_data": "cmd:lapor"},
+            {"text": "\U0001f49d Donasi", "callback_data": "donate_show"},
         ],
     ]
 
@@ -1180,6 +1181,7 @@ def _show_menu(chat_id: int | str, sb_client: Any = None, prefix: str = "") -> N
         "<b>Catat Transaksi:</b> kirim teks langsung\n"
         "\u2022 <code>50rb makan siang</code>\n"
         "\u2022 <code>+2jt gaji bulan ini</code>\n\n"
+        "\U0001f4f7 <b>OCR Foto:</b> kirim foto struk/screenshot\n\n"
         "<b>Pilih menu di bawah:</b>"
     )
     _send_keyboard(chat_id, header, keyboard)

@@ -75,7 +75,7 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-teal-400 opacity-80" />
-            <span className="text-xs font-medium text-slate-400 tracking-wide uppercase">Arus Kas Bersih</span>
+            <span className="text-xs font-medium text-slate-600 tracking-wide uppercase">Arus Kas Bersih</span>
           </div>
 
           {/* Period toggle */}
@@ -91,7 +91,7 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
                   "px-2.5 py-1 rounded-md text-[10px] font-medium transition-all",
                   period === p.id
                     ? "bg-teal-500 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-300",
+                    : "text-slate-600 hover:text-slate-800",
                 ].join(" ")}
               >
                 {p.label}
@@ -104,7 +104,7 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
         <div className="mb-1">
           <div
             className={`text-4xl sm:text-5xl font-bold font-mono tracking-tight ${
-              isPositive ? "text-teal-300" : "text-rose-300"
+              isPositive ? "text-teal-700" : "text-rose-600"
             }`}
           >
             {isPositive ? "+" : ""}
@@ -115,7 +115,7 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
         {/* Trend indicator */}
         <div
           className={`inline-flex items-center gap-1.5 mb-6 text-sm font-medium ${
-            isPositive ? "text-teal-400" : "text-rose-400"
+            isPositive ? "text-teal-600" : "text-rose-500"
           }`}
         >
           {isPositive ? (
@@ -155,14 +155,14 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
           >
             <div className="flex items-center gap-1.5 mb-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-700">
                 Pemasukan
               </span>
             </div>
-            <div className="text-lg font-bold font-mono text-emerald-300">
+            <div className="text-lg font-bold font-mono text-emerald-600">
               {formatRupiah(stats.income, true)}
             </div>
-            <div className="text-[10px] text-slate-600 mt-0.5">
+            <div className="text-[10px] text-slate-500 mt-0.5">
               {summary.income_count} transaksi
             </div>
           </div>
@@ -176,14 +176,14 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
           >
             <div className="flex items-center gap-1.5 mb-1.5">
               <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-700">
                 Pengeluaran
               </span>
             </div>
-            <div className="text-lg font-bold font-mono text-rose-300">
+            <div className="text-lg font-bold font-mono text-rose-600">
               {formatRupiah(stats.expense, true)}
             </div>
-            <div className="text-[10px] text-slate-600 mt-0.5">
+            <div className="text-[10px] text-slate-500 mt-0.5">
               {summary.expense_count} transaksi
             </div>
           </div>
@@ -191,8 +191,8 @@ export function BalanceCard({ summary, timeseries }: BalanceCardProps) {
 
         {/* Date range strip */}
         <div className="mt-4 pt-3.5 border-t border-white/5 flex items-center justify-between">
-          <span className="text-[11px] text-slate-600">{summary.date_range}</span>
-          <span className="text-[11px] text-slate-600">{summary.tx_count} total tx</span>
+          <span className="text-[11px] text-slate-500">{summary.date_range}</span>
+          <span className="text-[11px] text-slate-500">{summary.tx_count} total tx</span>
         </div>
       </div>
     </motion.div>

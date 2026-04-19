@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Zap, Check } from "lucide-react";
+import { X, Zap, Check, Camera, Loader2 } from "lucide-react";
 import { getCategoryMeta } from "@/components/CategoryBadge";
 import { formatRupiah } from "@/lib/utils";
 
@@ -153,7 +153,10 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
   const [manualCategory, setManualCategory] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [saved, setSaved] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrResults, setOcrResults] = useState<Array<{description: string; amount: number; type: string; category: string}>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -196,6 +199,36 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
       inputRef.current?.focus();
     }, 900);
   }, [parsed, raw, effectiveCategory, meta, method, date, onSaved]);
+
+  // OCR Upload Handler
+  const handleOCR = async (file: File) => {
+    setOcrLoading(true);
+    setOcrResults([]);
+    try {
+      const API = process.env.NEXT_PUBLIC_API_URL || "";
+      const form = new FormData();
+      form.append("file", file);
+      const resp = await fetch(`${API}/ai/ocr`, { method: "POST", body: form });
+      if (!resp.ok) throw new Error("OCR gagal");
+      const data = await resp.json();
+      const txs = data.transactions || [];
+      if (txs.length > 0) {
+        // Auto-fill first result
+        const first = txs[0];
+        setRaw(`${first.description} ${first.amount}`);
+        setManualCategory(first.category || "Lainnya");
+        if (first.date) setDate(first.date);
+        setOcrResults(txs);
+      } else {
+        setRaw("(Tidak ada transaksi terdeteksi)");
+      }
+    } catch (err) {
+      console.error("OCR error:", err);
+      setRaw("(OCR gagal — coba foto lebih jelas)");
+    } finally {
+      setOcrLoading(false);
+    }
+  };
 
   // Enter to save
   const onKey = (e: React.KeyboardEvent) => {
@@ -242,16 +275,68 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
           {/* Description + amount row */}
           <div className="space-y-1">
             <label className="text-xs text-slate-500">Keterangan</label>
-            <input
-              ref={inputRef}
-              value={raw}
-              onChange={(e) => setRaw(e.target.value)}
-              onKeyDown={onKey}
-              placeholder="Ngopi 25rb  ·  Gaji 5jt  ·  Bensin 100rb"
-              className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition-colors"
-              style={{ background: "#1f2937", border: "1px solid #374151" }}
-            />
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                value={raw}
+                onChange={(e) => setRaw(e.target.value)}
+                onKeyDown={onKey}
+                placeholder="Ngopi 25rb  ·  Gaji 5jt  ·  Bensin 100rb"
+                className="flex-1 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition-colors"
+                style={{ background: "#1f2937", border: "1px solid #374151" }}
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleOCR(file);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={ocrLoading}
+                className="px-3 rounded-lg flex items-center justify-center transition-colors"
+                style={{ background: "#1f2937", border: "1px solid #374151", color: ocrLoading ? "#6b7280" : "#2dd4bf" }}
+                title="Upload foto struk / screenshot transaksi"
+              >
+                {ocrLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+              </button>
+            </div>
+            {ocrLoading && (
+              <p className="text-[10px] text-teal-400 animate-pulse">📸 Membaca foto dengan AI...</p>
+            )}
           </div>
+
+          {/* OCR Results (multi-transaction) */}
+          {ocrResults.length > 1 && (
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                {ocrResults.length} transaksi terdeteksi dari foto
+              </label>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {ocrResults.map((tx, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setRaw(`${tx.description} ${tx.amount}`);
+                      setManualCategory(tx.category || "Lainnya");
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5"
+                    style={{ background: "#1f2937", border: "1px solid #374151" }}
+                  >
+                    <span className="text-slate-300 truncate">{tx.description}</span>
+                    <span className={`font-mono font-semibold ml-2 ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
+                      {formatRupiah(tx.amount, true)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Amount preview */}
           <AnimatePresence>

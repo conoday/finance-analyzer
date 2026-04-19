@@ -234,9 +234,9 @@ button:active { transform: scale(0.97); }
   transition: all 0.15s ease;
   white-space: nowrap;
 }
-.tab-pill:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
+.tab-pill:hover { color: #334155; background: rgba(0,0,0,0.04); }
 .tab-pill.active {
   background: rgba(20,184,166,0.14);
-  color: #2dd4bf;
+  color: #0f766e;
   border: 1px solid rgba(20,184,166,0.20);
 }

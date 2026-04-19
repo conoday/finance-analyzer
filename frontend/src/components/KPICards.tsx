@@ -62,12 +62,12 @@ export function KPICards({ summary, subTotal }: KPICardsProps) {
       {/* Income vs Expense bar */}
       <div className="glass rounded-xl p-4 border border-white/[0.06]">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pemasukan vs Pengeluaran</span>
+          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Pemasukan vs Pengeluaran</span>
           <span
             className="text-xs font-mono font-semibold px-2 py-0.5 rounded-full"
             style={{
               background: savingsRate >= 0 ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-              color: savingsRate >= 0 ? "#4ade80" : "#f87171",
+              color: savingsRate >= 0 ? "#16a34a" : "#dc2626",
             }}
           >
             {savingsRate >= 0 ? "+" : ""}{savingsRate}% savings
@@ -75,14 +75,14 @@ export function KPICards({ summary, subTotal }: KPICardsProps) {
         </div>
         <div className="flex items-center gap-3 mb-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <ArrowUpRight className="w-3.5 h-3.5 text-green-400 shrink-0" />
-            <span className="text-xs text-slate-400 truncate">Masuk</span>
-            <span className="text-sm font-bold font-mono text-green-400 ml-1">{formatRupiah(summary.total_income, true)}</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-green-600 shrink-0" />
+            <span className="text-xs text-slate-600 truncate">Masuk</span>
+            <span className="text-sm font-bold font-mono text-green-600 ml-1">{formatRupiah(summary.total_income, true)}</span>
           </div>
           <div className="flex items-center gap-1.5 min-w-0 ml-auto">
-            <span className="text-sm font-bold font-mono text-red-400 mr-1">{formatRupiah(summary.total_expense, true)}</span>
-            <span className="text-xs text-slate-400 truncate">Keluar</span>
-            <ArrowDownRight className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <span className="text-sm font-bold font-mono text-red-500 mr-1">{formatRupiah(summary.total_expense, true)}</span>
+            <span className="text-xs text-slate-600 truncate">Keluar</span>
+            <ArrowDownRight className="w-3.5 h-3.5 text-red-500 shrink-0" />
           </div>
         </div>
         {/* Stacked bar */}

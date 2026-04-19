@@ -25,7 +25,7 @@ export function TopMerchants({ merchants, income }: TopMerchantsProps) {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Store className="w-4 h-4 text-orange-400" />
-          <h3 className="text-sm font-semibold text-slate-200">Top Merchant</h3>
+          <h3 className="text-sm font-semibold text-slate-700">Top Merchant</h3>
         </div>
         <div className="space-y-2">
           {top.map((m, i) => {
@@ -39,10 +39,10 @@ export function TopMerchants({ merchants, income }: TopMerchantsProps) {
                 <div className="relative flex items-center justify-between px-3 py-1.5 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-slate-600 w-4">{i + 1}</span>
-                    <span className="text-slate-300 truncate max-w-[160px]">{m.deskripsi}</span>
+                    <span className="text-slate-700 truncate max-w-[160px]">{m.deskripsi}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-orange-400 font-mono">{formatRupiah(m.total_debit, true)}</div>
+                    <div className="text-orange-600 font-mono">{formatRupiah(m.total_debit, true)}</div>
                     <div className="text-[10px] text-slate-600">{m.jumlah_transaksi}x</div>
                   </div>
                 </div>
@@ -57,13 +57,13 @@ export function TopMerchants({ merchants, income }: TopMerchantsProps) {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-sm font-semibold text-slate-200">Sumber Pemasukan</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Sumber Pemasukan</h3>
           </div>
           <div className="space-y-2">
             {topInc.map((s) => (
               <div key={s.deskripsi} className="flex items-center justify-between text-xs px-1">
-                <span className="text-slate-400 truncate max-w-[180px]">{s.deskripsi}</span>
-                <span className="text-emerald-400 font-mono">{formatRupiah(s.total_kredit, true)}</span>
+                <span className="text-slate-600 truncate max-w-[180px]">{s.deskripsi}</span>
+                <span className="text-emerald-600 font-mono">{formatRupiah(s.total_kredit, true)}</span>
               </div>
             ))}
           </div>

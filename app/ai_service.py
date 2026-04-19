@@ -30,7 +30,7 @@ _PROVIDERS: dict[str, dict] = {
         # api.z.ai Anthropic-compatible endpoint (proven working with test_glm.py)
         "base_url": os.environ.get("GLM_BASE_URL", "https://api.z.ai/api/anthropic"),
         "model":    os.environ.get("GLM_MODEL", "glm-4.7"),
-        "vision_model": os.environ.get("GLM_VISION_MODEL", "glm-4v-flash"),
+        "vision_model": os.environ.get("GLM_VISION_MODEL", "glm-4.7"),
         # Fallback env vars (dipakai jika DB kosong)
         "key_envs": ["GLM_API_KEY", "GLM_API_KEY_2", "GLM_API_KEY_3", "GLM_API_KEY_4", "GLM_API_KEY_5"],
     },
@@ -553,7 +553,7 @@ def parse_receipt_image(image_bytes: bytes, content_type: str) -> dict:
     def _do(client, model):
         # GLM pakai model vision khusus (configurable via env var)
         if provider_name == "glm":
-            used_model = _PROVIDERS["glm"].get("vision_model", "glm-4v-flash")
+            used_model = _PROVIDERS["glm"].get("vision_model", "glm-4.7")
         else:
             used_model = model
         response = client.chat.completions.create(
@@ -798,7 +798,7 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
         raise ValueError("No API keys available for OCR")
     api_key = keys[0]["api_key"]
     
-    vision_model = cfg.get("vision_model", "glm-4v-flash")
+    vision_model = cfg.get("vision_model", "glm-4.7")
     base_url = cfg["base_url"].rstrip("/")
 
     system_prompt = (
