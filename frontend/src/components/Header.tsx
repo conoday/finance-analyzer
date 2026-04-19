@@ -63,7 +63,7 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <Image src="/logo.svg" alt="OprexDuit" width={32} height={32} className="rounded-xl" />
+          <Image src="/logo.png" alt="OprexDuit" width={32} height={32} className="rounded-xl" />
           <div>
             <span className="text-sm font-semibold text-slate-800 tracking-tight">
               Oprex<span className="text-teal-600">Duit</span>

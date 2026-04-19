@@ -1,6 +1,6 @@
-﻿# Master Tracking Board — OprexDuit
+# Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-17 (rev 7)
+> Last updated: 2026-04-19 (rev 8)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -15,11 +15,15 @@
 | Backend API | ✅ Live | https://oprexduit.onrender.com |
 | Database | ✅ Schema + migrations applied | Supabase — schema.sql + 002_affiliate_tables.sql |
 | Auth | ✅ Live | Login/Register/Verify/Callback + hooks + backend JWT |
-| Admin Console | ✅ Done, repo terpisah | github.com/conoday/oprex-admin-console |
-| Telegram Bot | ✅ Live | Webhook di /telegram/webhook, inline keyboard |
+| Admin Console | ✅ v2 Done, repo terpisah | github.com/conoday/oprex-admin-console |
+| Telegram Bot | ✅ Live | Webhook + OCR photo handler + inline keyboard |
+| Telegram OCR | ✅ Live | Kirim foto → AI vision → parse transaksi |
+| AI Chat | ✅ Live | Guardrails + data access (30 tx terakhir) |
+| Shared Room | ✅ Live | Room pasangan/grup + notifikasi |
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
+| Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Commit | ✅ b8feffc (2026-04-17) | feat: inline keyboard buttons belanja + shopping intent |
+| Last Commit | ✅ 69af232 (2026-04-19) | feat: AI + OCR + Admin v2 + Donasi |
 
 ---
 
@@ -64,7 +68,7 @@
 - [x] QRIS Donasi modal (qris.jpeg committed)
 - [x] SmartInput "Catat Cepat" — NLP parse (25rb, 5jt, ngopi → Makan)
 - [x] QuickTracker — post-input list, delete per-tx, CSV export, period filter
-- [x] OprexDuit rebrand: logo SVG, header cleanup
+- [x] OprexDuit rebrand: logo PNG baru, header cleanup
 - [x] **Light theme** (current): `#f8fafc` bg, `.glass = rgba(255,255,255,0.75)`
 - [x] Header light theme contrast fix (commit af3c3cb)
 - [x] Empty state redesign — 2-column (upload + KPI teaser / QuickTracker)
@@ -79,8 +83,9 @@
 - [x] `infer_datetime_format` removed (pandas 2+ compat)
 - [x] `parseIDR`: rebu/miliar/triliun + brand auto-kategorisasi
 
-### Dokumentasi Artefak (rev 7)
+### Dokumentasi Artefak (rev 8)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking
+- [x] Artefak 01,03,04,07,08,17 di-update setelah batch enhancement (2026-04-19)
 
 ### Telegram Bot (Phase Telegram — DONE)
 - [x] `app/telegram_bot.py` — webhook handler, auto user create, inline keyboard
@@ -109,15 +114,43 @@
 - [x] `DELETE /affiliate/reports/{id}` — admin dismiss laporan (auth required)
 - [x] `frontend/src/components/ReportLinkButton.tsx` — button + modal lapor link
 
-### Admin Console (Phase 5 — DONE, repo terpisah)
-- [x] Repo: `conoday/oprex-admin-console` (commit 342a5cb)
-- [x] `app/page.tsx` — Dashboard: stat cards (produk aktif, laporan pending)
-- [x] `app/affiliate/page.tsx` — CRUD tabel affiliate: create/edit/delete/toggle is_active
-- [x] `app/reports/page.tsx` — List laporan link rusak + dismiss
-- [x] `app/settings/page.tsx` — Config API URL + Bearer token (localStorage)
-- [x] `components/Sidebar.tsx` — Nav dengan active link highlight
-- [x] `lib/api.ts` — `apiFetch<T>()`, `formatRupiah()`, `formatDate()`
-- [x] Stack: Next.js 14 App Router, TypeScript, Tailwind CSS
+### Admin Console v1 (Phase 5 — DONE, repo terpisah)
+- [x] Repo: `conoday/oprex-admin-console`
+- [x] Dashboard, affiliate CRUD, link reports, settings, API keys
+
+### Admin Console v2 (Phase Admin v2 — DONE, 2026-04-19)
+- [x] Dashboard overhaul: hapus financial cards, tambah sparkline 7d + source breakdown chart
+- [x] Transactions: user name + copyable user_id + tx_id + search filter
+- [x] Log Explorer: `app/logs/page.tsx` — live mode, level/source filter, expandable
+- [x] OCR Metadata: `app/ocr-metadata/page.tsx` — detected fields per bank
+- [x] Sidebar: menu baru (Logs, OCR Metadata)
+- [x] Backend: `/admin/stats` (tanpa income/expense), `/admin/logs`, `/admin/ocr-metadata`
+
+### Shared Budget Room (Phase Room — DONE, 2026-04-18)
+- [x] Room create/join via Telegram (`/room create`, `/room join KODE`)
+- [x] Transaction scope: private / couple / group
+- [x] Notifikasi ke member room saat ada transaksi baru
+- [x] `_notify_room_members()` — kirim info tx ke semua member
+
+### AI Chat + Guardrails (Phase AI — DONE, 2026-04-19)
+- [x] AI Chat dgn akses data transaksi user (30 tx terakhir)
+- [x] Guardrails: tidak bocorkan system prompt, API keys, DB schema
+- [x] AI hanya jawab topik keuangan
+- [x] Multi-provider key rotation (GLM → DeepSeek → Gemini)
+- [x] Admin Console: API key management CRUD + priority
+- [x] Frontend: auth token dikirim ke `/ai/chat` untuk personalisasi
+
+### OCR (Phase OCR — DONE, 2026-04-19)
+- [x] Telegram: foto → `_handle_photo_ocr()` → AI vision (GLM-4V) → parse JSON
+- [x] Backend: `ocr_transaction_image()` di `ai_service.py`
+- [x] Web endpoint: `POST /ai/ocr` (multipart file upload)
+- [x] Bank metadata collection → `bank_ocr_metadata` table
+- [x] Admin Console: OCR Metadata page per bank
+
+### Donasi (Phase Donasi — DONE, 2026-04-19)
+- [x] Web: QRIS modal di SharePanel + Header button
+- [x] Telegram: `/donasi` command → kirim foto QRIS
+- [x] Inline button "Donasi" setelah aksi berhasil (OCR, dll)
 
 ---
 
@@ -137,9 +170,10 @@
 
 | Task | Status | Notes |
 |---|---|---|
-| AI integration (Kimi/GLM) | 🔧 Test script ready | `test_ai_keys.py` — tunggu key baru dari user |
+| Web SmartInput OCR upload | 🔧 Backend ready | `/ai/ocr` endpoint done, frontend drag-drop UI pending |
 | Tier enforcement backend | 🔧 Schema ready | Belum enforce max 3 akun, max 3 bulan history |
-| Transaction CRUD endpoints | 🔧 Planned | POST/GET/PUT/DELETE /transactions Phase 3 |
+| SQL migration: system_logs | 🔧 Pending | Tabel untuk Log Explorer — harus run manual di Supabase |
+| SQL migration: bank_ocr_metadata | 🔧 Pending | Tabel untuk OCR Metadata — harus run manual di Supabase |
 
 ---
 
@@ -156,24 +190,39 @@
 | P3-7 | Smart Search transaksi (client-side filter) | 2 jam | Free | P3-1 |
 | P3-8 | Recurring transaction detection & flag | 3 jam | Pro | P3-1 |
 
-## 🔲 BACKLOG — Phase AI
+## ✅ DONE — Phase AI (sebelumnya BACKLOG)
+
+| ID | Fitur | Status | Notes |
+|---|---|---|---|
+| AI-3 | Financial Coach Chat — tanya-jawab keuangan | ✅ Done | AI Chat dgn guardrails + data access |
+| AI-7 | AI Guardrails — keamanan | ✅ Done | Tidak bocorkan info backend |
+| AI-8 | Multi-provider key rotation | ✅ Done | GLM → DeepSeek → Gemini fallback |
+
+## 🔲 BACKLOG — Phase AI (lanjutan)
 
 | ID | Fitur | Estimasi | Provider | Dependency |
 |---|---|---|---|---|
-| AI-1 | Smart Kategorisasi — auto-tag dari deskripsi merchant | 3 jam | Kimi/GLM/DeepSeek | API key |
-| AI-2 | Monthly Insight — "boros makan +30%" | 3 jam | Kimi/GLM | P3-1 |
-| AI-3 | Financial Coach Chat — tanya-jawab keuangan | 5 jam | DeepSeek/Kimi | P3-1 + AI-2 |
-| AI-4 | Spending Prediction — prediksi pengeluaran bulan depan | 4 jam | Rule-based + LLM | P3-1 |
+| AI-1 | Smart Kategorisasi — auto-tag dari deskripsi merchant | 3 jam | GLM | - |
+| AI-2 | Monthly Insight — "boros makan +30%" | 3 jam | GLM | - |
+| AI-4 | Spending Prediction — prediksi pengeluaran bulan depan | 4 jam | Rule-based + LLM | - |
 | AI-5 | Financial Persona — saver/impulsive/balanced | 3 jam | Rule-based | AI-2 |
-| AI-6 | Bank Statement Parser AI — PDF → transaksi | 5 jam | DeepSeek R1 | AI key |
+| AI-6 | Bank Statement Parser AI — PDF → transaksi | 5 jam | DeepSeek R1 | - |
 
-## 🔲 BACKLOG — Phase OCR
+## ✅ DONE — Phase OCR (sebelumnya BACKLOG)
+
+| ID | Fitur | Status | Notes |
+|---|---|---|---|
+| OCR-1 | Telegram photo OCR → AI vision parse | ✅ Done | `_handle_photo_ocr()` + GLM-4V |
+| OCR-2 | Web `POST /ai/ocr` endpoint | ✅ Done | Multipart upload → AI parse |
+| OCR-3 | Bank metadata collection | ✅ Done | `bank_ocr_metadata` table |
+| OCR-4 | Admin OCR Metadata page | ✅ Done | Detected fields per bank |
+
+## 🔲 BACKLOG — Phase OCR (lanjutan)
 
 | ID | Fitur | Estimasi | Notes |
 |---|---|---|---|
-| OCR-1 | `POST /extract-image` endpoint | 4 jam | pytesseract |
-| OCR-2 | BCA/GoPay/OVO/Dana regex parser per bank | 3 jam | Per-bank pattern |
-| OCR-3 | Frontend: upload foto + preview + konfirmasi | 3 jam | Pro tier only |
+| OCR-5 | Web SmartInput: drag-drop foto + preview | 3 jam | Frontend UI |
+| OCR-6 | Rule-based parser per bank (BCA/GoPay/OVO/Dana) | 4 jam | Dari bank_ocr_metadata |
 
 ## 🔲 BACKLOG — Phase Payment / Billing
 
@@ -309,25 +358,26 @@ data/migrations/002_affiliate_tables.sql — affiliate_products + link_reports
 ## 🤖 AI STRATEGY
 
 ```
-Step 1 → Kumpulkan data (transaksi: waktu, kategori, frekuensi, nominal) ← SEKARANG
-Step 2 → Feature engineering (avg/hari, weekend ratio, top category)
-Step 3 → User profiling rule-based (saver/impulsive/balanced)
-Step 4 → Suggestion engine rule-based (IF makan>30% → warning)
-Step 5 → LLM integration → insight natural language
-Step 6 → Personal AI agent per user (memory: kebiasaan, preferensi)
+Step 1 → Kumpulkan data (transaksi: waktu, kategori, frekuensi, nominal) ✅ DONE
+Step 2 → Feature engineering (avg/hari, weekend ratio, top category) ✅ DONE
+Step 3 → LLM Chat dgn data user + guardrails ✅ DONE
+Step 4 → OCR Vision — foto → transaksi ✅ DONE
+Step 5 → User profiling rule-based (saver/impulsive/balanced) 🔲 NEXT
+Step 6 → Suggestion engine (IF makan>30% → warning) 🔲 NEXT
+Step 7 → Personal AI agent per user (memory: kebiasaan, preferensi) 🔲 FUTURE
 ```
 
-**AI Providers (pilih berdasarkan ketersediaan key):**
+**AI Providers (aktif di `ai_api_keys` table):**
 
-| Priority | Provider | Base URL | Model | Notes |
+| Priority | Provider | Base URL | Model | Usage |
 |---|---|---|---|---|
-| 1 | **Kimi (Moonshot)** | Tanya admin grupy | moonshot-v1-8k | Key dari grupy, endpoint proxy khusus |
-| 2 | **GLM (Zhipu)** | https://open.bigmodel.cn/api/paas/v4/ | glm-4-flash / glm-4-air | Key dari grupy, test model list |
-| 3 | **DeepSeek** | https://api.deepseek.com | deepseek-chat | Top-up $5, harga termurah |
-| 4 | **Gemini Flash** | Google AI SDK | gemini-2.0-flash | Free tier 1.5K req/hari |
+| 1 | **GLM** | api.z.ai (Anthropic-compatible) | glm-4.7 (chat), glm-4v-flash (OCR) | Primary provider |
+| 2 | **DeepSeek** | api.deepseek.com/v1 | deepseek-chat | Fallback |
+| 3 | **Gemini** | generativelanguage.googleapis.com | gemini-2.0-flash | Fallback |
 
-Semua provider kompatibel dengan **OpenAI SDK** (ganti `api_key` + `base_url` saja).
-Implementasi ada di [16_ai_cost_analysis.md](16_ai_cost_analysis.md).
+Key dikelola via Admin Console → API Keys CRUD.
+Rotasi otomatis (round-robin) + rate limit tracking.
+Implementasi: `app/ai_service.py` — `_call_with_fallback()`.
 
 ---
 
@@ -417,20 +467,23 @@ Ini Phase WA — ditunda sampai Phase 3 selesai.
 | 2026-04-10 | Redesign warm dark → light palette | ✅ Done |
 | 2026-04-10 | Spending Heatmap | ✅ Done |
 | 2026-04-10 | WA Share + CSV Export + QRIS modal | ✅ Done |
-| 2026-04-10 | Admin Console scaffold | 🔧 In progress |
+| 2026-04-10 | Admin Console scaffold | ✅ Done |
 | 2026-04-10 | AI provider analysis → DeepSeek recommended | ✅ Documented |
 | 2026-04-10 | Light theme + encoding bug fixes (4e98fb0) | ✅ Done |
-| 2026-04-10 | QuickTracker period filter + CSV export (2ca3753) | ✅ Done |
 | 2026-04-10 | parseIDR: rebu/miliar/triliun + brand auto-kategorisasi | ✅ Done |
-| 2026-04-10 | Backend: `infer_datetime_format` removed (pandas 2+) | ✅ Done |
-| 2026-04-10 | Product vision: Free/Pro/AI tiers + AI strategy | ✅ Documented |
 | 2026-04-10 | Phase 2 Auth complete (14b121c) | ✅ Done |
-| 2026-04-10 | Backend `_clean_amount` fix — 13/13 tests (af3c3cb) | ✅ Done |
-| 2026-04-10 | Header light theme contrast fix (af3c3cb) | ✅ Done |
-| 2026-04-10 | Empty state redesign 2-col (af3c3cb) | ✅ Done |
-| 2026-04-10 | Middleware guard Supabase env vars — fix nft.json (a66ccfc) | ✅ Done |
-| 2026-04-10 | test_ai_keys.py — grupy-aware key tester | ✅ Done |
 | 2026-04-12 | Artefak full cleanup & checkpoint (rev 6) | ✅ Done |
+| 2026-04-17 | Telegram Bot launch + affiliate system | ✅ Done |
+| 2026-04-18 | Shared Budget Room + notifikasi ke members | ✅ Done |
+| 2026-04-18 | Admin Console: API key management CRUD | ✅ Done |
+| 2026-04-18 | Bug fix: parser "27 rebu" → 27000, budget alert schema | ✅ Done |
+| 2026-04-19 | AI Chat: guardrails + akses data transaksi user | ✅ Done |
+| 2026-04-19 | Telegram OCR: foto → AI vision → parse transaksi | ✅ Done |
+| 2026-04-19 | Web OCR endpoint: POST /ai/ocr | ✅ Done |
+| 2026-04-19 | Admin Console v2: dashboard overhaul, log explorer, OCR metadata | ✅ Done |
+| 2026-04-19 | Donasi: QRIS Telegram + /donasi command | ✅ Done |
+| 2026-04-19 | Logo baru: logo_oprexduit.png → frontend/public/logo.png | ✅ Done |
+| 2026-04-19 | Artefak rev 8: 01,03,04,07,08,17 updated | ✅ Done |
 
 ---
 

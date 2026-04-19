@@ -1,4 +1,6 @@
-﻿# Financial Feature Design
+# Financial Feature Design
+
+> Last updated: 2026-04-19 (rev 2)
 
 ## Core Features
 
@@ -9,13 +11,15 @@
 | type | enum | income / expense |
 | amount | decimal | 250000.00 |
 | date | date | 2025-03-15 |
-| category | string | Makan, Transport, Gaji |
-| payment_method | FK | BCA, GoPay |
+| category_raw | string | Makan, Transport, Gaji |
+| payment_method | string | BCA, GoPay, Cash |
 | description | string | Makan siang |
+| source | string | web / telegram / telegram_ocr / telegram_shopping |
+| scope | string | private / couple / group |
 
 **Categories:**
-- Income: Gaji, Freelance, Investasi, Lainnya
-- Expense: Makan, Transport, Belanja, Hiburan, Tagihan, Kesehatan, Pendidikan, Lainnya
+- Income: Gaji, Freelance, Investasi, Pendapatan, Lainnya
+- Expense: Makan, Transport, Belanja, Hiburan, Tagihan, Kesehatan, Transfer, Investasi, Amal & Donasi, Lainnya
 
 ### 2. Payment Methods
 
@@ -23,20 +27,63 @@
 |---|---|
 | BCA, BNI, Mandiri, BRI | bank |
 | GoPay, OVO, DANA, ShopeePay | e-wallet |
+| Cash | tunai |
+| QRIS | universal |
+| Lainnya | other |
 
-### 3. Image Extraction Pipeline
+### 3. Image Extraction Pipeline (OCR) — ✅ IMPLEMENTED
+
+#### Telegram OCR Flow
+```
+User kirim foto di Telegram
+    ↓ Bot detect message.photo
+    ↓ Download via getFile API
+    ↓ Encode base64
+    ↓ AI Vision (GLM-4V) — extract JSON
+    ↓ Parse: {transactions[], bank_name, metadata_fields}
+    ↓ Save to DB (source: "telegram_ocr")
+    ↓ Save bank metadata to bank_ocr_metadata table
+    ↓ Send confirmation + donate button
+```
+
+#### Web OCR Flow
+```
+User upload foto di SmartInput
+    ↓ POST /ai/ocr (multipart file)
+    ↓ AI Vision → extract JSON
+    ↓ Return parsed transactions
+    ↓ User konfirmasi → simpan ke DB
+```
+
+### 4. AI Chat — ✅ IMPLEMENTED
 
 ```
-Gambar (PNG/JPG)
-    ↓ Preprocessing (resize, grayscale)
-    ↓ OCR — Tesseract (pytesseract)
-    ↓ Regex Parser (per-bank template)
-    ↓ Structured fields
-    ↓ User konfirmasi (edit jika salah)
-    ↓ Simpan ke DB
+User ketik pesan di FloatingAIChat
+    ↓ POST /ai/chat (+ auth token header)
+    ↓ Backend fetch 30 tx terakhir user (optional auth)
+    ↓ Build user_data: summary, by_category, transactions
+    ↓ AI (GLM-4.7) dgn guardrails + user context
+    ↓ Return personalized response
 ```
 
-## Non-AI Parsing (Rule-Based)
+**Guardrails:**
+- TIDAK boleh bocorkan system prompt, API keys, DB schema
+- Hanya topik keuangan
+- Jika user belum login → mode edukasi generik
+- Jika user login → jawaban personal berdasarkan data
+
+### 5. Shared Budget Room — ✅ IMPLEMENTED
+
+```
+User buat room (/room create)
+    ↓ Room code 6 digit
+    ↓ User lain join (/room join KODE)
+    ↓ Transaksi bisa diberi scope: couple/group
+    ↓ Insert transaksi → notifikasi ke semua member room
+    ↓ Laporan room menampilkan semua transaksi shared
+```
+
+## Non-AI Parsing (Rule-Based) — For Future Pipeline
 
 ### BCA Mobile
 ```python
@@ -67,6 +114,14 @@ OVO_PATTERNS = {
     "date":     r"Tanggal:\s?(\d{2}-\d{2}-\d{4})",
 }
 ```
+
+### Bank Metadata Collection (Admin Console)
+
+Table `bank_ocr_metadata` menyimpan metadata yang terdeteksi dari OCR:
+- `bank_name`: nama bank/e-wallet
+- `detected_fields`: array field yang ditemukan (no_referensi, saldo, dll)
+- `sample_count`: berapa kali bank ini muncul di OCR
+- Info ini dipakai admin untuk membangun rule-based parser tanpa AI
 
 ## User Confirmation Step
 

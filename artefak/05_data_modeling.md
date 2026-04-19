@@ -1,7 +1,7 @@
-﻿# Data Modeling
+# Data Modeling
 
-> Status: ✅ schema.sql v3 sudah dibuat — jalankan di Supabase SQL Editor
-> Last updated: 2026-04-12 (rev 3)
+> Status: ✅ schema.sql v3 + new tables (rooms, ai_api_keys, system_logs, bank_ocr_metadata)
+> Last updated: 2026-04-19 (rev 4)
 > File SQL: `supabase/schema.sql`
 
 ---
@@ -12,14 +12,26 @@
 auth.users (Supabase managed)
   └── profiles (1:1 via trigger)
         ├──< transactions (user_id FK)
-        │        ├── category TEXT (free text + inferred)
-        │        ├── method TEXT (cash/bca/gopay/dana/ovo/...)
-        │        ├── hour_of_day SMALLINT (untuk AI pattern)
-        │        └── day_of_week SMALLINT (untuk AI pattern)
+        │        ├── category_raw TEXT (free text + inferred)
+        │        ├── source TEXT (web/telegram/telegram_ocr/telegram_shopping)
+        │        ├── scope TEXT (private/couple/group)
+        │        └── created_at TIMESTAMPTZ
         ├──< import_batches (quota tracking)
         ├──< budgets (monthly cap per category)
         ├──< transaction_tags (many-to-many)
+        ├──< room_members (user rooms)
         └── ai_profiles (1:1 per user, AI data)
+
+rooms
+  ├── room_id, name, invite_code
+  └──< room_members (user_id FK)
+
+ai_api_keys → provider, key, model, base_url, priority, is_active
+system_logs → timestamp, level, source, message, details
+bank_ocr_metadata → bank_name, detected_fields, sample_count
+affiliate_products → name, url, platform, price
+link_reports → product_id, reported_by, reason
+pending_telegram_links → chat_id, link_code
 ```
 
 ---

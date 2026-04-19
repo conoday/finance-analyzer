@@ -132,19 +132,39 @@ def _progress_bar(pct: float, width: int = 10) -> str:
     filled = min(int(pct / 100 * width), width)
     return "\u2588" * filled + "\u2591" * (width - filled)
 
-
 _DONATE_TEXT = (
     "💝 <b>Dukung OprexDuit!</b>\n\n"
     "OprexDuit adalah platform gratis untuk semua orang. "
     "Donasi kamu berapapun — bahkan 100 perak — sangat membantu "
     "pengembangan fitur baru!\n\n"
-    "🏦 <b>Transfer Bank:</b>\n"
-    "  Bank Jago: 1234567890\n"
-    "  a.n. OprexDuit Dev\n\n"
     "📱 <b>QRIS / E-Wallet:</b>\n"
-    "  Scan QRIS di web: oprexduit.vercel.app/donasi\n\n"
+    "  Scan QRIS di bawah ini 👇\n"
+    "  (GoPay, OVO, Dana, ShopeePay, dll.)\n\n"
     "Terima kasih banyak! 🙏"
 )
+
+# URL QRIS from the web frontend deployment
+_QRIS_URL = os.environ.get(
+    "QRIS_IMAGE_URL",
+    "https://oprexduit.vercel.app/qris.jpeg"
+)
+
+
+def _send_donate_with_qris(chat_id: int | str) -> None:
+    """Send QRIS image + donation text via Telegram sendPhoto."""
+    url = _TG_API.format(token=_bot_token(), method="sendPhoto")
+    try:
+        with httpx.Client(timeout=15) as client:
+            client.post(url, json={
+                "chat_id": chat_id,
+                "photo": _QRIS_URL,
+                "caption": _DONATE_TEXT,
+                "parse_mode": "HTML",
+            })
+    except Exception as exc:
+        print(f"[telegram] sendPhoto donasi error: {exc}")
+        # Fallback to text only
+        send_message(chat_id, _DONATE_TEXT, parse_mode="HTML")
 
 
 def _send_with_donate_button(chat_id: int | str, text: str, parse_mode: str = "HTML") -> None:
@@ -506,7 +526,7 @@ def _handle_command(
     elif command in ("/hapus", "/delete"):
         _cmd_hapus(chat_id, user_id, sb_client)
     elif command == "/donasi":
-        send_message(chat_id, _DONATE_TEXT, parse_mode="HTML")
+        _send_donate_with_qris(chat_id)
     else:
         send_message(chat_id, "Perintah tidak dikenal. Ketik /menu untuk panduan.")
 
@@ -1881,7 +1901,7 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
 
     elif data == "donate_show":
         _answer_callback(cq_id, "💝 Terima kasih!")
-        send_message(chat_id, _DONATE_TEXT, parse_mode="HTML")
+        _send_donate_with_qris(chat_id)
 
     else:
         _answer_callback(cq_id)
