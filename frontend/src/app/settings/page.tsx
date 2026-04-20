@@ -245,7 +245,7 @@ function SettingsContent() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Kembali
           </NextLink>
-          <ChevronRight className="w-3 h-3 text-slate-300" />
+          <ChevronRight className="w-3 h-3 text-slate-700" />
           <span className="text-xs font-medium text-slate-700">Pengaturan</span>
         </div>
       </div>

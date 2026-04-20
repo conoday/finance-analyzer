@@ -123,7 +123,7 @@ export function FloatingAIChat() {
                       className={`text-sm px-4 py-2.5 rounded-2xl ${
                         msg.role === "user" 
                           ? "bg-indigo-500 text-white rounded-br-sm" 
-                          : "bg-white/10 text-slate-200 border border-white/5 rounded-bl-sm"
+                          : "bg-white/10 text-slate-800 border border-white/5 rounded-bl-sm"
                       }`}
                       style={msg.role === "user" ? { background: "linear-gradient(135deg, #6366f1, #4f46e5)" } : {}}
                     >

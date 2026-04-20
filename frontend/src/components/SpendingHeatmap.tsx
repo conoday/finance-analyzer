@@ -112,19 +112,19 @@ export function SpendingHeatmap({ timeseries }: SpendingHeatmapProps) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-semibold text-slate-200">Aktivitas Keuangan</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Aktivitas Keuangan</h3>
           <span className="badge badge-amber">{totalDays} hari</span>
         </div>
         <div className="flex gap-1 glass rounded-lg p-0.5">
           <button
             onClick={() => setMode("expense")}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${mode === "expense" ? "bg-amber-500/20 text-amber-300" : "text-slate-400 hover:text-slate-200"}`}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${mode === "expense" ? "bg-amber-500/20 text-amber-300" : "text-slate-400 hover:text-slate-800"}`}
           >
             Pengeluaran
           </button>
           <button
             onClick={() => setMode("income")}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${mode === "income" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:text-slate-200"}`}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${mode === "income" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:text-slate-800"}`}
           >
             Pemasukan
           </button>

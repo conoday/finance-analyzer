@@ -68,7 +68,7 @@ export function UploadZone({ onFile }: UploadZoneProps) {
             )}
           </motion.div>
           <div className="space-y-1">
-            <p className="text-slate-200 font-medium">
+            <p className="text-slate-800 font-medium">
               {isDragActive ? "Lepaskan file di sini..." : "Drag & drop file mutasi rekening"}
             </p>
             <p className="text-slate-700 text-sm">CSV atau XLSX — klik untuk browse</p>
@@ -86,7 +86,7 @@ export function UploadZone({ onFile }: UploadZoneProps) {
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => onFile("sample")}
-        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl glass border border-white/[0.06] text-sm text-slate-300 hover:text-slate-100 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all"
+        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl glass border border-white/[0.06] text-sm text-slate-700 hover:text-slate-100 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all"
       >
         <Beaker className="w-4 h-4 text-indigo-400" />
         Gunakan Data Sampel

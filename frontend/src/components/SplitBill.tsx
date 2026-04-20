@@ -278,7 +278,7 @@ export function SplitBill() {
               {s.label}
             </button>
             {idx < STEPS.length - 1 && (
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <ChevronRight className="w-4 h-4 text-slate-700" />
             )}
           </div>
         ))}

@@ -234,7 +234,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
                       <span className="text-[10px] text-slate-700">
                         {new Date(tx.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                       </span>
-                      <span className="text-slate-300">&middot;</span>
+                      <span className="text-slate-700">&middot;</span>
                       <span className="text-[8px] font-bold w-3.5 h-3.5 rounded flex items-center justify-center" style={{ background: mBadge.bg, color: mBadge.color }}>
                         {mBadge.abbr}
                       </span>

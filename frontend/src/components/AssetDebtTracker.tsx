@@ -627,7 +627,7 @@ function EmptyState({ icon, title, desc }: { icon: React.ReactNode; title: strin
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center gap-3"
       style={{ background: "rgba(241,245,249,0.5)", borderRadius: "16px", border: "1px dashed #cbd5e1" }}>
-      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-300"
+      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-700"
         style={{ background: "#f1f5f9" }}>
         {icon}
       </div>

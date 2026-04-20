@@ -259,13 +259,13 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <Zap className="w-3.5 h-3.5 text-teal-400" />
             Catat Cepat
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-slate-700 hover:text-slate-300 hover:bg-white/5 transition-colors"
+            className="p-1 rounded-md text-slate-700 hover:text-slate-700 hover:bg-white/5 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -328,7 +328,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
                     className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5"
                     style={{ background: "#1f2937", border: "1px solid #374151" }}
                   >
-                    <span className="text-slate-300 truncate">{tx.description}</span>
+                    <span className="text-slate-700 truncate">{tx.description}</span>
                     <span className={`font-mono font-semibold ml-2 ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatRupiah(tx.amount, true)}
                     </span>
@@ -370,7 +370,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
               <select
                 value={effectiveCategory}
                 onChange={(e) => setManualCategory(e.target.value)}
-                className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none appearance-none cursor-pointer"
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-800 outline-none appearance-none cursor-pointer"
                 style={{ background: "#1f2937", border: "1px solid #374151" }}
               >
                 {CATEGORY_LIST.map((cat) => {
@@ -389,7 +389,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none cursor-pointer"
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-800 outline-none cursor-pointer"
                 style={{ background: "#1f2937", border: "1px solid #374151" }}
               />
             </div>

@@ -121,7 +121,7 @@ function VerifyForm() {
           <h2 className="text-lg font-semibold text-slate-100">Cek email kamu</h2>
           <p className="text-xs text-slate-400 leading-relaxed">
             Kode aktivasi 6 digit telah dikirim ke{" "}
-            <span className="text-slate-200 font-medium">{email || "email kamu"}</span>.
+            <span className="text-slate-800 font-medium">{email || "email kamu"}</span>.
             <br />
             Berlaku selama 10 menit.
           </p>

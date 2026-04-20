@@ -121,7 +121,7 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
             <Heart className="w-4 h-4 text-red-400 fill-red-400" />
             <span className="text-sm font-semibold text-slate-100">Dukung Pengembang</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-700 hover:text-slate-200 hover:bg-white/5 transition-all">
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-700 hover:text-slate-800 hover:bg-white/5 transition-all">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -167,7 +167,7 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
 
         <button
           onClick={onClose}
-          className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-300 border border-white/[0.08] hover:bg-white/5 transition-all"
+          className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-white/[0.08] hover:bg-white/5 transition-all"
         >
           Tutup
         </button>
@@ -240,7 +240,7 @@ export function SharePanel({ data, onDonasi }: SharePanelProps & { onDonasi?: ()
         <button
           onClick={user ? handleCloudExport : handleExport}
           title={user ? "Export CSV (Cloud)" : "Export CSV"}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-200 border border-white/[0.08] hover:bg-white/5 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-800 border border-white/[0.08] hover:bg-white/5 transition-all"
         >
           {user ? <Cloud className="w-4 h-4" /> : <Download className="w-4 h-4" />}
           <span className="hidden sm:inline">{user ? "Export Cloud" : "Export CSV"}</span>

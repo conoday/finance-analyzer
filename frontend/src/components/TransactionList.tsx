@@ -43,7 +43,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Receipt className="w-4 h-4 text-teal-400/60" />
-          <h3 className="text-sm font-semibold text-slate-200">Riwayat Transaksi</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Riwayat Transaksi</h3>
           <span
             className="rounded-full px-2 py-0.5 text-[10px] font-medium"
             style={{ background: "rgba(20,184,166,0.12)", color: "#2dd4bf" }}
@@ -86,7 +86,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                 {/* Description + category */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm text-slate-200 truncate leading-snug">
+                    <p className="text-sm text-slate-800 truncate leading-snug">
                       {truncate(tx.deskripsi, 36)}
                     </p>
                   </div>
@@ -112,7 +112,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
         <button
           onClick={() => setExpanded((p) => !p)}
           className="w-full py-2.5 rounded-xl text-xs text-slate-700 hover:text-teal-400 transition-colors"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}
+          style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)" }}
         >
           {expanded
             ? `Tampilkan lebih sedikit`

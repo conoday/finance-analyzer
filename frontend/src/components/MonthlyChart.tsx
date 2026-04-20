@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
             {p.name}
           </span>
-          <span className="font-mono text-slate-200">{formatRupiah(p.value, true)}</span>
+          <span className="font-mono text-slate-800">{formatRupiah(p.value, true)}</span>
         </div>
       ))}
     </div>
@@ -35,7 +35,7 @@ export function MonthlyChart({ data }: MonthlyChartProps) {
       transition={{ duration: 0.4, delay: 0.1 }}
       className="glass rounded-2xl p-5 border border-white/[0.06]"
     >
-      <h2 className="text-sm font-semibold text-slate-200 mb-4">Tren Bulanan</h2>
+      <h2 className="text-sm font-semibold text-slate-800 mb-4">Tren Bulanan</h2>
       <ResponsiveContainer width="100%" height={280}>
         <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <defs>

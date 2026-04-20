@@ -26,12 +26,12 @@ function RupiahTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="glass rounded-lg px-3 py-2 text-xs space-y-1 border border-white/10 shadow-xl">
-      {label && <p className="font-semibold text-slate-300 mb-1">{label}</p>}
+      {label && <p className="font-semibold text-slate-700 mb-1">{label}</p>}
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
           <span className="text-slate-400">{p.name}:</span>
-          <span className="font-mono font-bold text-slate-200">{formatRupiah(p.value, true)}</span>
+          <span className="font-mono font-bold text-slate-800">{formatRupiah(p.value, true)}</span>
         </div>
       ))}
     </div>
@@ -168,7 +168,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-semibold text-slate-200">Monitoring Budget</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Monitoring Budget</h2>
           </div>
           <button
             onClick={() => setShowAdd((v) => !v)}
@@ -237,7 +237,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                 onChange={(e) => setNewCat(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCustomCategory()}
                 placeholder="Nama kategori baru..."
-                className="flex-1 px-3 py-2 rounded-lg text-sm text-slate-200 outline-none"
+                className="flex-1 px-3 py-2 rounded-lg text-sm text-slate-800 outline-none"
                 style={{
                   background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.12)",
@@ -287,7 +287,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                   <div className="flex items-center gap-2 min-w-0">
                     {isOver && <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                     {isWarn && !isOver && <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                    <span className="text-sm font-medium text-slate-200 truncate">{kategori}</span>
+                    <span className="text-sm font-medium text-slate-800 truncate">{kategori}</span>
                     {actual > 0 && (
                       <span
                         className="text-[10px] px-1.5 py-0.5 rounded-full font-mono"
@@ -316,13 +316,13 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                               if (e.key === "Escape") cancelEdit();
                             }}
                             placeholder="0"
-                            className="w-24 bg-transparent text-sm text-slate-200 outline-none tabular-nums"
+                            className="w-24 bg-transparent text-sm text-slate-800 outline-none tabular-nums"
                           />
                         </div>
                         <button onClick={() => commitEdit(kategori)} className="p-1 rounded-md text-teal-400 hover:text-teal-300">
                           <Check className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={cancelEdit} className="p-1 rounded-md text-slate-700 hover:text-slate-300">
+                        <button onClick={cancelEdit} className="p-1 rounded-md text-slate-700 hover:text-slate-700">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </>
@@ -331,7 +331,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                         <span className="text-xs font-mono text-slate-400">
                           {limit > 0 ? formatRupiah(limit, true) : <span className="text-slate-800">— set limit</span>}
                         </span>
-                        <button onClick={() => startEdit(kategori)} className="p-1 rounded-md text-slate-700 hover:text-slate-300 transition-colors">
+                        <button onClick={() => startEdit(kategori)} className="p-1 rounded-md text-slate-700 hover:text-slate-700 transition-colors">
                           <PencilLine className="w-3.5 h-3.5" />
                         </button>
                         {limit > 0 && (
@@ -376,7 +376,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
       {(donutData.length > 0 || barData.length > 0) && (
         <div className="glass rounded-2xl p-5 border border-white/[0.06] space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-300">Visualisasi Budget</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Visualisasi Budget</h3>
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveChart("donut")}
@@ -488,7 +488,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
         <TrendingDown className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
         <p className="text-slate-400 leading-relaxed">
           Set limit budget per kategori untuk dapat peringatan saat hampir habis.
-          Budget disimpan di browser — tidak perlu login. Gunakan tab <strong className="text-slate-300">Shared</strong> untuk berbagi dengan pasangan atau tim.
+          Budget disimpan di browser — tidak perlu login. Gunakan tab <strong className="text-slate-700">Shared</strong> untuk berbagi dengan pasangan atau tim.
         </p>
       </div>
     </motion.div>

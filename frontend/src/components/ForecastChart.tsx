@@ -34,7 +34,7 @@ export function ForecastChart({ timeseries, forecast }: ForecastChartProps) {
         {payload.map((p: any) => (
           <div key={p.dataKey} className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-            <span className="text-slate-300">{p.name}:</span>
+            <span className="text-slate-700">{p.name}:</span>
             <span className="font-mono text-slate-100">{formatRupiah(p.value, true)}</span>
           </div>
         ))}
@@ -50,7 +50,7 @@ export function ForecastChart({ timeseries, forecast }: ForecastChartProps) {
       className="glass rounded-2xl p-5 border border-white/[0.06]"
     >
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-slate-200">Saldo Kumulatif & Proyeksi</h2>
+        <h2 className="text-sm font-semibold text-slate-800">Saldo Kumulatif & Proyeksi</h2>
         <div className="flex items-center gap-3 text-[11px] text-slate-700">
           <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-blue-400 rounded" />Aktual</span>
           <span className="flex items-center gap-1"><span className="w-4 h-0.5 border-t-2 border-dashed border-indigo-400 rounded" />Proyeksi</span>

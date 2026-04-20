@@ -88,7 +88,7 @@ export function ReportLinkButton({ productId, productName }: Props) {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-slate-400 hover:text-slate-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -96,7 +96,7 @@ export function ReportLinkButton({ productId, productName }: Props) {
 
             {productName && (
               <p className="text-xs text-slate-400">
-                Produk: <span className="text-slate-200 font-medium">{productName}</span>
+                Produk: <span className="text-slate-800 font-medium">{productName}</span>
               </p>
             )}
 
@@ -132,7 +132,7 @@ export function ReportLinkButton({ productId, productName }: Props) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setOpen(false)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-300 border border-slate-600 hover:bg-slate-800 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-700 border border-slate-600 hover:bg-slate-800 transition-colors"
                   >
                     Batal
                   </button>

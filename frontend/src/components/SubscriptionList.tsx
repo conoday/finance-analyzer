@@ -35,7 +35,7 @@ export function SubscriptionList({ subs, total }: SubscriptionListProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <RefreshCw className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-sm font-semibold text-slate-200">Langganan Terdeteksi</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Langganan Terdeteksi</h3>
         </div>
         <div className="text-xs text-slate-700">
           Total: <span className="text-cyan-400 font-mono">{formatRupiah(total, true)}/bln</span>
@@ -56,7 +56,7 @@ export function SubscriptionList({ subs, total }: SubscriptionListProps) {
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0" />
               )}
               <div className="min-w-0">
-                <p className="text-xs text-slate-300 truncate">{sub.merchant}</p>
+                <p className="text-xs text-slate-700 truncate">{sub.merchant}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${FREQ_BADGE[sub.frekuensi] ?? "bg-slate-700 text-slate-400"}`}>
                     {sub.frekuensi}

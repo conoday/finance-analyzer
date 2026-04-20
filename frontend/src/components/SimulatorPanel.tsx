@@ -39,7 +39,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
       <div className="glass rounded-2xl border border-white/[0.06] p-5 space-y-5">
         <div className="flex items-center gap-2">
           <Sliders className="w-4 h-4 text-purple-400" />
-          <h3 className="text-sm font-semibold text-slate-200">Simulasi Penghematan</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Simulasi Penghematan</h3>
         </div>
 
         {/* Horizon */}
@@ -113,7 +113,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
             {/* Impact summary */}
             <div className="glass rounded-2xl border border-emerald-500/15 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-200">Estimasi Dampak Penghematan</h3>
+                <h3 className="text-sm font-semibold text-slate-800">Estimasi Dampak Penghematan</h3>
                 <div className={`flex items-center gap-1.5 text-sm font-bold ${totalSaving >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {totalSaving >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                   {formatRupiah(Math.abs(totalSaving), true)} / {horizon} bln
@@ -137,7 +137,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
 
             {/* Projection chart */}
             <div className="glass rounded-2xl border border-white/[0.06] p-5">
-              <h3 className="text-sm font-semibold text-slate-200 mb-4">Proyeksi Saldo Kumulatif</h3>
+              <h3 className="text-sm font-semibold text-slate-800 mb-4">Proyeksi Saldo Kumulatif</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={result.projection} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <defs>
@@ -164,7 +164,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
               <Sliders className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <p className="text-slate-300 font-medium">Simulasikan masa depan keuangan Anda</p>
+              <p className="text-slate-700 font-medium">Simulasikan masa depan keuangan Anda</p>
               <p className="text-slate-800 text-sm mt-1">Atur slider penghematan lalu klik "Jalankan Simulasi"</p>
             </div>
           </div>

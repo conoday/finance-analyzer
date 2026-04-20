@@ -24,7 +24,7 @@ export function StoryCards({ stories, overall }: StoryCardsProps) {
       >
         <div className="flex items-center gap-2 mb-3">
           <BookOpen className="w-4 h-4 text-indigo-400" />
-          <h3 className="text-sm font-semibold text-slate-200">Ringkasan Keuangan</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Ringkasan Keuangan</h3>
         </div>
         <h4 className="text-lg font-bold text-slate-100 mb-3">{overall.headline}</h4>
         <div className="space-y-2">
@@ -67,7 +67,7 @@ export function StoryCards({ stories, overall }: StoryCardsProps) {
                   </div>
                   <ChevronDown className={`w-3.5 h-3.5 text-slate-800 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                 </div>
-                <p className="text-sm font-semibold text-slate-200 mt-2 leading-snug">{s.headline}</p>
+                <p className="text-sm font-semibold text-slate-800 mt-2 leading-snug">{s.headline}</p>
                 <div className="flex gap-4 mt-2 text-[11px]">
                   <span className="text-emerald-400">+{formatRupiah(s.income, true)}</span>
                   <span className="text-red-400">-{formatRupiah(s.expense, true)}</span>
@@ -84,7 +84,7 @@ export function StoryCards({ stories, overall }: StoryCardsProps) {
                   >
                     <div className="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/[0.05] pt-3">
                       {s.body}
-                      <p className="mt-2 text-slate-700">Top kategori: <span className="text-slate-300">{s.top_category}</span></p>
+                      <p className="mt-2 text-slate-700">Top kategori: <span className="text-slate-700">{s.top_category}</span></p>
                     </div>
                   </motion.div>
                 )}
