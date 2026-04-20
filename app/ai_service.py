@@ -30,7 +30,7 @@ _PROVIDERS: dict[str, dict] = {
         # api.z.ai Anthropic-compatible endpoint (proven working with test_glm.py)
         "base_url": os.environ.get("GLM_BASE_URL", "https://api.z.ai/api/anthropic"),
         "model":    os.environ.get("GLM_MODEL", "glm-4.7"),
-        "vision_model": os.environ.get("GLM_VISION_MODEL", "glm-4.7"),
+        "vision_model": os.environ.get("GLM_VISION_MODEL", "claude-3-5-sonnet-20240620"),
         # Fallback env vars (dipakai jika DB kosong)
         "key_envs": ["GLM_API_KEY", "GLM_API_KEY_2", "GLM_API_KEY_3", "GLM_API_KEY_4", "GLM_API_KEY_5"],
     },
