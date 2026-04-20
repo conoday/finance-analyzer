@@ -1,6 +1,6 @@
 # Roadmap
 
-> Last updated: 2026-04-19 (rev 8)
+> Last updated: 2026-04-20 (rev 9)
 > Lihat tracking detail di `artefak/17_master_tracking.md`
 
 ## Overview
@@ -55,12 +55,16 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - ✅ Multi-provider key rotation (GLM → DeepSeek → Gemini)
 - ✅ Admin Console: API key management CRUD
 
-## Phase OCR — Image Extraction ✅ DONE (2026-04-19)
-- ✅ Telegram: kirim foto → AI vision OCR → parse transaksi
+## Phase OCR — Image Extraction ✅ DONE (iterasi 2026-04-20)
+- ✅ Telegram: kirim foto → AI vision (GLM-4.7) → OCR → parse → simpan DB
 - ✅ Web: `POST /ai/ocr` endpoint (multipart upload)
+- ✅ Web SmartInput: tombol 📷 camera → upload foto → OCR → auto-fill form
+- ✅ `_AnthropicCaller` auto-convert OpenAI image_url → Anthropic format
+- ✅ `_repair_json()` + `_safe_json_parse()` — robust JSON parsing
+- ✅ Prompt debiased (generic placeholders)
 - ✅ Bank metadata collection → `bank_ocr_metadata` table
 - ✅ Admin Console: OCR Metadata page per bank
-- 🔲 Web SmartInput OCR upload UI (endpoint ready, frontend pending)
+- 🔧 OCR accuracy masih di-tune (AI kadang misread gambar)
 
 ## Phase Admin v2 — Admin Console Overhaul ✅ DONE (2026-04-19)
 - ✅ Dashboard: hapus financial cards, tambah sparkline + source chart
@@ -70,9 +74,10 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - ✅ Sidebar: menu baru (Logs, OCR Metadata)
 
 ## Phase Donasi — Donation Feature ✅ DONE (2026-04-19)
-- ✅ Web: QRIS modal di SharePanel + Header
-- ✅ Telegram: `/donasi` command + QRIS photo
-- ✅ Inline button "Donasi" setelah aksi berhasil
+- ✅ Web: QRIS modal di SharePanel + Header button
+- ✅ Telegram: `/donasi` command + QRIS photo via `sendPhoto`
+- ✅ `/menu` keyboard: tombol 💝 Donasi + 📷 OCR hint
+- ✅ Light theme font fix — 6 komponen warna digelapkan
 
 ## Phase 3 — Transaction CRUD + Tier Enforcement 🔲 Planned
 - CRUD endpoint: POST/GET/PUT/DELETE /transactions

@@ -1,6 +1,6 @@
 # Financial Feature Design
 
-> Last updated: 2026-04-19 (rev 2)
+> Last updated: 2026-04-20 (rev 3)
 
 ## Core Features
 

@@ -1,6 +1,6 @@
 # Admin Console
 
-> Last updated: 2026-04-19 (rev 4)
+> Last updated: 2026-04-20 (rev 5)
 > Status: ✅ v2 DONE — repo `conoday/oprex-admin-console`
 
 ## Implementasi Aktual

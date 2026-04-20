@@ -1,6 +1,6 @@
 # Product Overview — OprexDuit
 
-> Last updated: 2026-04-19 (rev 4)
+> Last updated: 2026-04-20 (rev 5)
 
 ## Objective
 
@@ -75,7 +75,7 @@ Membangun aplikasi pencatatan keuangan yang:
 | Shared Budget Room + notifikasi | ✅ Done (Phase Room) |
 | Affiliate belanja via Telegram | ✅ Done (Phase Affiliate) |
 | Admin console: dashboard, logs, OCR metadata | ✅ Done (Phase Admin v2) |
-| Web OCR upload foto → parse transaksi | ✅ Endpoint ready, UI pending |
+| Web OCR upload foto → parse transaksi | ✅ Done (SmartInput 📷 button) |
 | Donasi QRIS di web + Telegram | ✅ Done |
 | Upload file CSV dibatasi per tier | 🔲 Phase 3 (enforcement) |
 | Pembayaran Pro tier berjalan | 🔲 Phase 6 (Payment) |

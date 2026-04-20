@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-19 (rev 9)
+> Last updated: 2026-04-20 (rev 10)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Commit | ✅ 72d9961 (2026-04-19) | fix: OCR model, dark text, menu donasi, SmartInput OCR |
+| Last Commit | ✅ c03d050 (2026-04-20) | fix: OCR vision pipeline, debiased prompt, JSON repair, light theme |
 
 ---
 
@@ -67,14 +67,17 @@
 - [x] SharePanel (WA Share + CSV Export + QRIS Donasi)
 - [x] QRIS Donasi modal (qris.jpeg committed)
 - [x] SmartInput "Catat Cepat" — NLP parse (25rb, 5jt, ngopi → Makan)
+- [x] SmartInput OCR upload — tombol 📷 camera, upload foto → POST `/ai/ocr` → auto-fill form
 - [x] QuickTracker — post-input list, delete per-tx, CSV export, period filter
-- [x] OprexDuit rebrand: logo PNG baru, header cleanup
-- [x] **Light theme** (current): `#f8fafc` bg, `.glass = rgba(255,255,255,0.75)`
+- [x] OprexDuit rebrand: logo PNG baru (128×128 optimized), header cleanup
+- [x] **Light theme** font fix — semua komponen pakai warna gelap (slate-600/700)
+  - BalanceCard, KPICards, TopMerchants, SpendingWheel, HealthGauge, tab-pill CSS
 - [x] Header light theme contrast fix (commit af3c3cb)
 - [x] Empty state redesign — 2-column (upload + KPI teaser / QuickTracker)
 - [x] Dashboard greeting fix (`text-slate-800`)
 - [x] Tab "Aktivitas" di dashboard
 - [x] Brand icons metode bayar (text-badge fallback)
+- [x] FloatingAIChat auth fix — pakai `@/utils/supabase/client` (bukan `@supabase/auth-helpers-nextjs`)
 
 ### Backend Bug Fixes
 - [x] `_clean_amount` rewrite (commit af3c3cb) — Indonesian number format
@@ -83,9 +86,9 @@
 - [x] `infer_datetime_format` removed (pandas 2+ compat)
 - [x] `parseIDR`: rebu/miliar/triliun + brand auto-kategorisasi
 
-### Dokumentasi Artefak (rev 8)
+### Dokumentasi Artefak (rev 10)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking
-- [x] Artefak 01,03,04,07,08,17 di-update setelah batch enhancement (2026-04-19)
+- [x] Artefak semua updated 2026-04-20 dengan status OCR pipeline terbaru
 
 ### Telegram Bot (Phase Telegram — DONE)
 - [x] `app/telegram_bot.py` — webhook handler, auto user create, inline keyboard
@@ -140,17 +143,24 @@
 - [x] Admin Console: API key management CRUD + priority
 - [x] Frontend: auth token dikirim ke `/ai/chat` untuk personalisasi
 
-### OCR (Phase OCR — DONE, 2026-04-19)
-- [x] Telegram: foto → `_handle_photo_ocr()` → AI vision (GLM-4V) → parse JSON
-- [x] Backend: `ocr_transaction_image()` di `ai_service.py`
+### OCR (Phase OCR — DONE, iterasi 2026-04-20)
+- [x] Telegram: foto → `_handle_photo_ocr()` → AI vision (GLM-4.7) → parse JSON → simpan DB
+- [x] Backend: `ocr_transaction_image()` di `ai_service.py` — OpenAI SDK via `_call_with_fallback`
+- [x] `_AnthropicCaller.create()` — auto-convert OpenAI `image_url` → Anthropic `image.source.base64`
+- [x] `_repair_json()` — hapus trailing commas, comments, potong text di luar `{}`
+- [x] `_safe_json_parse()` — repair + regex fallback extract `transactions[]`
+- [x] Prompt debiased — generic placeholder, bukan contoh spesifik
 - [x] Web endpoint: `POST /ai/ocr` (multipart file upload)
+- [x] Web SmartInput: tombol 📷 camera → upload foto → OCR → auto-fill form
 - [x] Bank metadata collection → `bank_ocr_metadata` table
 - [x] Admin Console: OCR Metadata page per bank
+- [x] Debug logging: image size (KB), raw AI response (first 500 chars)
 
 ### Donasi (Phase Donasi — DONE, 2026-04-19)
 - [x] Web: QRIS modal di SharePanel + Header button
-- [x] Telegram: `/donasi` command → kirim foto QRIS
-- [x] Inline button "Donasi" setelah aksi berhasil (OCR, dll)
+- [x] Telegram: `/donasi` command → kirim foto QRIS via `sendPhoto` API
+- [x] `/menu` keyboard: tombol 💝 Donasi + 📷 OCR hint text
+- [x] Env: `QRIS_IMAGE_URL` (default: oprexduit.vercel.app/qris.jpeg)
 
 ---
 
@@ -170,7 +180,7 @@
 
 | Task | Status | Notes |
 |---|---|---|
-| Web SmartInput OCR upload | 🔧 Backend ready | `/ai/ocr` endpoint done, frontend drag-drop UI pending |
+| OCR quality tuning | 🔧 Iterating | AI kadang misread gambar, prompt & model terus ditune |
 | Tier enforcement backend | 🔧 Schema ready | Belum enforce max 3 akun, max 3 bulan history |
 | SQL migration: system_logs | 🔧 Pending | Tabel untuk Log Explorer — harus run manual di Supabase |
 | SQL migration: bank_ocr_metadata | 🔧 Pending | Tabel untuk OCR Metadata — harus run manual di Supabase |

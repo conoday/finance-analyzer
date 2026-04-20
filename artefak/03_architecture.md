@@ -1,6 +1,6 @@
 # System Architecture — OprexDuit
 
-> Last updated: 2026-04-19 (rev 4)
+> Last updated: 2026-04-20 (rev 5)
 
 ## Current Stack (Deployed)
 
@@ -9,7 +9,7 @@
 | Frontend | Next.js 16 + Tailwind CSS | Vercel |
 | Backend | FastAPI (Python) | Render.com (free) |
 | Database / Auth | Supabase (PostgreSQL) | Supabase Cloud |
-| AI Provider | GLM-4.7 (chat) + GLM-4V (vision/OCR) | api.z.ai (Anthropic-compatible) |
+| AI Provider | GLM-4.7 (chat + vision/OCR) | api.z.ai (Anthropic-compatible proxy) |
 | Admin Console | Next.js 14 + TypeScript + Tailwind | Vercel (repo terpisah) |
 
 ## Architecture Diagram
@@ -53,15 +53,23 @@
 ```
 ┌──────────────────────────┐
 │  AI Provider: GLM (z.ai) │
-│  ├── glm-4.7 (chat)     │  ← /ai/chat endpoint
-│  └── glm-4v-flash (OCR) │  ← /ai/ocr + Telegram photo
+│  └── glm-4.7 (chat+OCR) │  ← /ai/chat + /ai/ocr + Telegram photo
+│                          │
+│  Wrapper:                │
+│  └── _AnthropicCaller    │  ← Converts OpenAI SDK → Anthropic API
+│      ├── image_url→base64│  ← Auto-convert for vision/OCR
+│      └── system msg split│  ← Anthropic system param
 │                          │
 │  Fallback providers:     │
 │  ├── deepseek-chat       │
 │  └── gemini-2.0-flash    │
 │                          │
 │  Key Management:         │
-│  └── ai_api_keys table   │  ← Admin Console CRUD
+│  └── ai_api_keys table   │  ← Admin Console CRUD + auto rotation
+│                          │
+│  OCR Pipeline:           │
+│  ├── _repair_json()      │  ← Fix trailing commas, comments
+│  └── _safe_json_parse()  │  ← Regex fallback if JSON broken
 └──────────────────────────┘
 
 Guardrails:
