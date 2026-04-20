@@ -26,11 +26,11 @@ export function useAnalysis() {
   }, []);
 
   
-  const analyzeMe = useCallback(async () => {
+  const analyzeMe = useCallback(async (month?: string) => {
     setStatus("loading");
     setError(null);
     try {
-      const result = await api.analyzeMe();
+      const result = await api.analyzeMe(30, month);
       setData(result);
       setStatus("success");
     } catch (e) {

@@ -529,7 +529,7 @@ def _handle_command(
     elif command == "/ringkasan":
         _cmd_ringkasan(chat_id, user_id, sb_client)
     elif command == "/laporan":
-        _cmd_laporan(chat_id, user_id, sb_client)
+        _cmd_laporan(chat_id, user_id, sb_client, args)
     elif command == "/riwayat":
         _cmd_riwayat(chat_id, user_id, sb_client)
     elif command == "/budget":
@@ -973,15 +973,21 @@ def _cmd_ringkasan(
         send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
-    today = _today_wib().isoformat()
+    from datetime import datetime, timedelta
+    from app.utils import _today_wib
+    today_dt = _today_wib()
+    seven_days_ago = (today_dt - timedelta(days=7)).isoformat()
+    today_str = today_dt.isoformat()
 
     try:
         # Own transactions
         res = (
             sb_client.table("transactions")
-            .select("amount,type,description,category_raw,scope")
+            .select("amount,type,description,category_raw,scope,date")
             .eq("user_id", user_id)
-            .eq("date", today)
+            .gte("date", seven_days_ago)
+            .lte("date", today_str + "T23:59:59")
+            .order("date", desc=True)
             .execute()
         )
         txs = res.data or []
@@ -1010,8 +1016,8 @@ def _cmd_ringkasan(
         if not txs:
             send_message(
                 chat_id,
-                f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({_today_wib().strftime('%d %b %Y')})\n\n"
-                "Belum ada transaksi hari ini.\n"
+                f"\U0001f4ca <b>Ringkasan 7 Hari Terakhir</b>\n\n"
+                "Belum ada transaksi dalam seminggu ini.\n"
                 "Yuk catat: <code>50rb makan siang</code>",
             )
             return
@@ -1028,7 +1034,7 @@ def _cmd_ringkasan(
         own_count = sum(1 for t in txs if t["_from"] == "self")
         room_count = sum(1 for t in txs if t["_from"] == "room")
 
-        lines = [f"\U0001f4ca <b>Ringkasan Hari Ini</b> ({_today_wib().strftime('%d %b %Y')})\n"]
+        lines = [f"\U0001f4ca <b>Ringkasan 7 Hari Terakhir</b>\n"]
         lines.append(f"\U0001f4b0 Pemasukan : <b>{_fmt(total_income)}</b>")
         lines.append(f"\U0001f4b8 Pengeluaran: <b>{_fmt(total_expense)}</b>")
         _net_icon = "\U0001f4c8" if net >= 0 else "\U0001f4c9"
@@ -1058,13 +1064,43 @@ def _cmd_laporan(
     chat_id: int | str,
     user_id: Optional[str],
     sb_client: Any,
+    args: list[str] = None
 ) -> None:
     if not user_id:
         send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
         return
 
     today = _today_wib()
-    month_start = today.replace(day=1).isoformat()
+    target_month_str = ""
+    
+    if args and len(args) > 0:
+        # User provided a month like 03-2026 or 2026-03 or 03
+        arg = args[0]
+        try:
+            if "-" in arg:
+                parts = arg.split("-")
+                if len(parts[0]) == 4:
+                    target_month_str = f"{parts[0]}-{parts[1].zfill(2)}"
+                else:
+                    target_month_str = f"{parts[1]}-{parts[0].zfill(2)}"
+            else:
+                target_month_str = f"{today.year}-{arg.zfill(2)}"
+        except Exception:
+            pass
+
+    if not target_month_str:
+        target_month_str = today.strftime("%Y-%m")
+        
+    try:
+        from datetime import datetime
+        target_dt = datetime.strptime(target_month_str, "%Y-%m")
+        month_label = target_dt.strftime("%B %Y")
+    except Exception:
+        target_month_str = today.strftime("%Y-%m")
+        month_label = today.strftime("%B %Y")
+
+    month_start = f"{target_month_str}-01"
+    month_end = f"{target_month_str}-31T23:59:59"
 
     try:
         # Own transactions
@@ -1073,7 +1109,7 @@ def _cmd_laporan(
             .select("amount,type,category_raw,scope")
             .eq("user_id", user_id)
             .gte("date", month_start)
-            .lte("date", today.isoformat())
+            .lte("date", month_end)
             .execute()
         )
         txs = res.data or []
@@ -1091,7 +1127,7 @@ def _cmd_laporan(
                     .eq("user_id", mid)
                     .in_("scope", ["couple", "group"])
                     .gte("date", month_start)
-                    .lte("date", today.isoformat())
+                    .lte("date", month_end)
                     .execute()
                 )
                 for t in (other_res.data or []):
@@ -1118,7 +1154,7 @@ def _cmd_laporan(
         own_count = sum(1 for t in txs if t["_from"] == "self")
         room_count = sum(1 for t in txs if t["_from"] == "room")
 
-        lines = [f"\U0001f4c5 <b>Laporan Bulan Ini</b> ({today.strftime('%B %Y')})\n"]
+        lines = [f"\U0001f4c5 <b>Laporan Keuangan</b> ({month_label})\n"]
         lines.append(f"\U0001f4b0 Pemasukan : <b>{_fmt(total_income)}</b>")
         lines.append(f"\U0001f4b8 Pengeluaran: <b>{_fmt(total_expense)}</b>")
         _net_icon2 = "\U0001f4c8" if net >= 0 else "\U0001f4c9"

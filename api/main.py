@@ -166,6 +166,7 @@ async def analyze_upload(
 def analyze_me(
     forecast_periods: int = Query(30, ge=7, le=90),
     forecast_method: str = Query("linear_regression"),
+    month: str = Query(None, description="Format YYYY-MM untuk filter bulan tertentu"),
     user: dict = Depends(require_auth)
 ):
     """Analyze transactions directly from the user's Supabase database."""
@@ -174,7 +175,12 @@ def analyze_me(
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
 
     user_id = user.get("sub")
-    res = sb.table("transactions").select("*").eq("user_id", user_id).order("date").execute()
+    
+    query = sb.table("transactions").select("*").eq("user_id", user_id).order("date")
+    if month:
+        query = query.gte("date", f"{month}-01").lt("date", f"{month}-31T23:59:59")
+        
+    res = query.execute()
     
     rows = res.data or []
     if not rows:

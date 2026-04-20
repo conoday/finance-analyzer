@@ -33,12 +33,21 @@ export const CATEGORY_MAP: Record<string, CategoryMeta> = {
 };
 
 function get(cat: string): CategoryMeta {
-  return (
-    CATEGORY_MAP[cat] ??
-    Object.values(CATEGORY_MAP).find(
-      (v) => v.label.toLowerCase() === cat.toLowerCase()
-    ) ?? CATEGORY_MAP["Lainnya"]
-  );
+  if (!cat) return CATEGORY_MAP["Lainnya"];
+  const exactMatch = CATEGORY_MAP[cat] ?? Object.values(CATEGORY_MAP).find((v) => v.label.toLowerCase() === cat.toLowerCase());
+  if (exactMatch) return exactMatch;
+
+  // Fallback heuristic for common raw strings
+  const low = cat.toLowerCase();
+  if (low.includes("makan") || low.includes("food") || low.includes("kuliner") || low.includes("minum") || low.includes("snack") || low.includes("groceries")) return CATEGORY_MAP["Makan"];
+  if (low.includes("pulsa") || low.includes("data") || low.includes("internet") || low.includes("tagihan") || low.includes("listrik") || low.includes("air")) return CATEGORY_MAP["Tagihan"];
+  if (low.includes("gojek") || low.includes("grab") || low.includes("bensin") || low.includes("parkir") || low.includes("toll") || low.includes("transport")) return CATEGORY_MAP["Transport"];
+  if (low.includes("belanja") || low.includes("baju") || low.includes("shopee") || low.includes("tokopedia")) return CATEGORY_MAP["Belanja"];
+  if (low.includes("amal") || low.includes("donasi") || low.includes("sedekah") || low.includes("zakat")) return { emoji: "🤝", label: "Amal & Donasi", cssClass: "cat-other", hex: "#14b8a6" };
+  if (low.includes("obat") || low.includes("sehat") || low.includes("rs") || low.includes("dokter") || low.includes("apotek")) return CATEGORY_MAP["Kesehatan"];
+  if (low.includes("gaji") || low.includes("salary") || low.includes("bonus") || low.includes("dividend")) return CATEGORY_MAP["Pendapatan"];
+  
+  return CATEGORY_MAP["Lainnya"];
 }
 
 interface Props {

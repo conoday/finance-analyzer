@@ -52,13 +52,15 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("transaksi");
   const [showDonasi, setShowDonasi] = useState(false);
   const [showSmartInput, setShowSmartInput] = useState(false);
+  const currentMonthStr = new Date().toISOString().slice(0, 7);
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonthStr);
 
   // Sync Cloud Data automatically
   useEffect(() => {
-    if (user && !data && status === "idle") {
-      analyzeMe();
+    if (user && status === "idle" && !data) {
+      analyzeMe(monthFilter);
     }
-  }, [user, data, status, analyzeMe]);
+  }, [user, data, status, analyzeMe, monthFilter]);
 
   // True jika backend mengembalikan empty analysis (0 transaksi)
   const isEmptyCloud = !!(data && (data as any).message && (data.summary?.tx_count === 0 || data.summary?.total_expense === 0));
@@ -234,11 +236,33 @@ export default function Home() {
               ) : (
               <>
               {/* Greeting */}
-              <div>
-                <h2 className="text-xl font-semibold text-slate-800">
-                  Hei! 👋 Berikut ringkasan keuanganmu.
-                </h2>
-                <p className="text-sm text-slate-700 mt-0.5">{data.summary.date_range}</p>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    Hei! 👋 Berikut ringkasan keuanganmu.
+                  </h2>
+                  <p className="text-sm text-slate-700 mt-0.5">{data.summary.date_range}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-600">Bulan:</span>
+                  <input 
+                    type="month"
+                    value={monthFilter}
+                    onChange={(e) => {
+                      setMonthFilter(e.target.value);
+                      analyzeMe(e.target.value || undefined);
+                    }}
+                    className="bg-white border focus:ring-2 focus:outline-none focus:ring-teal-500 p-1.5 text-sm rounded-lg shadow-sm font-medium text-slate-800"
+                  />
+                  {monthFilter && (
+                    <button 
+                      onClick={() => { setMonthFilter(""); analyzeMe(); }}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline"
+                    >
+                      Semua
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Hero: BalanceCard */}
@@ -264,7 +288,17 @@ export default function Home() {
               <AnimatePresence mode="wait">
                 {activeTab === "transaksi" && (
                   <TabPanel key="transaksi">
-                    <TransactionList transactions={data.transactions ?? []} />
+                    <TransactionList 
+                      transactions={data.transactions ?? []} 
+                      onDelete={async (id) => {
+                        // Optimistic hide visually
+                        if (data && data.transactions) {
+                           data.transactions = data.transactions.filter(t => t.id !== id);
+                        }
+                        await deleteOne(id);
+                        await analyzeMe(); // Re-fetch to update all charts/dashboards
+                      }}
+                    />
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-2">
                       <TopMerchants merchants={data.top_merchants} income={data.income_src} />
                       <SubscriptionList subs={data.subscriptions} total={data.sub_total_monthly} />

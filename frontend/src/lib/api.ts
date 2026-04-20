@@ -29,10 +29,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
 
   /** Analyze user's Supabase transactions */
-  analyzeMe: (forecastPeriods = 30): Promise<AnalysisResult> =>
-    request<AnalysisResult>(
-      `/analyze/me?forecast_periods=${forecastPeriods}&forecast_method=linear_regression`
-    ),
+  analyzeMe: (forecastPeriods = 30, month?: string): Promise<AnalysisResult> => {
+    let url = `/analyze/me?forecast_periods=${forecastPeriods}&forecast_method=linear_regression`;
+    if (month) {
+      url += `&month=${month}`;
+    }
+    return request<AnalysisResult>(url);
+  },
 
   /** Analyze uploaded file */
   analyzeFile: (file: File, forecastPeriods = 30): Promise<AnalysisResult> => {
