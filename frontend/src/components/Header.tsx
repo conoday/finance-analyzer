@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, Heart, LogIn, LogOut, ChevronDown, Settings } from "lucide-react";
+import { LogIn, LogOut, ChevronDown, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
-  hasData: boolean;
-  onReset: () => void;
+  hasData?: boolean;
+  onReset?: () => void;
   onDonasi?: () => void;
 }
 
@@ -50,7 +50,7 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
+export function Header({ onDonasi }: HeaderProps) {
   const [showMenu, setShowMenu] = useState(false);
   const { user, loading, signOut } = useAuth();
 
@@ -59,85 +59,56 @@ export function Header({ hasData, onReset, onDonasi }: HeaderProps) {
   const firstName = fullName.split(" ")[0];
 
   return (
-    <header className="sticky top-0 z-50 w-full" style={{ background: "rgba(255,255,255,0.88)", borderBottom: "1px solid rgba(20,184,166,0.12)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}>
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="OprexDuit" width={32} height={32} className="rounded-xl" />
-          <div>
-            <span className="text-sm font-semibold text-slate-800 tracking-tight">
-              Oprex<span className="text-teal-600">Duit</span>
-            </span>
-            <p className="hidden sm:block text-[10px] text-slate-400 leading-none mt-0.5">
-              Ngatur duit, beres.
-            </p>
-          </div>
+    <header
+      className="sticky top-0 z-40 w-full md:hidden"
+      style={{ background: "rgba(255,255,255,0.92)", borderBottom: "1px solid rgba(20,184,166,0.12)", backdropFilter: "blur(20px)" }}
+    >
+      <div className="px-4 h-14 flex items-center justify-between">
+        {/* Logo — mobile only */}
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="OprexDuit" width={28} height={28} className="rounded-xl" />
+          <span className="text-sm font-bold text-slate-800 tracking-tight">
+            Oprex<span className="text-teal-600">Duit</span>
+          </span>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5">
-          {hasData && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-700 hover:text-slate-800 hover:bg-slate-100 transition-all border border-slate-200"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Upload Baru</span>
-            </motion.button>
-          )}
-
-          <button
-            onClick={onDonasi}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
-            style={{ color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.20)", background: "rgba(20,184,166,0.06)" }}
-          >
-            <Heart className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Donasi</span>
-          </button>
-
-          {/* Auth button */}
-          {!loading && (
-            user ? (
-              /* Logged in — show avatar + name + dropdown */
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu((p) => !p)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all hover:bg-white/5"
-                  style={{ color: "#64748b", border: "1px solid #e2e8f0" }}
-                >
-                  {avatar ? (
-                    <Image src={avatar} alt={firstName} width={22} height={22} className="rounded-full" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-teal-600 flex items-center justify-center text-[9px] font-bold text-white">
-                      {firstName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="hidden sm:inline max-w-[80px] truncate text-slate-700">{firstName}</span>
-                  <ChevronDown className="w-3 h-3 text-slate-700" />
-                </button>
-                <AnimatePresence>
-                  {showMenu && (
-                    <UserMenu onSignOut={async () => { await signOut(); setShowMenu(false); }} />
-                  )}
-                </AnimatePresence>
-              </div>
-            ) : (
-              /* Logged out — login link */
-              <Link
-                href="/auth/login"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
-                style={{ color: "#0f766e", border: "1px solid rgba(20,184,166,0.30)", background: "rgba(20,184,166,0.06)" }}
+        {/* Auth button */}
+        {!loading && (
+          user ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu((p) => !p)}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all"
+                style={{ color: "#64748b", border: "1px solid #e2e8f0" }}
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Masuk</span>
-              </Link>
-            )
-          )}
-        </div>
+                {avatar ? (
+                  <Image src={avatar} alt={firstName} width={22} height={22} className="rounded-full" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-teal-600 flex items-center justify-center text-[9px] font-bold text-white">
+                    {firstName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="hidden sm:inline max-w-[80px] truncate text-slate-700">{firstName}</span>
+                <ChevronDown className="w-3 h-3 text-slate-700" />
+              </button>
+              <AnimatePresence>
+                {showMenu && (
+                  <UserMenu onSignOut={async () => { await signOut(); setShowMenu(false); }} />
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <Link
+              href="/auth/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
+              style={{ color: "#0f766e", border: "1px solid rgba(20,184,166,0.30)", background: "rgba(20,184,166,0.06)" }}
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              Masuk
+            </Link>
+          )
+        )}
       </div>
     </header>
   );
 }
-

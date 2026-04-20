@@ -52,6 +52,7 @@ _WEB_URL = os.environ.get("WEB_URL", "https://oprexduit.vercel.app")
 _SHOPPING_SESSIONS: dict[str, dict] = {}
 _SPLITBILL_SESSIONS: dict[str, dict] = {}
 _REPORT_SESSIONS: dict[str, dict] = {}
+_RIWAYAT_CACHE: dict[str, list] = {}  # latest /riwayat result per chat_id, for /hapus
 
 _SCOPE_LABEL = {"private": "Pribadi", "couple": "Pasangan", "group": "Grup"}
 _SCOPE_EMOJI = {"private": "\U0001f464", "couple": "\U0001f491", "group": "\U0001f465"}
@@ -532,6 +533,8 @@ def _handle_command(
         _cmd_laporan(chat_id, user_id, sb_client, args)
     elif command == "/riwayat":
         _cmd_riwayat(chat_id, user_id, sb_client)
+    elif command in ("/hapus", "/delete"):
+        _cmd_hapus(chat_id, user_id, args, sb_client)
     elif command == "/budget":
         _cmd_budget(chat_id, user_id, sb_client)
     elif command in ("/belanja", "/shop"):
@@ -619,8 +622,11 @@ def _cmd_start(chat_id: int | str, user_id: Optional[str], username: str, sb_cli
             "  <code>25000 bensin</code>\n\n"
             "\U0001f6cd Mau belanja hemat? Ketik /belanja\n\n"
             "\U0001f4ca Perintah lainnya:\n"
-            "  /ringkasan - Ringkasan hari ini\n"
-            "  /laporan   - Laporan bulan ini\n"
+            "  /ringkasan - Ringkasan 7 hari terakhir\n"
+            "  /laporan   - Laporan bulan berjalan\n"
+            "  /laporan 03-2025 - Laporan bulan tertentu\n"
+            "  /riwayat   - 10 transaksi terakhir (berkode)\n"
+            "  /hapus 3   - Hapus transaksi ke-3 dari /riwayat\n"
             "  /budget    - Cek budget\n"
             "  /menu      - Menu lengkap\n\n"
             f"{link_info}",
@@ -939,7 +945,7 @@ def _cmd_riwayat(
         
         res = (
             sb_client.table("transactions")
-            .select("amount,type,description,date,category_raw")
+            .select("id,amount,type,description,date,category_raw")
             .eq("user_id", user_id)
             .gte("date", last_month)
             .order("date", desc=True)
@@ -952,17 +958,83 @@ def _cmd_riwayat(
             send_message(chat_id, "Belum ada transaksi dalam 30 hari terakhir.")
             return
 
+        # Store tx list for /hapus reference (in-memory, simple)
+        _RIWAYAT_CACHE[str(chat_id)] = txs
+
         lines = []
-        for tx in txs:
+        for i, tx in enumerate(txs, 1):
             icon = "💰" if tx["type"] == "income" else "💸"
             amt = f"+{_fmt(tx['amount'])}" if tx["type"] == "income" else _fmt(tx['amount'])
             date_str = tx["date"].split("T")[0] if "T" in tx["date"] else tx["date"]
-            lines.append(f"{icon} <b>{date_str}</b>: {tx['description']} {amt}")
+            lines.append(f"<b>{i}.</b> {icon} <b>{date_str}</b>: {tx['description']} {amt}")
 
-        msg = "📜 <b>10 Riwayat Transaksi Terakhir:</b>\n\n" + "\n".join(lines)
+        msg = (
+            "📜 <b>10 Riwayat Transaksi Terakhir:</b>\n\n" +
+            "\n".join(lines) +
+            "\n\n<i>Ketik /hapus [nomor] untuk menghapus. Contoh: /hapus 3</i>"
+        )
         send_message(chat_id, msg)
     except Exception as e:
         send_message(chat_id, f"Gagal memuat riwayat: {e}")
+
+
+def _cmd_hapus(
+    chat_id: int | str,
+    user_id: Optional[str],
+    args: list[str],
+    sb_client: Any,
+) -> None:
+    if not user_id:
+        send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
+        return
+
+    if not args:
+        send_message(
+            chat_id,
+            "\u2139\ufe0f Cara pakai: /hapus [nomor]\n\n"
+            "Pertama, ketik /riwayat untuk melihat daftar transaksi.\n"
+            "Kemudian hapus dengan nomor urutnya, contoh:\n"
+            "<code>/hapus 3</code>"
+        )
+        return
+
+    try:
+        nomor = int(args[0])
+    except ValueError:
+        send_message(chat_id, "\u274c Nomor tidak valid. Contoh: <code>/hapus 3</code>")
+        return
+
+    cached = _RIWAYAT_CACHE.get(str(chat_id), [])
+    if not cached:
+        send_message(chat_id, "\u26a0\ufe0f Ketik /riwayat dulu sebelum menghapus.")
+        return
+
+    if nomor < 1 or nomor > len(cached):
+        send_message(chat_id, f"\u274c Nomor tidak valid. Pilih antara 1\u2013{len(cached)}.")
+        return
+
+    tx = cached[nomor - 1]
+    tx_id = tx.get("id")
+    tx_desc = tx.get("description", "Transaksi")
+    tx_amt = _fmt(tx.get("amount", 0))
+
+    if not tx_id:
+        send_message(chat_id, "\u274c Gagal mendapatkan ID transaksi. Coba /riwayat lagi.")
+        return
+
+    try:
+        sb_client.table("transactions").delete().eq("id", tx_id).eq("user_id", user_id).execute()
+        # Remove from cache
+        _RIWAYAT_CACHE[str(chat_id)].pop(nomor - 1)
+        send_message(
+            chat_id,
+            f"\u2705 <b>Transaksi dihapus!</b>\n\n"
+            f"<s>{tx_desc} - {tx_amt}</s>\n\n"
+            "<i>Data ini juga sudah terhapus dari dashboard web.</i>"
+        )
+    except Exception as e:
+        send_message(chat_id, f"\u274c Gagal menghapus: {e}")
+
 
 def _cmd_ringkasan(
     chat_id: int | str,
