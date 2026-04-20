@@ -858,21 +858,36 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
     """
     provider_name = os.environ.get("AI_PROVIDER", "glm").lower()
     image_url = f"data:image/jpeg;base64,{image_base64}"
+    
+    # Log image size for debugging
+    img_size_kb = len(image_base64) * 3 / 4 / 1024
+    print(f"[ocr] Image size: {img_size_kb:.0f} KB")
 
     system_prompt = (
-        "Kamu OCR transaksi keuangan Indonesia. "
-        "Ekstrak HANYA transaksi yang TERLIHAT di gambar. "
-        "JANGAN mengarang transaksi yang tidak ada. "
-        "Jika gambar menunjukkan 1 detail transaksi, kembalikan tepat 1 transaksi.\n\n"
-        "Kembalikan JSON SINGKAT tanpa komentar:\n"
-        '{"bank_name":"Bank Jago","metadata_fields":["no_ref","saldo"],'
-        '"transactions":[{"date":"2026-04-19","description":"MyTelkomsel Apps",'
-        '"amount":20000,"type":"expense","category":"Tagihan"}]}'
+        "Kamu adalah pembaca gambar transaksi keuangan Indonesia.\n\n"
+        "ATURAN PENTING:\n"
+        "1. BACA TELITI setiap teks yang ada di gambar. Jangan menebak atau mengarang.\n"
+        "2. Baca NAMA BANK dari header/logo (misal: Jago, BCA, Mandiri, BRI, GoPay, OVO, dll).\n"
+        "3. Baca NOMINAL uang persis seperti tertulis di gambar.\n"
+        "4. Baca DESKRIPSI/NAMA transaksi persis dari gambar.\n"
+        "5. Baca TANGGAL persis dari gambar.\n"
+        "6. Jika hanya 1 transaksi terlihat, kembalikan HANYA 1.\n"
+        "7. Nominal dalam angka bulat tanpa titik (contoh: 20000 bukan 20.000).\n\n"
+        "Format output JSON (tanpa komentar, tanpa trailing comma):\n"
+        '{"bank_name":"NAMA_BANK","metadata_fields":[],'
+        '"transactions":[{"date":"YYYY-MM-DD","description":"DESKRIPSI",'
+        '"amount":NOMINAL,"type":"expense","category":"KATEGORI"}]}'
     )
 
-    user_text = "Ekstrak transaksi dari gambar ini."
+    user_text = (
+        "Baca gambar ini dengan TELITI. "
+        "Apa nama bank/e-wallet yang terlihat? "
+        "Berapa nominal transaksinya? "
+        "Apa deskripsi transaksinya? "
+        "Kembalikan dalam format JSON."
+    )
     if caption:
-        user_text += f" Konteks: {caption}"
+        user_text += f" Konteks tambahan: {caption}"
 
     def _do(client, model):
         if provider_name == "glm":

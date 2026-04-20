@@ -248,12 +248,15 @@ def _handle_photo_ocr(chat_id: int, file_id: str, caption: str, username: str, s
             return
         
         file_path = file_info["result"]["file_path"]
+        file_size = file_info["result"].get("file_size", 0)
+        print(f"[ocr] Telegram file: {file_path}, size: {file_size} bytes")
         
         # Step 3: Download the file
         with httpx.Client(timeout=30) as client:
             img_response = client.get(f"https://api.telegram.org/file/bot{_TOKEN}/{file_path}")
             img_bytes = img_response.content
         
+        print(f"[ocr] Downloaded image: {len(img_bytes)} bytes")
         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
 
         # Step 4: Call AI OCR
