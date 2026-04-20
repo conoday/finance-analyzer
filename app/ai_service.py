@@ -896,8 +896,13 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
         try:
             import requests
             print("[ocr] Stage 1: Reading image via OCR.Space Free API...")
+            
+            # Ambil key dari DB atau env (Provider: ocrspace), default helloworld
+            ocr_keys = _get_provider_keys_with_id("ocrspace")
+            ocr_api_key = ocr_keys[0]["api_key"] if ocr_keys else os.environ.get("OCR_SPACE_KEY", "helloworld")
+            
             payload = {
-                'apikey': 'helloworld',
+                'apikey': ocr_api_key,
                 'base64Image': f'data:image/jpeg;base64,{image_base64}',
                 'language': 'eng'
             }

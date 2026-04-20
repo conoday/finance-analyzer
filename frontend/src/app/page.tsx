@@ -96,7 +96,7 @@ export default function Home() {
                 <h1 className="text-4xl sm:text-5xl font-bold tracking-tight" style={{ color: "#0f172a" }}>
                   Oprex<span style={{ color: "#0f766e" }}>Duit</span>
                 </h1>
-                <p className="text-slate-500 text-base max-w-md leading-relaxed">
+                <p className="text-slate-700 text-base max-w-md leading-relaxed">
                   Catat pengeluaran harian, analisis mutasi bank, dan pantau kesehatan keuanganmu.
                 </p>
               </div>
@@ -124,7 +124,7 @@ export default function Home() {
 
                   {/* Preview KPI strip (teaser) */}
                   <div className="rounded-2xl p-4 space-y-3" style={{ background: "linear-gradient(135deg, rgba(20,184,166,0.09) 0%, rgba(139,92,246,0.06) 100%)", border: "1px solid rgba(20,184,166,0.18)" }}>
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Setelah upload, kamu akan lihat</p>
+                    <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-widest">Setelah upload, kamu akan lihat</p>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { label: "Arus Kas Bersih", value: "Rp —", sub: "bulan ini", color: "#0f766e" },
@@ -133,7 +133,7 @@ export default function Home() {
                         { label: "Langganan", value: "Rp —", sub: "estimasi tetap", color: "#0369a1" },
                       ].map((kpi) => (
                         <div key={kpi.label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.8)" }}>
-                          <p className="text-[10px] text-slate-500 leading-tight">{kpi.label}</p>
+                          <p className="text-[10px] text-slate-700 leading-tight">{kpi.label}</p>
                           <p className="text-sm font-bold font-mono mt-0.5" style={{ color: kpi.color }}>{kpi.value}</p>
                           <p className="text-[9px] text-slate-400">{kpi.sub}</p>
                         </div>
@@ -202,7 +202,7 @@ export default function Home() {
                 />
                 <Loader2 className="w-16 h-16 animate-spin" style={{ color: "#14b8a6" }} />
               </div>
-              <p className="text-slate-500 text-lg animate-pulse">Menganalisis transaksi Anda…</p>
+              <p className="text-slate-700 text-lg animate-pulse">Menganalisis transaksi Anda…</p>
             </motion.div>
           )}
 
@@ -220,7 +220,7 @@ export default function Home() {
                 <div className="text-center py-16 px-4">
                   <div className="text-5xl mb-4">📝</div>
                   <h2 className="text-xl font-semibold text-slate-800">Belum ada transaksi</h2>
-                  <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
+                  <p className="text-sm text-slate-700 mt-2 max-w-sm mx-auto">
                     Catat pengeluaran pertamamu lewat Telegram atau form catat cepat di bawah, lalu kembali ke sini untuk melihat dashboard analisismu.
                   </p>
                   <button
@@ -238,7 +238,7 @@ export default function Home() {
                 <h2 className="text-xl font-semibold text-slate-800">
                   Hei! 👋 Berikut ringkasan keuanganmu.
                 </h2>
-                <p className="text-sm text-slate-500 mt-0.5">{data.summary.date_range}</p>
+                <p className="text-sm text-slate-700 mt-0.5">{data.summary.date_range}</p>
               </div>
 
               {/* Hero: BalanceCard */}

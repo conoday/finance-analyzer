@@ -124,7 +124,7 @@ function SummaryBar({ totalAset, totalHutang }: { totalAset: number; totalHutang
       ].map((item) => (
         <div key={item.label} className="rounded-2xl p-4 space-y-1"
           style={{ background: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="flex items-center gap-1.5 text-xs text-slate-700">
             <span style={{ color: item.color }}>{item.icon}</span>
             {item.label}
           </div>
@@ -189,18 +189,18 @@ function ItemForm({ type, initial, onSave, onCancel }: ItemFormProps<any>) {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Nama</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Nama</label>
           <input className={inputClass} value={name} onChange={e => setName(e.target.value)}
             placeholder={type === "asset" ? "cth: Tabungan BCA" : "cth: Cicilan Motor"} required />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Kategori</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Kategori</label>
           <select className={inputClass} value={category} onChange={e => setCategory(e.target.value as any)}>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">
+          <label className="block text-xs font-medium text-slate-700 mb-1">
             {type === "asset" ? "Nilai (Rp)" : "Jumlah Hutang (Rp)"}
           </label>
           <input className={inputClass} value={value} type="number" min="0" step="1000"
@@ -209,31 +209,31 @@ function ItemForm({ type, initial, onSave, onCancel }: ItemFormProps<any>) {
         {type === "debt" && (
           <>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Cicilan/Bulan (Rp, opsional)</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Cicilan/Bulan (Rp, opsional)</label>
               <input className={inputClass} value={monthly} type="number" min="0" step="1000"
                 onChange={e => setMonthly(e.target.value)} placeholder="500000" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Jatuh Tempo</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Jatuh Tempo</label>
               <input className={inputClass} value={dueDate} type="date"
                 onChange={e => setDueDate(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
               <input type="checkbox" id="isPaid" checked={isPaid} onChange={e => setIsPaid(e.target.checked)}
                 className="w-4 h-4 accent-teal-500" />
-              <label htmlFor="isPaid" className="text-sm text-slate-600">Sudah lunas</label>
+              <label htmlFor="isPaid" className="text-sm text-slate-800">Sudah lunas</label>
             </div>
           </>
         )}
       </div>
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">Catatan (opsional)</label>
+        <label className="block text-xs font-medium text-slate-700 mb-1">Catatan (opsional)</label>
         <input className={inputClass} value={note} onChange={e => setNote(e.target.value)}
           placeholder="Tambah catatan..." />
       </div>
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={onCancel}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-slate-500 border border-slate-200 hover:bg-slate-50">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-slate-700 border border-slate-200 hover:bg-slate-50">
           <X className="w-3.5 h-3.5" /> Batal
         </button>
         <button type="submit"
@@ -351,7 +351,7 @@ export function AssetDebtTracker() {
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.id
                 ? "bg-white text-slate-800 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
+                : "text-slate-700 hover:text-slate-700"
             }`}>
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
@@ -411,7 +411,7 @@ export function AssetDebtTracker() {
             {/* Category breakdown */}
             {data.assets.length > 0 && (
               <div className="mt-4 rounded-2xl p-4" style={{ background: "#fff", border: "1px solid #e2e8f0" }}>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Per Kategori</p>
+                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Per Kategori</p>
                 <div className="space-y-2">
                   {ASSET_CATEGORIES.map(cat => {
                     const total = data.assets.filter(a => a.category === cat).reduce((s, a) => s + a.value, 0);
@@ -419,7 +419,7 @@ export function AssetDebtTracker() {
                     const pct = totalAset > 0 ? (total / totalAset) * 100 : 0;
                     return (
                       <div key={cat}>
-                        <div className="flex justify-between text-xs text-slate-600 mb-1">
+                        <div className="flex justify-between text-xs text-slate-800 mb-1">
                           <span className="flex items-center gap-1.5">
                             <span style={{ color: ASSET_COLORS[cat] }}>{ASSET_ICONS[cat]}</span>
                             {cat}
@@ -511,7 +511,7 @@ export function AssetDebtTracker() {
                       <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color }} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-800 truncate">{r.name}</p>
-                        <p className="text-xs text-slate-500">{(DEBT_ICONS as any)[r.category]}{" "}{r.category}</p>
+                        <p className="text-xs text-slate-700">{(DEBT_ICONS as any)[r.category]}{" "}{r.category}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold font-mono" style={{ color }}>{formatRupiah(r.amount, true)}</p>
@@ -632,7 +632,7 @@ function EmptyState({ icon, title, desc }: { icon: React.ReactNode; title: strin
         {icon}
       </div>
       <div>
-        <p className="text-sm font-semibold text-slate-500">{title}</p>
+        <p className="text-sm font-semibold text-slate-700">{title}</p>
         <p className="text-xs text-slate-400 mt-1 max-w-xs">{desc}</p>
       </div>
     </div>

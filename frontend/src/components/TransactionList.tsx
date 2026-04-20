@@ -54,7 +54,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
         {transactions.length > PAGE_SIZE && (
           <button
             onClick={() => setExpanded((p) => !p)}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-teal-400 transition-colors"
+            className="flex items-center gap-1 text-xs text-slate-700 hover:text-teal-400 transition-colors"
           >
             {expanded ? (
               <><ChevronUp className="w-3.5 h-3.5" /> Tampilkan sedikit</>
@@ -91,7 +91,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-slate-600">{formatDate(tx.tanggal)}</span>
+                    <span className="text-[10px] text-slate-800">{formatDate(tx.tanggal)}</span>
                     <CategoryBadge category={tx.kategori ?? "Lainnya"} variant="pill" />
                   </div>
                 </div>
@@ -111,7 +111,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
       {transactions.length > PAGE_SIZE && (
         <button
           onClick={() => setExpanded((p) => !p)}
-          className="w-full py-2.5 rounded-xl text-xs text-slate-500 hover:text-teal-400 transition-colors"
+          className="w-full py-2.5 rounded-xl text-xs text-slate-700 hover:text-teal-400 transition-colors"
           style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}
         >
           {expanded

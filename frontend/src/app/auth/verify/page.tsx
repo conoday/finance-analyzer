@@ -174,20 +174,20 @@ function VerifyForm() {
         </button>
 
         {/* Resend */}
-        <div className="text-center text-xs text-slate-500">
+        <div className="text-center text-xs text-slate-700">
           Tidak dapat email?{" "}
           <button
             type="button"
             onClick={handleResend}
             disabled={cooldown > 0}
-            className="text-teal-400 hover:text-teal-300 font-medium disabled:text-slate-600 disabled:cursor-not-allowed transition-colors"
+            className="text-teal-400 hover:text-teal-300 font-medium disabled:text-slate-800 disabled:cursor-not-allowed transition-colors"
           >
             {cooldown > 0 ? `Kirim ulang (${cooldown}s)` : "Kirim ulang kode"}
           </button>
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-600">
+      <p className="text-center text-xs text-slate-800">
         Salah email?{" "}
         <Link href="/auth/register" className="text-teal-400 hover:text-teal-300">
           Daftar ulang

@@ -253,7 +253,7 @@ export function SplitBill() {
           <p className="text-xs text-slate-400 mt-0.5">Upload struk atau input manual, lalu bagi rata tagihan</p>
         </div>
         {(items.length > 0 || participants.length > 0) && (
-          <button onClick={reset} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={reset} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-800 transition-colors">
             <RotateCcw className="w-3.5 h-3.5" /> Reset
           </button>
         )}
@@ -319,7 +319,7 @@ export function SplitBill() {
 
             {/* Manual item input */}
             <div className="rounded-2xl p-4 space-y-3" style={{ background: "#fff", border: "1px solid #e2e8f0" }}>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tambah Item Manual</p>
+              <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Tambah Item Manual</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input className={inputClass} value={newItemName} onChange={e => setNewItemName(e.target.value)}
                   placeholder="Nama item" onKeyDown={e => e.key === "Enter" && addItem()} />
@@ -381,7 +381,7 @@ export function SplitBill() {
           <motion.div key="step2" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}
             className="space-y-4">
             <div className="rounded-2xl p-4 space-y-3" style={{ background: "#fff", border: "1px solid #e2e8f0" }}>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" /> Peserta
               </p>
               <div className="flex gap-2">
@@ -409,7 +409,7 @@ export function SplitBill() {
 
             <div className="flex gap-2">
               <button onClick={() => setStep(1)}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 flex-1">
+                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50 flex-1">
                 <ChevronLeft className="w-4 h-4" /> Kembali
               </button>
               <button onClick={() => setStep(3)} disabled={participants.length === 0}
@@ -425,7 +425,7 @@ export function SplitBill() {
         {step === 3 && (
           <motion.div key="step3" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}
             className="space-y-4">
-            <p className="text-xs text-slate-500">Pilih siapa yang memesan setiap item (bisa lebih dari 1 orang).</p>
+            <p className="text-xs text-slate-700">Pilih siapa yang memesan setiap item (bisa lebih dari 1 orang).</p>
 
             <div className="space-y-3">
               {items.map(item => {
@@ -468,22 +468,22 @@ export function SplitBill() {
 
             {/* Tax & Service */}
             <div className="rounded-2xl p-4 space-y-3" style={{ background: "#fff", border: "1px solid #e2e8f0" }}>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pajak & Biaya Layanan</p>
+              <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Pajak & Biaya Layanan</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Pajak (%)</label>
+                  <label className="block text-xs text-slate-700 mb-1">Pajak (%)</label>
                   <input type="number" min="0" max="30" step="1" value={taxPct}
                     onChange={e => setTaxPct(Number(e.target.value))}
                     className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Service Charge (%)</label>
+                  <label className="block text-xs text-slate-700 mb-1">Service Charge (%)</label>
                   <input type="number" min="0" max="30" step="1" value={servicePct}
                     onChange={e => setServicePct(Number(e.target.value))}
                     className={inputClass} />
                 </div>
               </div>
-              <div className="text-xs text-slate-500 space-y-1 pt-1">
+              <div className="text-xs text-slate-700 space-y-1 pt-1">
                 <div className="flex justify-between"><span>Subtotal</span><span className="font-mono">{formatRupiah(subtotal, true)}</span></div>
                 {taxPct > 0 && <div className="flex justify-between"><span>Pajak {taxPct}%</span><span className="font-mono">{formatRupiah(taxAmount, true)}</span></div>}
                 {servicePct > 0 && <div className="flex justify-between"><span>Service {servicePct}%</span><span className="font-mono">{formatRupiah(serviceAmount, true)}</span></div>}
@@ -495,7 +495,7 @@ export function SplitBill() {
 
             <div className="flex gap-2">
               <button onClick={() => setStep(2)}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 flex-1">
+                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50 flex-1">
                 <ChevronLeft className="w-4 h-4" /> Kembali
               </button>
               <button onClick={() => setStep(4)}
@@ -526,7 +526,7 @@ export function SplitBill() {
                   </div>
                   <div className="space-y-0.5">
                     {r.items.map((it, i) => (
-                      <p key={i} className="text-xs text-slate-500">• {it}</p>
+                      <p key={i} className="text-xs text-slate-700">• {it}</p>
                     ))}
                     {taxPct > 0 && r.tax > 0 && (
                       <p className="text-xs text-slate-400">+ Pajak {taxPct}%: {formatRupiah(r.tax, true)}</p>
@@ -546,7 +546,7 @@ export function SplitBill() {
 
             <div className="flex gap-2">
               <button onClick={() => setStep(3)}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 flex-1">
+                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50 flex-1">
                 <ChevronLeft className="w-4 h-4" /> Edit
               </button>
               <button onClick={() => copyText(shareText)}
@@ -558,7 +558,7 @@ export function SplitBill() {
             </div>
 
             <button onClick={reset}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors">
               <RotateCcw className="w-4 h-4" /> Split baru
             </button>
           </motion.div>

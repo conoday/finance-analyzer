@@ -65,7 +65,7 @@ export function StoryCards({ stories, overall }: StoryCardsProps) {
                     <span className="text-base">{MOOD_EMOJI[s.mood] ?? "📋"}</span>
                     <span className="text-xs text-slate-400 font-medium">{s.periode}</span>
                   </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-800 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                 </div>
                 <p className="text-sm font-semibold text-slate-200 mt-2 leading-snug">{s.headline}</p>
                 <div className="flex gap-4 mt-2 text-[11px]">
@@ -84,7 +84,7 @@ export function StoryCards({ stories, overall }: StoryCardsProps) {
                   >
                     <div className="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/[0.05] pt-3">
                       {s.body}
-                      <p className="mt-2 text-slate-500">Top kategori: <span className="text-slate-300">{s.top_category}</span></p>
+                      <p className="mt-2 text-slate-700">Top kategori: <span className="text-slate-300">{s.top_category}</span></p>
                     </div>
                   </motion.div>
                 )}

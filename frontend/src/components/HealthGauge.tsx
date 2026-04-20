@@ -12,7 +12,7 @@ export function HealthGauge({ report }: HealthGaugeProps) {
   if (!report) {
     return (
       <div className="glass rounded-2xl border border-white/[0.06] p-12 flex items-center justify-center">
-        <p className="text-slate-500 text-sm">Health score tidak tersedia.</p>
+        <p className="text-slate-700 text-sm">Health score tidak tersedia.</p>
       </div>
     );
   }
@@ -56,7 +56,7 @@ export function HealthGauge({ report }: HealthGaugeProps) {
             >
               {report.grade}
             </motion.span>
-            <span className="text-sm text-slate-500">{score.toFixed(0)}/100</span>
+            <span className="text-sm text-slate-700">{score.toFixed(0)}/100</span>
           </div>
         </div>
         <p className="text-center text-slate-700 text-sm font-medium">{report.headline}</p>
@@ -82,7 +82,7 @@ export function HealthGauge({ report }: HealthGaugeProps) {
                   className={`h-full rounded-full ${dim.score >= 70 ? "bg-emerald-400" : dim.score >= 50 ? "bg-yellow-400" : "bg-red-400"}`}
                 />
               </div>
-              <p className="text-[11px] text-slate-600">{dim.description}</p>
+              <p className="text-[11px] text-slate-800">{dim.description}</p>
             </div>
           ))}
         </div>

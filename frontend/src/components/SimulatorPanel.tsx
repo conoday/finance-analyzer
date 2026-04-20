@@ -56,7 +56,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
             onChange={(e) => setHorizon(Number(e.target.value))}
             className="w-full accent-purple-500"
           />
-          <div className="flex justify-between text-[10px] text-slate-600 mt-1">
+          <div className="flex justify-between text-[10px] text-slate-800 mt-1">
             <span>1 bln</span>
             <span>12 bln</span>
           </div>
@@ -64,7 +64,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
 
         {/* Category sliders */}
         <div className="space-y-4">
-          <p className="text-xs text-slate-500">Atur target penghematan per kategori (% pengurangan):</p>
+          <p className="text-xs text-slate-700">Atur target penghematan per kategori (% pengurangan):</p>
           {categories.map((cat) => {
             const pct = adjustments[cat.kategori] ?? 0;
             return (
@@ -74,7 +74,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
                     <span className="w-2 h-2 rounded-full" style={{ background: categoryColor(cat.kategori) }} />
                     {cat.kategori}
                   </span>
-                  <span className={`font-medium ${pct > 0 ? "text-emerald-400" : "text-slate-600"}`}>
+                  <span className={`font-medium ${pct > 0 ? "text-emerald-400" : "text-slate-800"}`}>
                     {pct > 0 ? `-${pct}%` : "0%"}
                   </span>
                 </div>
@@ -126,7 +126,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
                     { label: "Pengurangan", value: result.impact.pct_reduction, suffix: "%" },
                   ].map(({ label, value, suffix }) => (
                     <div key={label} className="bg-white/[0.03] rounded-lg p-3 text-xs text-center">
-                      <p className="text-slate-500 mb-1">{label}</p>
+                      <p className="text-slate-700 mb-1">{label}</p>
                       <p className="text-emerald-400 font-bold text-base">
                         {suffix === "%" ? `${value}%` : formatRupiah(value, true)}
                       </p>
@@ -165,7 +165,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
             </div>
             <div>
               <p className="text-slate-300 font-medium">Simulasikan masa depan keuangan Anda</p>
-              <p className="text-slate-600 text-sm mt-1">Atur slider penghematan lalu klik "Jalankan Simulasi"</p>
+              <p className="text-slate-800 text-sm mt-1">Atur slider penghematan lalu klik "Jalankan Simulasi"</p>
             </div>
           </div>
         )}

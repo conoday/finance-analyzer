@@ -71,12 +71,12 @@ export function UploadZone({ onFile }: UploadZoneProps) {
             <p className="text-slate-200 font-medium">
               {isDragActive ? "Lepaskan file di sini..." : "Drag & drop file mutasi rekening"}
             </p>
-            <p className="text-slate-500 text-sm">CSV atau XLSX — klik untuk browse</p>
+            <p className="text-slate-700 text-sm">CSV atau XLSX — klik untuk browse</p>
           </div>
         </div>
       </motion.div>
 
-      <div className="flex items-center gap-3 text-xs text-slate-600">
+      <div className="flex items-center gap-3 text-xs text-slate-800">
         <div className="flex-1 h-px bg-white/5" />
         <span>atau</span>
         <div className="flex-1 h-px bg-white/5" />

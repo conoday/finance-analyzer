@@ -67,7 +67,7 @@ export function ReportLinkButton({ productId, productName }: Props) {
       <button
         onClick={() => setOpen(true)}
         title="Laporkan link rusak"
-        className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-rose-400 transition-colors"
+        className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 hover:text-rose-400 transition-colors"
       >
         <Flag className="w-3 h-3" />
         <span>Laporkan link</span>
@@ -113,7 +113,7 @@ export function ReportLinkButton({ productId, productName }: Props) {
                     Alasan (opsional)
                   </label>
                   <textarea
-                    className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-teal-500 resize-none h-20"
+                    className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder:text-slate-700 focus:outline-none focus:border-teal-500 resize-none h-20"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="cth: Link tidak bisa dibuka, dialihkan ke halaman lain, dll."

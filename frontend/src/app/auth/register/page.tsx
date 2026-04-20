@@ -154,7 +154,7 @@ export default function RegisterPage() {
             Oprex<span className="text-teal-500">Duit</span>
           </span>
         </div>
-        <p className="text-slate-500 text-sm">Buat akun gratis kamu</p>
+        <p className="text-slate-700 text-sm">Buat akun gratis kamu</p>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
@@ -186,7 +186,7 @@ export default function RegisterPage() {
         {/* Form */}
         <form onSubmit={handleRegister} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-slate-500 font-medium">Nama lengkap</label>
+            <label className="text-xs text-slate-700 font-medium">Nama lengkap</label>
             <input
               type="text"
               required
@@ -198,7 +198,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-500 font-medium">Email</label>
+            <label className="text-xs text-slate-700 font-medium">Email</label>
             <input
               type="email"
               required
@@ -210,7 +210,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-500 font-medium">
+            <label className="text-xs text-slate-700 font-medium">
               Password{" "}
               <span className="text-slate-400 font-normal">(min 8 karakter, 1 huruf kapital, 1 angka)</span>
             </label>
@@ -226,7 +226,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-800 transition-colors"
               >
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -234,7 +234,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-500 font-medium">Konfirmasi password</label>
+            <label className="text-xs text-slate-700 font-medium">Konfirmasi password</label>
             <input
               type={showPw ? "text" : "password"}
               required
@@ -301,7 +301,7 @@ export default function RegisterPage() {
                     )}
                   </div>
                 </div>
-                <span className="text-xs text-slate-600 leading-relaxed">{item.label}</span>
+                <span className="text-xs text-slate-800 leading-relaxed">{item.label}</span>
               </label>
             ))}
           </div>
@@ -323,7 +323,7 @@ export default function RegisterPage() {
         </form>
       </div>
 
-      <p className="text-center text-xs text-slate-500">
+      <p className="text-center text-xs text-slate-700">
         Sudah punya akun?{" "}
         <Link href="/auth/login" className="text-teal-600 hover:text-teal-500 font-medium">
           Masuk di sini
@@ -345,12 +345,12 @@ export default function RegisterPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div>
                 <p className="text-sm font-bold text-slate-800">Syarat &amp; Ketentuan Layanan</p>
-                <p className="text-xs text-slate-500 mt-0.5">OprexDuit — baca sebelum mendaftar</p>
+                <p className="text-xs text-slate-700 mt-0.5">OprexDuit — baca sebelum mendaftar</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowTNC(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-700 transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -373,7 +373,7 @@ export default function RegisterPage() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-800 leading-snug">{s.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{s.subtitle}</p>
+                        <p className="text-xs text-slate-700 mt-0.5">{s.subtitle}</p>
                       </div>
                       <ChevronDown
                         className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}

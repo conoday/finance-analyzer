@@ -64,7 +64,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       title="Salin"
-      className="p-1 rounded hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600"
+      className="p-1 rounded hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-800"
     >
       {copied ? <Check className="w-3.5 h-3.5 text-teal-600" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
@@ -240,7 +240,7 @@ function SettingsContent() {
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           <NextLink
             href="/"
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-slate-700 hover:text-slate-800 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Kembali
@@ -319,7 +319,7 @@ function SettingsContent() {
                   style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Chat ID</span>
+                    <span className="text-slate-700">Chat ID</span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono font-medium text-slate-700">{status.chat_id}</span>
                       {status.chat_id && <CopyButton text={status.chat_id} />}
@@ -327,7 +327,7 @@ function SettingsContent() {
                   </div>
                   {formattedDate && (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Dihubungkan</span>
+                      <span className="text-slate-700">Dihubungkan</span>
                       <span className="text-slate-700">{formattedDate}</span>
                     </div>
                   )}
@@ -341,7 +341,7 @@ function SettingsContent() {
                     "Ringkasan mingguan setiap Senin",
                     "Notif budget saat hampir melebihi limit",
                   ].map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-xs text-slate-500">
+                    <div key={f} className="flex items-center gap-2 text-xs text-slate-700">
                       <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" />
                       {f}
                     </div>
@@ -382,7 +382,7 @@ function SettingsContent() {
                       >
                         {step}
                       </div>
-                      <p className="text-xs text-slate-500">{text}</p>
+                      <p className="text-xs text-slate-700">{text}</p>
                     </div>
                   ))}
                 </div>
@@ -392,7 +392,7 @@ function SettingsContent() {
                   <div>
                     <label
                       htmlFor="link-code"
-                      className="block text-xs font-medium text-slate-600 mb-1.5"
+                      className="block text-xs font-medium text-slate-800 mb-1.5"
                     >
                       Kode link dari bot
                     </label>

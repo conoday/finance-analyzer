@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,7 +7,7 @@ import type { QuickTransaction } from "@/components/SmartInput";
 import { getCategoryMeta } from "@/components/CategoryBadge";
 import { formatRupiah } from "@/lib/utils";
 
-/* â”€â”€ text-badge mapping for payment method â”€â”€ */
+/* ── text-badge mapping for payment method ── */
 const METHOD_BADGE: Record<string, { abbr: string; color: string; bg: string }> = {
   GoPay:   { abbr: "GP",  color: "#0f766e", bg: "#ccfbf1" },
   OVO:     { abbr: "OV",  color: "#7c3aed", bg: "#ede9fe" },
@@ -94,7 +94,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
     return (
       <div className="rounded-xl border border-dashed border-slate-200 p-8 flex flex-col items-center gap-3 text-center">
         <Zap className="w-8 h-8 text-slate-400" />
-        <p className="text-sm text-slate-500">Belum ada catatan.</p>
+        <p className="text-sm text-slate-700">Belum ada catatan.</p>
         <button
           onClick={onAddNew}
           className="mt-1 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
@@ -108,10 +108,10 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
 
   return (
     <div className="space-y-4">
-      {/* â”€â”€ Period filter + Export â”€â”€ */}
+      {/* ── Period filter + Export ── */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1 p-0.5 rounded-lg" style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }}>
-          <Calendar className="w-3 h-3 text-slate-600 ml-1.5" />
+          <Calendar className="w-3 h-3 text-slate-800 ml-1.5" />
           {PERIOD_OPTS.map((opt) => (
             <button
               key={opt.key}
@@ -135,7 +135,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
         </button>
       </div>
 
-      {/* â”€â”€ Summary strip â”€â”€ */}
+      {/* ── Summary strip ── */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Pemasukan",   value: totalIncome,  color: "#34d399", icon: <TrendingUp className="w-3.5 h-3.5" /> },
@@ -143,7 +143,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
           { label: "Saldo",       value: balance,      color: balance >= 0 ? "#34d399" : "#fb7185", icon: null },
         ].map((item) => (
           <div key={item.label} className="rounded-xl px-3 py-3" style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
-            <p className="text-[10px] text-slate-500 mb-1 flex items-center gap-1">{item.icon}{item.label}</p>
+            <p className="text-[10px] text-slate-700 mb-1 flex items-center gap-1">{item.icon}{item.label}</p>
             <p className="text-sm font-bold font-mono" style={{ color: item.color }}>
               {item.value >= 0 ? "" : "-"}{formatRupiah(Math.abs(item.value), true)}
             </p>
@@ -151,10 +151,10 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
         ))}
       </div>
 
-      {/* â”€â”€ Category breakdown â”€â”€ */}
+      {/* ── Category breakdown ── */}
       {topCats.length > 0 && (
         <div className="rounded-xl px-4 py-3 space-y-2" style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
-          <p className="text-xs font-medium text-slate-600 mb-2">Pengeluaran per Kategori</p>
+          <p className="text-xs font-medium text-slate-800 mb-2">Pengeluaran per Kategori</p>
           {topCats.map(([cat, amount]) => {
             const meta = getCategoryMeta(cat);
             const pct  = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
@@ -164,7 +164,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
                   <span className="flex items-center gap-1.5 text-slate-700">
                     <span>{meta.emoji}</span>{cat}
                   </span>
-                  <span className="font-mono text-slate-500">{formatRupiah(amount, true)}</span>
+                  <span className="font-mono text-slate-700">{formatRupiah(amount, true)}</span>
                 </div>
                 <div className="h-1 rounded-full bg-slate-200">
                   <div className="h-1 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: meta.hex }} />
@@ -175,10 +175,10 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
         </div>
       )}
 
-      {/* â”€â”€ Transaction list â”€â”€ */}
+      {/* ── Transaction list ── */}
       <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #e2e8f0" }}>
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100" style={{ background: "#f8fafc" }}>
-          <p className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+          <p className="text-xs font-medium text-slate-800 flex items-center gap-1.5">
             {isCloud
               ? <><Cloud className="w-3 h-3 text-teal-500" /> {filtered.length} transaksi</>
               : <><HardDrive className="w-3 h-3 text-slate-400" /> {filtered.length} transaksi</>
@@ -194,13 +194,13 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
               + Tambah
             </button>
             {!confirmClear ? (
-              <button onClick={() => setConfirmClear(true)} className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors px-1" title="Hapus semua">
+              <button onClick={() => setConfirmClear(true)} className="text-[10px] text-slate-800 hover:text-slate-400 transition-colors px-1" title="Hapus semua">
                 <Trash2 className="w-3 h-3" />
               </button>
             ) : (
               <div className="flex items-center gap-1.5">
                 <button onClick={() => { onClear(); setConfirmClear(false); }} className="text-[10px] text-red-400 hover:text-red-300 font-medium">Hapus semua</button>
-                <button onClick={() => setConfirmClear(false)} className="text-[10px] text-slate-500 hover:text-slate-700">Batal</button>
+                <button onClick={() => setConfirmClear(false)} className="text-[10px] text-slate-700 hover:text-slate-700">Batal</button>
               </div>
             )}
           </div>
@@ -209,7 +209,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
         <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
           <AnimatePresence>
             {filtered.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500" style={{ background: "#f8fafc" }}>
+              <div className="py-8 text-center text-xs text-slate-700" style={{ background: "#f8fafc" }}>
                 Tidak ada transaksi dalam periode ini.
               </div>
             ) : filtered.map((tx) => {
@@ -231,14 +231,14 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-slate-800 truncate">{tx.desc}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-slate-700">
                         {new Date(tx.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                       </span>
                       <span className="text-slate-300">&middot;</span>
                       <span className="text-[8px] font-bold w-3.5 h-3.5 rounded flex items-center justify-center" style={{ background: mBadge.bg, color: mBadge.color }}>
                         {mBadge.abbr}
                       </span>
-                      <span className="text-[10px] text-slate-500">{tx.method}</span>
+                      <span className="text-[10px] text-slate-700">{tx.method}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -256,7 +256,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
         </div>
       </div>
 
-      {/* â”€â”€ Storage indicator â”€â”€ */}
+      {/* ── Storage indicator ── */}
       {isCloud ? (
         <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: "linear-gradient(135deg, #f0fdf4, #ecfdf5)", border: "1px solid #a7f3d0" }}>
           <Cloud className="w-4 h-4 text-teal-500 shrink-0" />
@@ -265,7 +265,7 @@ export function QuickTracker({ txs, onAddNew, onDelete, onClear, isCloud = false
       ) : (
         <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
           <HardDrive className="w-4 h-4 text-slate-400 shrink-0" />
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-slate-700">
             Tersimpan di browser ini &mdash;{" "}
             <a href="/auth/login" className="text-teal-600 hover:underline font-medium">Login</a>
             {" "}untuk simpan permanen

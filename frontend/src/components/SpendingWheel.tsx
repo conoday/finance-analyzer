@@ -16,7 +16,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     <div className="glass-strong rounded-xl p-3 text-xs min-w-[160px]">
       <p className="font-medium text-slate-700 mb-1">{d.kategori}</p>
       <p className="text-slate-400">{formatRupiah(d.total)}</p>
-      <p className="text-slate-500">{d.pct.toFixed(1)}% of total</p>
+      <p className="text-slate-700">{d.pct.toFixed(1)}% of total</p>
     </div>
   );
 };
@@ -80,7 +80,7 @@ export function SpendingWheel({ data }: SpendingWheelProps) {
                 className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ background: categoryColor(row.kategori) }}
               />
-              <span className="text-slate-600">{row.kategori}</span>
+              <span className="text-slate-800">{row.kategori}</span>
             </div>
             <span className="text-slate-700 font-mono">{formatRupiah(row.total, true)}</span>
           </div>

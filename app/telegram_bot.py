@@ -335,8 +335,29 @@ def _handle_photo_ocr(chat_id: int, file_id: str, caption: str, username: str, s
         else:
             msg += "⚠️ Transaksi tidak tersimpan karena akun belum terhubung.\nGunakan /start untuk menghubungkan."
 
-        # Add donation button
+        # Add donation button & Send
         _send_with_donate_button(chat_id, msg)
+
+        # Step 8: Send Scope selection keyboard
+        if saved_count > 0:
+            scope_keyboard = [
+                [
+                    {"text": "👤 Pribadi", "callback_data": "ocr:scope:private"},
+                    {"text": "👥 Pasangan", "callback_data": "ocr:scope:shared"}
+                ]
+            ]
+            
+            bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+            import httpx
+            with httpx.Client(timeout=5) as client:
+                client.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": "Atur cakupan untuk transaksi di atas:",
+                        "reply_markup": {"inline_keyboard": scope_keyboard}
+                    }
+                )
 
     except Exception as e:
         print(f"[ocr] Error processing photo: {e}")
@@ -509,6 +530,8 @@ def _handle_command(
         _cmd_ringkasan(chat_id, user_id, sb_client)
     elif command == "/laporan":
         _cmd_laporan(chat_id, user_id, sb_client)
+    elif command == "/riwayat":
+        _cmd_riwayat(chat_id, user_id, sb_client)
     elif command == "/budget":
         _cmd_budget(chat_id, user_id, sb_client)
     elif command in ("/belanja", "/shop"):
@@ -899,6 +922,47 @@ def _save_and_confirm(
     except Exception as exc:
         send_message(chat_id, f"\u26a0\ufe0f Gagal menyimpan: {exc}")
 
+
+def _cmd_riwayat(
+    chat_id: int | str,
+    user_id: Optional[str],
+    sb_client: Any,
+) -> None:
+    if not user_id:
+        send_message(chat_id, "\u26a0\ufe0f Gagal menginisialisasi akun. Coba ketik /start lagi.")
+        return
+
+    try:
+        from datetime import datetime, timedelta
+        from app.utils import _today_wib
+        last_month = (_today_wib() - timedelta(days=30)).isoformat()
+        
+        res = (
+            sb_client.table("transactions")
+            .select("amount,type,description,date,category_raw")
+            .eq("user_id", user_id)
+            .gte("date", last_month)
+            .order("date", desc=True)
+            .limit(10)
+            .execute()
+        )
+        txs = res.data or []
+
+        if not txs:
+            send_message(chat_id, "Belum ada transaksi dalam 30 hari terakhir.")
+            return
+
+        lines = []
+        for tx in txs:
+            icon = "💰" if tx["type"] == "income" else "💸"
+            amt = f"+{_fmt(tx['amount'])}" if tx["type"] == "income" else _fmt(tx['amount'])
+            date_str = tx["date"].split("T")[0] if "T" in tx["date"] else tx["date"]
+            lines.append(f"{icon} <b>{date_str}</b>: {tx['description']} {amt}")
+
+        msg = "📜 <b>10 Riwayat Transaksi Terakhir:</b>\n\n" + "\n".join(lines)
+        send_message(chat_id, msg)
+    except Exception as e:
+        send_message(chat_id, f"Gagal memuat riwayat: {e}")
 
 def _cmd_ringkasan(
     chat_id: int | str,
@@ -1817,6 +1881,46 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         product_id = data[len("shop:report:"):]
         _answer_callback(cq_id, "Laporan terkirim! Terima kasih \U0001f64f")
         _report_broken_link(chat_id, product_id, username, sb_client)
+
+    elif data.startswith("ocr:scope:"):
+        scope_val = data[len("ocr:scope:"):]
+        _answer_callback(cq_id, f"Mengubah cakupan menjadi {scope_val}...")
+        user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
+        if user_id and sb_client:
+            from datetime import datetime, timedelta
+            from app.utils import _today_wib
+            
+            # Update transaksi OCR yang baru saja masuk (15 menit terakhir)
+            time_limit = (_today_wib() - timedelta(minutes=15)).isoformat()
+            try:
+                res = (
+                    sb_client.table("transactions")
+                    .update({"scope": scope_val})
+                    .eq("user_id", user_id)
+                    .eq("source", "telegram_ocr")
+                    .gte("created_at", time_limit)
+                    .execute()
+                )
+                
+                label = "👥 Pasangan/Grup" if scope_val == "shared" else "👤 Pribadi"
+                bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+                
+                # Edit pesan asli untuk menghapus tombol
+                msg_id = cq["message"]["message_id"]
+                import httpx
+                with httpx.Client(timeout=5) as client:
+                    client.post(
+                        f"https://api.telegram.org/bot{bot_token}/editMessageText",
+                        json={
+                            "chat_id": chat_id,
+                            "message_id": msg_id,
+                            "text": f"✅ Cakupan transaksi OCR terbaru berhasil diubah menjadi: <b>{label}</b>",
+                            "parse_mode": "HTML",
+                            "reply_markup": {"inline_keyboard": []}  # Hapus keyboard
+                        }
+                    )
+            except Exception as e:
+                _answer_callback(cq_id, f"Gagal update: {e}")
 
     elif data.startswith("tx:scope:"):
         parts = data.split(":")

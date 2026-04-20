@@ -265,7 +265,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
+            className="p-1 rounded-md text-slate-700 hover:text-slate-300 hover:bg-white/5 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -274,7 +274,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
         <div className="p-4 space-y-4">
           {/* Description + amount row */}
           <div className="space-y-1">
-            <label className="text-xs text-slate-500">Keterangan</label>
+            <label className="text-xs text-slate-700">Keterangan</label>
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -314,7 +314,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
           {/* OCR Results (multi-transaction) */}
           {ocrResults.length > 1 && (
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+              <label className="text-[10px] text-slate-700 uppercase tracking-wider font-semibold">
                 {ocrResults.length} transaksi terdeteksi dari foto
               </label>
               <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -351,7 +351,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
                   className="flex items-center justify-between rounded-lg px-3 py-2.5"
                   style={{ background: "#1f2937", border: "1px solid #374151" }}
                 >
-                  <span className="text-xs text-slate-500">Nominal terdeteksi</span>
+                  <span className="text-xs text-slate-700">Nominal terdeteksi</span>
                   <span
                     className="text-sm font-bold font-mono"
                     style={{ color: parsed.isIncome ? "#34d399" : "#fb7185" }}
@@ -366,7 +366,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
           {/* Category + Date row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">Kategori</label>
+              <label className="text-xs text-slate-700">Kategori</label>
               <select
                 value={effectiveCategory}
                 onChange={(e) => setManualCategory(e.target.value)}
@@ -384,7 +384,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">Tanggal</label>
+              <label className="text-xs text-slate-700">Tanggal</label>
               <input
                 type="date"
                 value={date}
@@ -397,7 +397,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
 
           {/* Payment method */}
           <div className="space-y-2">
-            <label className="text-xs text-slate-500">Metode Bayar</label>
+            <label className="text-xs text-slate-700">Metode Bayar</label>
             <div className="flex flex-wrap gap-1.5">
               {METHODS.map((m) => {
                 const active = method === m.label;

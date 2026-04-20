@@ -139,7 +139,7 @@ export function SpendingHeatmap({ timeseries }: SpendingHeatmapProps) {
             {monthLabels.map((ml) => (
               <div
                 key={`${ml.label}-${ml.col}`}
-                className="text-[10px] text-slate-600 absolute"
+                className="text-[10px] text-slate-800 absolute"
                 style={{ left: 28 + ml.col * 14 }}
               >
                 {ml.label}
@@ -200,7 +200,7 @@ export function SpendingHeatmap({ timeseries }: SpendingHeatmapProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-between text-[10px] text-slate-600">
+      <div className="flex items-center justify-between text-[10px] text-slate-800">
         <span>{spendDays} hari pengeluaran tercatat</span>
         <div className="flex items-center gap-1">
           <span>Rendah</span>
@@ -233,7 +233,7 @@ export function SpendingHeatmap({ timeseries }: SpendingHeatmapProps) {
             <div className="text-emerald-400">Masuk: {formatRupiah(tooltip.income, true)}</div>
           )}
           {tooltip.expense === 0 && tooltip.income === 0 && (
-            <div className="text-slate-500">Tidak ada transaksi</div>
+            <div className="text-slate-700">Tidak ada transaksi</div>
           )}
         </div>
       )}

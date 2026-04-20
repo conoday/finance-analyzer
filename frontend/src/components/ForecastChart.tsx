@@ -51,7 +51,7 @@ export function ForecastChart({ timeseries, forecast }: ForecastChartProps) {
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-slate-200">Saldo Kumulatif & Proyeksi</h2>
-        <div className="flex items-center gap-3 text-[11px] text-slate-500">
+        <div className="flex items-center gap-3 text-[11px] text-slate-700">
           <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-blue-400 rounded" />Aktual</span>
           <span className="flex items-center gap-1"><span className="w-4 h-0.5 border-t-2 border-dashed border-indigo-400 rounded" />Proyeksi</span>
         </div>
@@ -77,7 +77,7 @@ export function ForecastChart({ timeseries, forecast }: ForecastChartProps) {
       {/* Forecast */}
       {fc.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-xs text-slate-500 mb-2 font-medium">Proyeksi Ke Depan</h3>
+          <h3 className="text-xs text-slate-700 mb-2 font-medium">Proyeksi Ke Depan</h3>
           <ResponsiveContainer width="100%" height={180}>
             <ComposedChart data={fc} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <defs>

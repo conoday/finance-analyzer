@@ -153,7 +153,7 @@ export function AIPlanner({
         style={{ background: "#fff", border: "1px solid #e2e8f0" }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
               <DollarSign className="w-3.5 h-3.5 inline mr-1 text-teal-500" />
               Pemasukan Bulanan (Rp)
             </label>
@@ -161,21 +161,21 @@ export function AIPlanner({
               onChange={e => setIncome(e.target.value)} placeholder="8000000" required />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Pengeluaran Bulanan (Rp)
             </label>
             <input className={inputClass} value={expense} type="number" min="0" step="100000"
               onChange={e => setExpense(e.target.value)} placeholder="5500000" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Tabungan Saat Ini (Rp)
             </label>
             <input className={inputClass} value={savings} type="number" min="0" step="100000"
               onChange={e => setSavings(e.target.value)} placeholder="10000000" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
               <Calendar className="w-3.5 h-3.5 inline mr-1 text-indigo-400" />
               Target Horizon
             </label>
@@ -188,7 +188,7 @@ export function AIPlanner({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          <label className="block text-xs font-medium text-slate-700 mb-1.5">
             <Target className="w-3.5 h-3.5 inline mr-1 text-purple-400" />
             Tujuan Keuanganmu
           </label>
@@ -235,7 +235,7 @@ export function AIPlanner({
               <ScoreRing score={result.health_score} />
               <div>
                 <p className="text-sm font-bold text-slate-800 mb-1">{result.headline}</p>
-                <div className="flex items-center gap-4 text-xs text-slate-500">
+                <div className="flex items-center gap-4 text-xs text-slate-700">
                   <span>Savings Rate: <b className="text-slate-700">{result.savings_rate_now.toFixed(1)}%</b></span>
                   <span>→ Target: <b className="text-teal-600">{result.savings_rate_target.toFixed(1)}%</b></span>
                 </div>
@@ -251,10 +251,10 @@ export function AIPlanner({
             {result.budget_allocation?.length > 0 && (
               <div className="rounded-2xl p-4 space-y-3"
                 style={{ background: "#fff", border: "1px solid #e2e8f0" }}>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alokasi Budget yang Direkomendasikan</p>
+                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Alokasi Budget yang Direkomendasikan</p>
                 {result.budget_allocation.map(item => (
                   <div key={item.category}>
-                    <div className="flex justify-between text-xs text-slate-600 mb-1">
+                    <div className="flex justify-between text-xs text-slate-800 mb-1">
                       <span>{item.category}</span>
                       <span className="font-semibold">{item.pct}%</span>
                     </div>
@@ -344,7 +344,7 @@ export function AIPlanner({
 
             {/* Re-generate */}
             <button onClick={() => setResult(null)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors">
               <RefreshCw className="w-4 h-4" /> Buat rencana baru
             </button>
           </motion.div>

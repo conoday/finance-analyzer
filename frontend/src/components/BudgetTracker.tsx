@@ -256,7 +256,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
 
         {/* Empty state */}
         {rows.length === 0 && (
-          <div className="text-center py-8 text-slate-500 text-sm">
+          <div className="text-center py-8 text-slate-700 text-sm">
             <Target className="w-8 h-8 mx-auto mb-2 opacity-30" />
             <p>Upload mutasi bank atau tambah kategori untuk mulai set budget</p>
           </div>
@@ -322,20 +322,20 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                         <button onClick={() => commitEdit(kategori)} className="p-1 rounded-md text-teal-400 hover:text-teal-300">
                           <Check className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={cancelEdit} className="p-1 rounded-md text-slate-500 hover:text-slate-300">
+                        <button onClick={cancelEdit} className="p-1 rounded-md text-slate-700 hover:text-slate-300">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </>
                     ) : (
                       <>
                         <span className="text-xs font-mono text-slate-400">
-                          {limit > 0 ? formatRupiah(limit, true) : <span className="text-slate-600">— set limit</span>}
+                          {limit > 0 ? formatRupiah(limit, true) : <span className="text-slate-800">— set limit</span>}
                         </span>
-                        <button onClick={() => startEdit(kategori)} className="p-1 rounded-md text-slate-500 hover:text-slate-300 transition-colors">
+                        <button onClick={() => startEdit(kategori)} className="p-1 rounded-md text-slate-700 hover:text-slate-300 transition-colors">
                           <PencilLine className="w-3.5 h-3.5" />
                         </button>
                         {limit > 0 && (
-                          <button onClick={() => removeBudget(kategori)} className="p-1 rounded-md text-slate-600 hover:text-red-400 transition-colors">
+                          <button onClick={() => removeBudget(kategori)} className="p-1 rounded-md text-slate-800 hover:text-red-400 transition-colors">
                             <X className="w-3 h-3" />
                           </button>
                         )}
@@ -356,7 +356,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                         style={{ background: barColor }}
                       />
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-500">
+                    <div className="flex justify-between text-[10px] text-slate-700">
                       <span>
                         {isOver
                           ? `⚠ Over ${formatRupiah(actual - limit, true)}`
@@ -441,7 +441,7 @@ export function BudgetTracker({ byCategory }: BudgetTrackerProps) {
                         <span className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                         <span className="text-[11px] text-slate-400 flex-1 truncate">{d.name}</span>
-                        <span className="text-[10px] font-mono text-slate-500">{pct}%</span>
+                        <span className="text-[10px] font-mono text-slate-700">{pct}%</span>
                         <span className="text-[10px] font-mono text-slate-400">{formatRupiah(d.value, true)}</span>
                       </div>
                     );

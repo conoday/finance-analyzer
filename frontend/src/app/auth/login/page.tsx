@@ -72,7 +72,7 @@ export default function LoginPage() {
             Oprex<span className="text-teal-400">Duit</span>
           </span>
         </div>
-        <p className="text-slate-500 text-sm">Masuk ke akun kamu</p>
+        <p className="text-slate-700 text-sm">Masuk ke akun kamu</p>
       </div>
 
       {/* Card */}
@@ -105,7 +105,7 @@ export default function LoginPage() {
         {/* Email form */}
         <form onSubmit={handleEmailLogin} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-slate-500 font-medium">Email</label>
+            <label className="text-xs text-slate-700 font-medium">Email</label>
             <input
               type="email"
               required
@@ -117,7 +117,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-500 font-medium">Password</label>
+            <label className="text-xs text-slate-700 font-medium">Password</label>
             <div className="relative">
               <input
                 type={showPw ? "text" : "password"}
@@ -130,7 +130,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-800 transition-colors"
               >
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -154,7 +154,7 @@ export default function LoginPage() {
         </form>
       </div>
 
-      <p className="text-center text-xs text-slate-500">
+      <p className="text-center text-xs text-slate-700">
         Belum punya akun?{" "}
         <Link href="/auth/register" className="text-teal-600 hover:text-teal-500 font-medium">
           Daftar gratis

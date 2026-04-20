@@ -121,7 +121,7 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
             <Heart className="w-4 h-4 text-red-400 fill-red-400" />
             <span className="text-sm font-semibold text-slate-100">Dukung Pengembang</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all">
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-700 hover:text-slate-200 hover:bg-white/5 transition-all">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -138,7 +138,7 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
             style={{ background: qrisError ? "#111827" : "#fff" }}
           >
             {qrisError ? (
-              <p className="text-xs text-slate-500 text-center px-4">
+              <p className="text-xs text-slate-700 text-center px-4">
                 QRIS tidak dapat dimuat.<br />Tap tombol unduh di bawah.
               </p>
             ) : (
@@ -161,7 +161,7 @@ export function DonasiModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="text-[10px] text-slate-600 text-center">
+        <p className="text-[10px] text-slate-800 text-center">
           QRIS berlaku untuk semua dompet digital (GoPay, OVO, Dana, ShopeePay, dll.)
         </p>
 

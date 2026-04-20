@@ -20,7 +20,7 @@ export function SubscriptionList({ subs, total }: SubscriptionListProps) {
   if (!subs || subs.length === 0) {
     return (
       <div className="glass rounded-2xl border border-white/[0.06] p-5 flex items-center justify-center">
-        <p className="text-slate-600 text-sm">Tidak ada langganan terdeteksi.</p>
+        <p className="text-slate-800 text-sm">Tidak ada langganan terdeteksi.</p>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export function SubscriptionList({ subs, total }: SubscriptionListProps) {
           <RefreshCw className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-semibold text-slate-200">Langganan Terdeteksi</h3>
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-slate-700">
           Total: <span className="text-cyan-400 font-mono">{formatRupiah(total, true)}/bln</span>
         </div>
       </div>
@@ -61,13 +61,13 @@ export function SubscriptionList({ subs, total }: SubscriptionListProps) {
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${FREQ_BADGE[sub.frekuensi] ?? "bg-slate-700 text-slate-400"}`}>
                     {sub.frekuensi}
                   </span>
-                  <span className="text-[10px] text-slate-600">{sub.confidence}% konfiden</span>
+                  <span className="text-[10px] text-slate-800">{sub.confidence}% konfiden</span>
                 </div>
               </div>
             </div>
             <div className="text-right ml-3">
               <p className="text-xs text-cyan-400 font-mono">{formatRupiah(sub.estimated_monthly, true)}</p>
-              <p className="text-[10px] text-slate-600">/bulan</p>
+              <p className="text-[10px] text-slate-800">/bulan</p>
             </div>
           </motion.div>
         ))}
