@@ -1,6 +1,6 @@
 # System Architecture — OprexDuit
 
-> Last updated: 2026-04-20 (rev 5)
+> Last updated: 2026-04-20 (rev 6)
 
 ## Current Stack (Deployed)
 
@@ -9,8 +9,8 @@
 | Frontend | Next.js 16 + Tailwind CSS | Vercel |
 | Backend | FastAPI (Python) | Render.com (free) |
 | Database / Auth | Supabase (PostgreSQL) | Supabase Cloud |
-| AI Provider | GLM-4.7 (chat + vision/OCR) | api.z.ai (Anthropic-compatible proxy) |
-| Admin Console | Next.js 14 + TypeScript + Tailwind | Vercel (repo terpisah) |
+| AI Provider | GLM-4.7 (chat + JSON parsing) | api.z.ai (Anthropic-compatible proxy) |
+| OCR Provider | OCR.Space (free API) | api.ocr.space (extracts text from image) |
 
 ## Architecture Diagram
 
@@ -53,12 +53,12 @@
 ```
 ┌──────────────────────────┐
 │  AI Provider: GLM (z.ai) │
-│  └── glm-4.7 (chat+OCR) │  ← /ai/chat + /ai/ocr + Telegram photo
-│                          │
-│  Wrapper:                │
-│  └── _AnthropicCaller    │  ← Converts OpenAI SDK → Anthropic API
-│      ├── image_url→base64│  ← Auto-convert for vision/OCR
-│      └── system msg split│  ← Anthropic system param
+│  OCR / AI Pipeline:      │
+│  ├── OCR.Space API       │  ← Tahap 1: Ekstrak teks raw dari gambar
+│  │   └─ Key: helloworld  │     (Public free key, 3 req/sec limit)
+│  │                       │ 
+│  └── GLM-4.7 (z.ai)      │  ← Tahap 2: Parse teks raw → JSON
+│      └─ _AnthropicCaller │  ← Wrapper OpenAI SDK → Anthropic
 │                          │
 │  Fallback providers:     │
 │  ├── deepseek-chat       │
@@ -67,7 +67,7 @@
 │  Key Management:         │
 │  └── ai_api_keys table   │  ← Admin Console CRUD + auto rotation
 │                          │
-│  OCR Pipeline:           │
+│  JSON Robustness:        │
 │  ├── _repair_json()      │  ← Fix trailing commas, comments
 │  └── _safe_json_parse()  │  ← Regex fallback if JSON broken
 └──────────────────────────┘

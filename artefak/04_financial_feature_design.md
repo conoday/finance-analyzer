@@ -31,19 +31,23 @@
 | QRIS | universal |
 | Lainnya | other |
 
-### 3. Image Extraction Pipeline (OCR) — ✅ IMPLEMENTED
+### 3. Image Extraction Pipeline (2-Stage OCR) — ✅ IMPLEMENTED
 
-#### Telegram OCR Flow
+Karena limitasi proxy Z.AI yang membuang konteks gambar, aplikasi OprexDuit menggunakan sistem 2-tahap (Two-Stage OCR Pipeline) untuk mengamankan data dan menghindari halusinasi model.
+
+#### The 2-Stage Flow (Web & Telegram)
 ```
-User kirim foto di Telegram
-    ↓ Bot detect message.photo
-    ↓ Download via getFile API
+User kirim/upload foto (Telegram / Web)
     ↓ Encode base64
-    ↓ AI Vision (GLM-4V) — extract JSON
+    ↓ STAGE 1: Mata (OCR.Space API)
+      - Hit https://api.ocr.space/parse/image (key: helloworld)
+      - Extract raw messy plain-text dari struk (≈600ms)
+    ↓ STAGE 2: Otak (GLM-4.7 Text Model)
+      - Inject raw text ke dalam sistem prompt
+      - AI bertugas merakit text berantakan menjadi JSON struktur
     ↓ Parse: {transactions[], bank_name, metadata_fields}
-    ↓ Save to DB (source: "telegram_ocr")
+    ↓ Save to DB
     ↓ Save bank metadata to bank_ocr_metadata table
-    ↓ Send confirmation + donate button
 ```
 
 #### Web OCR Flow

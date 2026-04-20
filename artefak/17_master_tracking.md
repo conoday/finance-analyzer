@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-20 (rev 10)
+> Last updated: 2026-04-20 (rev 11)
 > Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -144,11 +144,12 @@
 - [x] Frontend: auth token dikirim ke `/ai/chat` untuk personalisasi
 
 ### OCR (Phase OCR — DONE, iterasi 2026-04-20)
-- [x] Telegram: foto → `_handle_photo_ocr()` → AI vision (GLM-4.7) → parse JSON → simpan DB
-- [x] Backend: `ocr_transaction_image()` di `ai_service.py` — OpenAI SDK via `_call_with_fallback`
-- [x] `_AnthropicCaller.create()` — auto-convert OpenAI `image_url` → Anthropic `image.source.base64`
-- [x] `_repair_json()` — hapus trailing commas, comments, potong text di luar `{}`
-- [x] `_safe_json_parse()` — repair + regex fallback extract `transactions[]`
+- [x] Backend: Arsitektur 2-Stage OCR Pipeline karena limitasi z.ai proxy membuang gambar.
+- [x] Stage 1 (Mata): API Publik gratis `api.ocr.space` menarik raw text berantakan dari gambar (key: `helloworld`).
+- [x] Stage 2 (Otak): `GLM-4.7` menerima raw OCR text dan merakitnya ulang menjadi terstruktur JSON.
+- [x] Telegram: foto → `_handle_photo_ocr()` → 2-Stage Pipeline → parse JSON → simpan DB
+- [x] `_AnthropicCaller.create()` — compatible wrapper proxy z.ai
+- [x] `_safe_json_parse()` — repair whitespace, JSON syntax recovery, dan regex list extractor fallback
 - [x] Prompt debiased — generic placeholder, bukan contoh spesifik
 - [x] Web endpoint: `POST /ai/ocr` (multipart file upload)
 - [x] Web SmartInput: tombol 📷 camera → upload foto → OCR → auto-fill form
