@@ -893,19 +893,46 @@ def ocr_transaction_image(image_base64: str, caption: str = "") -> dict:
         user_text += f" Konteks tambahan: {caption}"
 
     def _do(client, model):
+        try:
+            import requests
+            print("[ocr] Stage 1: Reading image via OCR.Space Free API...")
+            payload = {
+                'apikey': 'helloworld',
+                'base64Image': f'data:image/jpeg;base64,{image_base64}',
+                'language': 'eng'
+            }
+            resp = requests.post("https://api.ocr.space/parse/image", data=payload, timeout=20)
+            ocr_result = resp.json()
+            raw_text = ocr_result.get("ParsedResults", [{}])[0].get("ParsedText", "")
+            if raw_text:
+                print(f"[ocr] OCR Space Extracted Text ({len(raw_text)} chars)")
+            else:
+                raw_text = "(Gambar tidak memiliki teks atau gagal dibaca oleh OCR)"
+        except Exception as e:
+            print(f"[ocr] OCR Space failed {e}. Fallback to Vision AI only.")
+            raw_text = ""
+
+        # Modifikasi prompt khusus jika ada teks OCR mentah
+        final_user_text = user_text
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        if raw_text:
+            final_user_text += f"\n\n--- TEKS MENTAH DARI STRUK (Hasil Sistem OCR) ---\n{raw_text}\n-----------------------------------\n\nURUTKAN teks berantakan di atas menjadi JSON transaksi keuangan!"
+            messages.append({"role": "user", "content": [{"type": "text", "text": final_user_text}]})
+        else:
+            messages.append({"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": image_url}},
+                {"type": "text", "text": final_user_text},
+            ]})
+
         if provider_name == "glm":
-            used_model = _PROVIDERS["glm"].get("vision_model", "glm-4.7")
+            used_model = "glm-4.7" # Selalu gunakan text model karena sudah di-OCR
         else:
             used_model = model
+
         response = client.chat.completions.create(
             model=used_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": image_url}},
-                    {"type": "text", "text": user_text},
-                ]},
-            ],
+            messages=messages,
             max_tokens=800,
             temperature=0.05,
         )
