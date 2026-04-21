@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAnalysis } from "@/hooks/useAnalysis";
-import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Loader2, Sparkles, Filter } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Loader2, Sparkles, Filter, Target, Receipt, Search } from "lucide-react";
 import Image from "next/image";
 import { formatRupiah } from "@/lib/utils";
 
@@ -26,8 +26,8 @@ export default function Dashboard() {
   const firstName = fullName.split(" ")[0];
 
   // Derive simple metrics from txs for the overview
-  const totalIncome = txs.filter(t => t.type === "income").reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = txs.filter(t => t.type === "expense").reduce((acc, t) => acc + t.amount, 0);
+  const totalIncome = txs.filter(t => t.isIncome).reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = txs.filter(t => !t.isIncome).reduce((acc, t) => acc + t.amount, 0);
   const netBalance = totalIncome - totalExpense;
 
   const getCategoryColor = (cat: string) => {
@@ -115,8 +115,8 @@ export default function Dashboard() {
             {/* Segmented Bar */}
             <div className="flex h-4 rounded-full overflow-hidden gap-1 w-full bg-slate-100">
               {totalExpense > 0 ? (
-                Object.entries(txs.filter(t=>t.type==='expense').reduce((acc:any, t)=>{
-                  acc[t.category_raw || 'Lainnya'] = (acc[t.category_raw || 'Lainnya'] || 0) + t.amount;
+                Object.entries(txs.filter(t=>!t.isIncome).reduce((acc:any, t)=>{
+                  acc[t.category || 'Lainnya'] = (acc[t.category || 'Lainnya'] || 0) + t.amount;
                   return acc;
                 }, {})).sort((a:any, b:any) => b[1] - a[1]).slice(0, 3).map(([cat, amt]:any) => (
                   <div key={cat} style={{ width: `${(amt / totalExpense) * 100}%`, backgroundColor: getCategoryColor(cat) }} className="h-full rounded-full" title={`${cat} - ${formatRupiah(amt)}`} />
@@ -224,8 +224,8 @@ export default function Dashboard() {
                   <tr><td colSpan={4} className="text-center py-10 text-slate-400 text-sm">Tidak ada transaksi bulan ini.</td></tr>
                 ) : (
                   txs.slice(0, 5).map((tx, idx) => {
-                    const isIncome = tx.type === 'income';
-                    const Initial = tx.description.charAt(0).toUpperCase();
+                    const isIncome = tx.isIncome;
+                    const Initial = tx.desc.charAt(0).toUpperCase();
                     return (
                       <tr key={tx.id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
                         <td className="py-4 pl-2">
@@ -234,7 +234,7 @@ export default function Dashboard() {
                                   style={{ backgroundColor: isIncome ? '#10b981' : '#0f172a' }}>
                                {Initial}
                              </div>
-                             <span className="font-semibold text-slate-900 text-sm truncate max-w-[150px]">{tx.description}</span>
+                             <span className="font-semibold text-slate-900 text-sm truncate max-w-[150px]">{tx.desc}</span>
                            </div>
                         </td>
                         <td className="py-4">

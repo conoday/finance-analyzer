@@ -23,7 +23,7 @@ function truncate(s: string, n: number) {
 }
 
 interface TransactionListProps {
-  transactions: TransactionRow[];
+  transactions: (TransactionRow & { id?: string })[];
   onDelete?: (id: string, desc: string) => void;
 }
 
@@ -107,7 +107,7 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
                     <button 
                       onClick={() => {
                         if (window.confirm(`Hapus transaksi "${tx.deskripsi}"?`)) {
-                          onDelete(tx.id, tx.deskripsi);
+                          onDelete(tx.id!, tx.deskripsi);
                         }
                       }}
                       className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
