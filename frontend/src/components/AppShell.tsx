@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SideNav } from "@/components/SideNav";
 import { Header } from "@/components/Header";
+import { TopNav } from "@/components/TopNav";
 import { AnimatePresence } from "framer-motion";
 import { DonasiModal } from "@/components/SharePanel";
 
@@ -10,20 +11,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [showDonasi, setShowDonasi] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar (desktop) */}
-      <SideNav onDonasi={() => setShowDonasi(true)} />
+    <div className="flex flex-col min-h-screen bg-[#fcfcfc]">
+      {/* Desktop Top Navigation */}
+      <TopNav />
+      {/* Mobile Top Header (Keeps the logo and auth) */}
+      <Header onDonasi={() => setShowDonasi(true)} />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top header: logo (mobile only) + auth */}
-        <Header onDonasi={() => setShowDonasi(true)} />
-
-        {/* Page content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 max-w-screen-xl mx-auto w-full">
+      <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
+        <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 mx-auto w-full max-w-[1440px]">
           {children}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation (SideNav is hidden on md+ via CSS in its internal component) */}
+      <SideNav onDonasi={() => setShowDonasi(true)} hideOnDesktop />
 
       {/* Donation modal */}
       <AnimatePresence>

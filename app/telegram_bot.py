@@ -940,7 +940,6 @@ def _cmd_riwayat(
 
     try:
         from datetime import datetime, timedelta
-        from app.utils import _today_wib
         last_month = (_today_wib() - timedelta(days=30)).isoformat()
         
         res = (
@@ -1046,7 +1045,6 @@ def _cmd_ringkasan(
         return
 
     from datetime import datetime, timedelta
-    from app.utils import _today_wib
     today_dt = _today_wib()
     seven_days_ago = (today_dt - timedelta(days=7)).isoformat()
     today_str = today_dt.isoformat()
@@ -1171,8 +1169,12 @@ def _cmd_laporan(
         target_month_str = today.strftime("%Y-%m")
         month_label = today.strftime("%B %Y")
 
+    import calendar
+    from datetime import datetime as _dt
+    _y, _m = map(int, target_month_str.split("-"))
+    _last_day = calendar.monthrange(_y, _m)[1]
     month_start = f"{target_month_str}-01"
-    month_end = f"{target_month_str}-31T23:59:59"
+    month_end = f"{target_month_str}-{_last_day:02d}T23:59:59"
 
     try:
         # Own transactions
@@ -1996,7 +1998,6 @@ def _handle_callback_query(cq: dict, sb_client: Any) -> None:
         user_id = _get_or_create_telegram_user(chat_id, username, sb_client)
         if user_id and sb_client:
             from datetime import datetime, timedelta
-            from app.utils import _today_wib
             
             # Update transaksi OCR yang baru saja masuk (15 menit terakhir)
             time_limit = (_today_wib() - timedelta(minutes=15)).isoformat()

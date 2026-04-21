@@ -178,7 +178,14 @@ def analyze_me(
     
     query = sb.table("transactions").select("*").eq("user_id", user_id).order("date")
     if month:
-        query = query.gte("date", f"{month}-01").lt("date", f"{month}-31T23:59:59")
+        import calendar as _cal
+        try:
+            _y, _mo = map(int, month.split("-"))
+            _last_day = _cal.monthrange(_y, _mo)[1]
+            month_end = f"{month}-{_last_day:02d}T23:59:59"
+        except Exception:
+            month_end = f"{month}-31T23:59:59"  # fallback
+        query = query.gte("date", f"{month}-01").lte("date", month_end)
         
     res = query.execute()
     
