@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAnalysis } from "@/hooks/useAnalysis";
-import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Loader2, Sparkles, Filter, Target, Receipt, Search } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Loader2, Sparkles, Filter, Target, Receipt, Search, BarChart3 } from "lucide-react";
 import Image from "next/image";
 import { formatRupiah } from "@/lib/utils";
 
@@ -43,17 +43,22 @@ export default function Dashboard() {
   return (
     <div className={`space-y-8 animate-fade-in pb-10 transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
       
-      {/* ── 1. Page Header (Greeting) ── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            {isLoading && <Loader2 className="w-5 h-5 animate-spin text-[#df6b52]" />}
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Hi, {fullName}</h1>
-          </div>
-          <p className="text-slate-500 text-sm mt-1">Stay updated on your finances with real-time data</p>
+      {/* ── 1. Hero Balance Section ── */}
+      <div className="flex flex-col items-center justify-center text-center mt-2 mb-10 relative">
+        <p className="text-slate-500 text-sm font-medium mb-2">Total Arus Kas (Bulan Ini)</p>
+        <div className="flex items-center gap-3">
+          {isLoading ? (
+             <div className="h-12 w-48 bg-slate-200 animate-pulse rounded-2xl my-2" />
+          ) : (
+             <h1 className="text-5xl sm:text-6xl font-extrabold text-slate-900 tracking-tighter leading-tight drop-shadow-sm">
+               {formatRupiah(netBalance)}
+             </h1>
+          )}
         </div>
         
-        <div className="flex items-center gap-3">
+        {/* Month Picker Badge */}
+        <div className="mt-5 flex items-center justify-center gap-1.5 bg-white border border-slate-200 rounded-full py-1.5 px-3 shadow-sm hover:shadow-md transition-shadow">
+          <Calendar className="w-4 h-4 text-slate-400" />
           <input
             type="month"
             value={monthFilter}
@@ -61,48 +66,41 @@ export default function Dashboard() {
               setMonthFilter(e.target.value);
               analyzeMe(e.target.value || undefined);
             }}
-            className="bg-white/70 backdrop-blur-md border border-white/40 focus:ring-2 focus:outline-none focus:ring-[#df6b52]/50 px-3 py-2 text-sm rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-medium text-slate-800"
+            className="bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-700 w-auto px-1 outline-none"
           />
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#df6b52] hover:bg-[#c95b45] text-white rounded-2xl text-sm font-semibold active:scale-[0.98] transition-all shadow-sm shadow-orange-200">
-            <ArrowUpRight className="w-4 h-4" /> Export
-          </button>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex items-center justify-center gap-8 sm:gap-12 mt-10">
+           <a href="/transaksi" className="group flex flex-col items-center gap-2.5">
+              <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center group-hover:bg-emerald-100 group-active:scale-95 transition-all shadow-sm">
+                 <ArrowDownRight className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-semibold text-slate-600">Pemasukan</span>
+           </a>
+           <a href="/transaksi" className="group flex flex-col items-center gap-2.5">
+              <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center group-hover:bg-rose-100 group-active:scale-95 transition-all shadow-sm">
+                 <ArrowUpRight className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-semibold text-slate-600">Pengeluaran</span>
+           </a>
+           <a href="/laporan" className="group flex flex-col items-center gap-2.5">
+              <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center group-hover:bg-indigo-100 group-active:scale-95 transition-all shadow-sm">
+                 <BarChart3 className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-semibold text-slate-600">Analisa</span>
+           </a>
+           <a href="/budget" className="group flex flex-col items-center gap-2.5">
+              <div className="w-14 h-14 bg-sky-50 text-sky-600 rounded-full flex items-center justify-center group-hover:bg-sky-100 group-active:scale-95 transition-all shadow-sm">
+                 <Target className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-semibold text-slate-600">Budget</span>
+           </a>
         </div>
       </div>
 
       {/* ── 2. Top Grid Section ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xlg:grid-cols-3 gap-6">
-        
-        {/* Card A: Checking Account (Main Balance) */}
-        <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex flex-col justify-between" style={{ minHeight: '260px' }}>
-          <div>
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100">
-                 <WalletIcon />
-              </div>
-              <div className="px-3 py-1 bg-slate-50 rounded-full text-xs font-semibold text-slate-600 border border-slate-100 flex items-center gap-1.5">
-                🇮🇩 IDR
-              </div>
-            </div>
-            <h2 className="text-slate-800 font-semibold">Arus Kas (Net)</h2>
-            <p className="text-slate-400 text-xs mt-1">Total selisih pemasukan dan pengeluaran</p>
-          </div>
-          
-          <div className="mt-4">
-            <div className="flex items-end justify-between mb-5">
-              <h3 className="text-4xl font-extrabold text-slate-900 tracking-tight">{formatRupiah(netBalance)}</h3>
-              <a href="/laporan" className="text-sm font-semibold text-[#df6b52] hover:underline">See details</a>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button className="bg-[#df6b52] hover:bg-[#c95b45] text-white rounded-2xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-sm shadow-orange-200">
-                Pemasukan <ArrowDownRight className="w-4 h-4 opacity-80" />
-              </button>
-              <button className="bg-white border-2 border-[#df6b52] hover:bg-orange-50 text-[#df6b52] rounded-2xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-95">
-                Pengeluaran <ArrowUpRight className="w-4 h-4 opacity-80" />
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 xlg:grid-cols-2 gap-6">
 
         {/* Card B: Spending Overview */}
         <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex flex-col justify-between" style={{ minHeight: '260px' }}>
@@ -116,14 +114,36 @@ export default function Dashboard() {
             <h2 className="text-slate-800 font-semibold mb-1">Kategori Pengeluaran</h2>
             <p className="text-slate-400 text-xs mb-6">Track Your Spending, Control Your Finance</p>
             
-            {/* Segmented Bar */}
-            <div className="flex h-4 rounded-full overflow-hidden gap-1 w-full bg-slate-100">
+            {/* Vertical Category List replacing Segmented Bar */}
+            <div className="space-y-4">
               {totalExpense > 0 && data?.by_category?.length ? (
-                data.by_category.slice(0, 3).map((cat) => (
-                  <div key={cat.kategori} style={{ width: `${(cat.total / totalExpense) * 100}%`, backgroundColor: getCategoryColor(cat.kategori) }} className="h-full rounded-full" title={`${cat.kategori} - ${formatRupiah(cat.total)}`} />
-                ))
+                data.by_category.slice(0, 3).map((cat) => {
+                  const percent = Math.round((cat.total / totalExpense) * 100);
+                  const color = getCategoryColor(cat.kategori);
+                  return (
+                    <div key={cat.kategori} className="flex items-center gap-4">
+                       {/* Icon box */}
+                       <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm" style={{ backgroundColor: color }}>
+                          {cat.kategori.charAt(0).toUpperCase()}
+                       </div>
+                       {/* Text and bar */}
+                       <div className="flex-1">
+                          <div className="flex justify-between items-end mb-1.5">
+                             <span className="text-sm font-semibold text-slate-800">{cat.kategori}</span>
+                             <span className="text-xs font-bold text-slate-900">{formatRupiah(cat.total)}</span>
+                          </div>
+                          {/* Mini progress track */}
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                             <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: color }} />
+                          </div>
+                       </div>
+                    </div>
+                  )
+                })
               ) : (
-                <div className="w-full bg-slate-200" />
+                <div className="py-4 text-center">
+                   <p className="text-xs text-slate-400">Belum ada pengeluaran.</p>
+                </div>
               )}
             </div>
           </div>
@@ -141,7 +161,7 @@ export default function Dashboard() {
         </div>
 
         {/* Card C: Side Panel Cards (Stacked) */}
-        <div className="flex flex-col gap-6 lg:col-span-2 xlg:col-span-1">
+        <div className="flex flex-col gap-6">
            <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex-1">
              <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
@@ -150,27 +170,33 @@ export default function Dashboard() {
                 </div>
                 <MoreHorizontal className="w-4 h-4 text-slate-400" />
              </div>
-             <p className="text-xs text-slate-400 mb-4">Plan Your Savings, Secure Your Future</p>
+             <p className="text-xs text-slate-400 mb-4">Aset & tabungan Anda saat ini</p>
              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
-                   <div className="flex items-center gap-3">
-                     <span className="text-lg">🏦</span>
-                     <div>
-                       <p className="text-sm font-semibold text-slate-800">Rekening Utama</p>
-                       <p className="text-[11px] text-slate-400 font-medium">Rp5.000.000 / Rp10.000.000</p>
+                <div className="flex items-center justify-between p-4 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
+                   <div className="flex items-center gap-3 w-full">
+                     <span className="text-2xl">🏦</span>
+                     <div className="flex-1">
+                       <p className="text-sm font-semibold text-slate-800 flex justify-between">
+                          Rekening Utama <span>Rp5.000.000</span>
+                       </p>
+                       <div className="w-full bg-slate-100 rounded-full h-1 mt-2">
+                          <div className="bg-[#df6b52] h-1 rounded-full" style={{ width: '50%' }} />
+                       </div>
                      </div>
                    </div>
-                   <ArrowRightIcon />
                 </div>
-                <div className="flex items-center justify-between p-3 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
-                   <div className="flex items-center gap-3">
-                     <span className="text-lg">✈️</span>
-                     <div>
-                       <p className="text-sm font-semibold text-slate-800">Dana Liburan</p>
-                       <p className="text-[11px] text-slate-400 font-medium text-[#df6b52]">Rp1.000.000 / Rp5.000.000</p>
+                <div className="flex items-center justify-between p-4 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
+                   <div className="flex items-center gap-3 w-full">
+                     <span className="text-2xl">✈️</span>
+                     <div className="flex-1">
+                       <p className="text-sm font-semibold text-slate-800 flex justify-between">
+                          Dana Liburan <span className="text-[#df6b52]">Rp1.000.000</span>
+                       </p>
+                       <div className="w-full bg-slate-100 rounded-full h-1 mt-2">
+                          <div className="bg-sky-400 h-1 rounded-full" style={{ width: '20%' }} />
+                       </div>
                      </div>
                    </div>
-                   <ArrowRightIcon />
                 </div>
              </div>
              <a href="/aset" className="block w-full text-center mt-4 bg-[#df6b52] hover:bg-[#c95b45] text-white py-3 rounded-2xl text-sm font-bold transition-all shadow-sm shadow-orange-100">
@@ -222,7 +248,19 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {!data?.transactions || data.transactions.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center py-10 text-slate-400 text-sm">Tidak ada transaksi bulan ini.</td></tr>
+                  <tr>
+                    <td colSpan={4} className="text-center py-16">
+                       <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100">
+                             <Receipt className="w-8 h-8 text-slate-300" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-700">Belum Ada Transaksi</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Catat pemasukan atau pengeluaran pertamamu bulan ini!</p>
+                          </div>
+                       </div>
+                    </td>
+                  </tr>
                 ) : (
                   data.transactions.slice(0, 5).map((tx, idx) => {
                     const isIncome = tx.tipe === 'income';

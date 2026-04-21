@@ -320,12 +320,12 @@ export function AssetDebtTracker() {
   }
 
   // ── Computed totals ─────────────────────────────────────────────────────
-  const totalAset = useMemo(() => data.assets.reduce((s, a) => s + a.value, 0), [data.assets]);
-  const totalHutang = useMemo(() => data.debts.filter(d => !d.isPaid).reduce((s, d) => s + d.amount, 0), [data.debts]);
+  const totalAset = useMemo(() => (data?.assets || []).reduce((s, a) => s + a.value, 0), [data?.assets]);
+  const totalHutang = useMemo(() => (data?.debts || []).filter(d => !d.isPaid).reduce((s, d) => s + d.amount, 0), [data?.debts]);
 
   // ── Upcoming reminders ──────────────────────────────────────────────────
   const reminders = useMemo(() => {
-    return data.debts
+    return (data?.debts || [])
       .filter(d => !d.isPaid && d.dueDate)
       .map(d => ({ ...d, daysLeft: getDaysUntil(d.dueDate) }))
       .filter(d => d.daysLeft !== null && d.daysLeft <= 30)
