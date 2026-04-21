@@ -38,23 +38,21 @@ export default function Dashboard() {
     return "#bac5d4"; // Light gray fallback
   };
 
-  if (status === "loading" || txLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-40 gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
-      </div>
-    );
-  }
+  const isLoading = status === "loading" || txLoading;
 
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
+    <div className={`space-y-8 animate-fade-in pb-10 transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
       
       {/* ── 1. Page Header (Greeting) ── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Hi, {fullName}</h1>
+          <div className="flex items-center gap-3">
+            {isLoading && <Loader2 className="w-5 h-5 animate-spin text-[#df6b52]" />}
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Hi, {fullName}</h1>
+          </div>
           <p className="text-slate-500 text-sm mt-1">Stay updated on your finances with real-time data</p>
         </div>
+        
         <div className="flex items-center gap-3">
           <input
             type="month"
@@ -63,9 +61,9 @@ export default function Dashboard() {
               setMonthFilter(e.target.value);
               analyzeMe(e.target.value || undefined);
             }}
-            className="bg-white border focus:ring-2 focus:outline-none focus:ring-[#df6b52]/50 px-3 py-2 text-sm rounded-full shadow-sm font-medium text-slate-800"
+            className="bg-white/70 backdrop-blur-md border border-white/40 focus:ring-2 focus:outline-none focus:ring-[#df6b52]/50 px-3 py-2 text-sm rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-medium text-slate-800"
           />
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#df6b52] hover:bg-[#c95b45] text-white rounded-full text-sm font-semibold transition-colors shadow-sm shadow-orange-200">
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#df6b52] hover:bg-[#c95b45] text-white rounded-2xl text-sm font-semibold active:scale-[0.98] transition-all shadow-sm shadow-orange-200">
             <ArrowUpRight className="w-4 h-4" /> Export
           </button>
         </div>
@@ -75,7 +73,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 xlg:grid-cols-3 gap-6">
         
         {/* Card A: Checking Account (Main Balance) */}
-        <div className="bg-white rounded-3xl p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between" style={{ minHeight: '260px' }}>
+        <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex flex-col justify-between" style={{ minHeight: '260px' }}>
           <div>
             <div className="flex justify-between items-start mb-6">
               <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100">
@@ -107,7 +105,7 @@ export default function Dashboard() {
         </div>
 
         {/* Card B: Spending Overview */}
-        <div className="bg-white rounded-3xl p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between" style={{ minHeight: '260px' }}>
+        <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex flex-col justify-between" style={{ minHeight: '260px' }}>
           <div>
             <div className="flex justify-between items-start mb-6">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
@@ -144,17 +142,17 @@ export default function Dashboard() {
 
         {/* Card C: Side Panel Cards (Stacked) */}
         <div className="flex flex-col gap-6 lg:col-span-2 xlg:col-span-1">
-           <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex-1">
+           <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex-1">
              <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 flex items-center justify-center border border-slate-100 rounded-lg"><Target className="w-4 h-4 text-slate-600"/></div>
+                  <div className="w-8 h-8 flex items-center justify-center border border-slate-100 bg-slate-50 rounded-lg"><Target className="w-4 h-4 text-slate-600"/></div>
                   <h3 className="font-semibold text-slate-900 text-sm">Aset & Tabungan</h3>
                 </div>
                 <MoreHorizontal className="w-4 h-4 text-slate-400" />
              </div>
              <p className="text-xs text-slate-400 mb-4">Plan Your Savings, Secure Your Future</p>
              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border border-slate-100 rounded-2xl bg-white hover:border-slate-200 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between p-3 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
                    <div className="flex items-center gap-3">
                      <span className="text-lg">🏦</span>
                      <div>
@@ -164,7 +162,7 @@ export default function Dashboard() {
                    </div>
                    <ArrowRightIcon />
                 </div>
-                <div className="flex items-center justify-between p-3 border border-slate-100 rounded-2xl bg-white hover:border-slate-200 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between p-3 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
                    <div className="flex items-center gap-3">
                      <span className="text-lg">✈️</span>
                      <div>
@@ -187,7 +185,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Recent Transactions Table (Spans 2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100">
+        <div className="lg:col-span-2 bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -231,7 +229,7 @@ export default function Dashboard() {
                     const amount = Math.max(tx.kredit, tx.debit);
                     const Initial = tx.deskripsi.charAt(0).toUpperCase();
                     return (
-                      <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                      <tr key={idx} className="border-b border-slate-100/50 hover:bg-white/50 transition-colors group">
                         <td className="py-4 pl-2">
                            <div className="flex items-center gap-3">
                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm`}
@@ -265,7 +263,7 @@ export default function Dashboard() {
         </div>
 
         {/* Payment Schedule Card (Col 3) */}
-        <div className="bg-white rounded-3xl p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100">
+        <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60">
            <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">

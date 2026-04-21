@@ -51,10 +51,10 @@ export function TopNav() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#fcfcfc] border-b border-slate-200 hidden md:block">
+    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm hidden md:block">
       <div className="px-6 lg:px-10 h-[72px] mx-auto flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 w-[200px]">
+        <Link href="/" className="flex items-center gap-3 w-[200px] hover:opacity-80 transition-opacity">
           <Image src="/logo.png" alt="OprexDuit Logo" width={32} height={32} className="w-8 h-8 rounded-xl object-contain" />
           <span className="text-lg font-extrabold text-slate-900 tracking-tight">
             Oprex<span className="text-orange-500">Duit.</span>

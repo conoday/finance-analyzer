@@ -60,8 +60,7 @@ export function Header({ onDonasi }: HeaderProps) {
 
   return (
     <header
-      className="sticky top-0 z-40 w-full md:hidden"
-      style={{ background: "rgba(255,255,255,0.92)", borderBottom: "1px solid rgba(20,184,166,0.12)", backdropFilter: "blur(20px)" }}
+      className="sticky top-0 z-40 w-full md:hidden bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm"
     >
       <div className="px-4 h-14 flex items-center justify-between">
         {/* Logo — mobile only */}

@@ -53,8 +53,7 @@ export function SideNav({ onDonasi, hideOnDesktop }: { onDonasi?: () => void; hi
   return (
     <>
       {/* ── Mobile Bottom Nav ── */}
-      <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t flex items-center justify-around px-2 py-2 safe-pb ${hideOnDesktop ? 'md:hidden' : ''}`}
-        style={{ borderColor: "rgba(20,184,166,0.15)" }}
+      <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 shadow-[0_-4px_24px_rgba(0,0,0,0.02)] flex items-center justify-around px-2 py-2 safe-pb ${hideOnDesktop ? 'md:hidden' : ''}`}
       >
         {NAV_ITEMS.filter((i) => i.mobileShow).map((item) => (
           <MobileNavItem key={item.href} item={item} />
