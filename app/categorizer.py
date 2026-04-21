@@ -109,8 +109,24 @@ def categorize_transactions(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["deskripsi"] = df["deskripsi"].fillna("").astype(str)
 
-    results = df["deskripsi"].apply(_classify_single)
-    df[["kategori", "tipe"]] = pd.DataFrame(results.tolist(), index=df.index)
+    def _apply_cat(row):
+        existing_cat = str(row.get("kategori", "")).strip()
+        tipe = str(row.get("tipe", "")).strip()
+        desc = str(row.get("deskripsi", ""))
+        
+        # Determine new category & type
+        new_cat, new_type = _classify_single(desc)
+        
+        # Override only if missing or "Lainnya"
+        final_cat = existing_cat if existing_cat and existing_cat.lower() != "lainnya" else new_cat
+        final_type = tipe if tipe else new_type
+        
+        return pd.Series([final_cat, final_type])
+
+    # df["kategori"] has been aliased to "category_raw" previously
+    # Apply category logic row by row
+    results = df.apply(_apply_cat, axis=1)
+    df[["kategori", "tipe"]] = results
 
     # Override tipe berdasarkan nilai debit/kredit jika tersedia
     if "debit" in df.columns and "kredit" in df.columns:

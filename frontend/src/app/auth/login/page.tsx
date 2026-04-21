@@ -62,14 +62,9 @@ export default function LoginPage() {
       {/* Logo */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 mb-1">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
-          >
-            <Wallet className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">
-            Oprex<span className="text-teal-400">Duit</span>
+          <img src="/logo.png" alt="OprexDuit Logo" className="w-10 h-10 object-contain rounded-xl" />
+          <span className="text-2xl font-bold tracking-tight text-slate-900">
+            Oprex<span className="text-orange-500">Duit.</span>
           </span>
         </div>
         <p className="text-slate-700 text-sm">Masuk ke akun kamu</p>

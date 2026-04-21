@@ -252,10 +252,45 @@ function SettingsContent() {
 
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-5">
 
-        {/* Page title */}
-        <div>
-          <h1 className="text-lg font-semibold text-slate-800">Pengaturan Akun</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
+        {/* Page title & Avatar */}
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-800">Pengaturan Akun</h1>
+            <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-5" style={{ border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <p className="text-sm font-medium text-slate-800 mb-3">Avatar Profil</p>
+            <div className="flex flex-wrap gap-3">
+              {Array.from({ length: 15 }, (_, i) => {
+                const seedUrl = `https://api.dicebear.com/8.x/adventurer/svg?seed=Avatar${i}`;
+                const isSelected = user.user_metadata?.avatar_url === seedUrl;
+                return (
+                  <button
+                    key={i}
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.updateUser({ data: { avatar_url: seedUrl } });
+                        router.refresh();
+                        setMessage({ type: "success", text: "Avatar berhasil diperbarui!" });
+                      } catch (e) {
+                         setMessage({ type: "error", text: "Gagal memperbarui avatar." });
+                      }
+                    }}
+                    className={`relative w-12 h-12 rounded-xl border-2 transition-all overflow-hidden ${isSelected ? "border-teal-500 scale-110 shadow-md" : "border-slate-100 hover:border-teal-300"}`}
+                  >
+                    <img src={seedUrl} alt={`Avatar ${i}`} className="w-full h-full object-cover bg-slate-50" />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-teal-500/20 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-teal-700 font-bold drop-shadow-md" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-3">Pilih avatar yang mewakili kamu.</p>
+          </div>
         </div>
 
         {/* Global message */}

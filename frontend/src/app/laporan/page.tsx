@@ -23,26 +23,25 @@ export default function LaporanPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(124,58,237,0.12)" }}>
-            <BarChart3 className="w-5 h-5 text-violet-600" />
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-50 border border-violet-100">
+              <BarChart3 className="w-5 h-5 text-violet-600" />
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Laporan & Analitik</h1>
-            <p className="text-xs text-slate-500">Visualisasi pengeluaran & tren keuangan</p>
-          </div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Laporan & Analitik</h1>
+          <p className="text-slate-500 text-sm mt-1">Visualisasi pengeluaran & tren keuangan</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-600">Bulan:</span>
+        <div className="flex items-center gap-3">
           <input
             type="month" value={monthFilter}
             onChange={(e) => { setMonthFilter(e.target.value); analyzeMe(e.target.value || undefined); }}
-            className="bg-white border focus:ring-2 focus:outline-none focus:ring-teal-500 p-1.5 text-sm rounded-lg shadow-sm font-medium text-slate-800"
+            className="bg-white border focus:ring-2 focus:outline-none focus:ring-violet-500 px-3 py-2 text-sm rounded-full shadow-sm font-medium text-slate-800"
           />
           {monthFilter && (
             <button onClick={() => { setMonthFilter(""); analyzeMe(); }}
-              className="text-xs text-slate-500 hover:text-slate-800 underline">Semua</button>
+              className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">Semua</button>
           )}
         </div>
       </div>

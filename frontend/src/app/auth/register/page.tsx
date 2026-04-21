@@ -100,11 +100,15 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    const randomSeed = Math.floor(Math.random() * 15);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name },
+        data: { 
+          full_name: name,
+          avatar_url: `https://api.dicebear.com/8.x/adventurer/svg?seed=Avatar${randomSeed}`,
+        },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? location.origin}/auth/callback`,
       },
     });
@@ -143,15 +147,10 @@ export default function RegisterPage() {
     <div className="w-full max-w-sm space-y-5 py-8">
       {/* Logo */}
       <div className="text-center space-y-1">
-        <div className="inline-flex items-center gap-2">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
-          >
-            <Wallet className="w-5 h-5 text-white" />
-          </div>
+        <div className="inline-flex items-center gap-2 mb-1">
+          <img src="/logo.png" alt="OprexDuit Logo" className="w-10 h-10 object-contain rounded-xl" />
           <span className="text-2xl font-bold tracking-tight text-slate-800">
-            Oprex<span className="text-teal-500">Duit</span>
+            Oprex<span className="text-orange-500">Duit.</span>
           </span>
         </div>
         <p className="text-slate-700 text-sm">Buat akun gratis kamu</p>

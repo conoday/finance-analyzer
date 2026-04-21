@@ -18,12 +18,10 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/",              label: "Dashboard",    icon: LayoutDashboard, mobileShow: true },
   { href: "/transaksi",    label: "Transaksi",    icon: Receipt,         mobileShow: true },
-  { href: "/laporan",      label: "Laporan",      icon: BarChart3,       mobileShow: true },
+  { href: "/laporan",      label: "Laporan",      icon: BarChart3,       mobileShow: false },
   { href: "/budget",       label: "Budget",       icon: Wallet,          mobileShow: true },
-  { href: "/perencanaan",  label: "Perencanaan",  icon: TrendingUp,      mobileShow: false },
-  { href: "/import",       label: "Import Mutasi",icon: Upload,          mobileShow: false },
-  { href: "/aset",         label: "Aset & Hutang",icon: PiggyBank,       mobileShow: false },
-  { href: "/settings",     label: "Pengaturan",   icon: Settings,        mobileShow: true },
+  { href: "/aset",         label: "Aset",         icon: PiggyBank,       mobileShow: true },
+  { href: "/settings",     label: "Menu",         icon: Settings,        mobileShow: true },
 ];
 
 function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {

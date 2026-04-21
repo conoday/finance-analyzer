@@ -55,9 +55,7 @@ export function TopNav() {
       <div className="px-6 lg:px-10 h-[72px] mx-auto flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 w-[200px]">
-          <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center shadow-sm">
-             <span className="text-white font-black text-sm">O</span>
-          </div>
+          <Image src="/logo.png" alt="OprexDuit Logo" width={32} height={32} className="w-8 h-8 rounded-xl object-contain" />
           <span className="text-lg font-extrabold text-slate-900 tracking-tight">
             Oprex<span className="text-orange-500">Duit.</span>
           </span>

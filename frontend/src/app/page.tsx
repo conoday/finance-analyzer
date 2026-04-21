@@ -25,10 +25,10 @@ export default function Dashboard() {
   const fullName = (user?.user_metadata?.full_name as string) ?? user?.email ?? "Guest";
   const firstName = fullName.split(" ")[0];
 
-  // Derive simple metrics from txs for the overview
-  const totalIncome = txs.filter(t => t.isIncome).reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = txs.filter(t => !t.isIncome).reduce((acc, t) => acc + t.amount, 0);
-  const netBalance = totalIncome - totalExpense;
+  // Derive simple metrics from data.summary for the overview
+  const totalIncome = data?.summary?.total_income ?? 0;
+  const totalExpense = data?.summary?.total_expense ?? 0;
+  const netBalance = data?.summary?.net_cashflow ?? 0;
 
   const getCategoryColor = (cat: string) => {
     const lower = cat.toLowerCase();
@@ -56,11 +56,17 @@ export default function Dashboard() {
           <p className="text-slate-500 text-sm mt-1">Stay updated on your finances with real-time data</p>
         </div>
         <div className="flex items-center gap-3">
+          <input
+            type="month"
+            value={monthFilter}
+            onChange={(e) => {
+              setMonthFilter(e.target.value);
+              analyzeMe(e.target.value || undefined);
+            }}
+            className="bg-white border focus:ring-2 focus:outline-none focus:ring-[#df6b52]/50 px-3 py-2 text-sm rounded-full shadow-sm font-medium text-slate-800"
+          />
           <button className="flex items-center gap-2 px-5 py-2.5 bg-[#df6b52] hover:bg-[#c95b45] text-white rounded-full text-sm font-semibold transition-colors shadow-sm shadow-orange-200">
             <ArrowUpRight className="w-4 h-4" /> Export
-          </button>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 rounded-full text-sm font-semibold transition-colors shadow-sm">
-            <SettingsIcon /> Manage
           </button>
         </div>
       </div>
@@ -114,12 +120,9 @@ export default function Dashboard() {
             
             {/* Segmented Bar */}
             <div className="flex h-4 rounded-full overflow-hidden gap-1 w-full bg-slate-100">
-              {totalExpense > 0 ? (
-                Object.entries(txs.filter(t=>!t.isIncome).reduce((acc:any, t)=>{
-                  acc[t.category || 'Lainnya'] = (acc[t.category || 'Lainnya'] || 0) + t.amount;
-                  return acc;
-                }, {})).sort((a:any, b:any) => b[1] - a[1]).slice(0, 3).map(([cat, amt]:any) => (
-                  <div key={cat} style={{ width: `${(amt / totalExpense) * 100}%`, backgroundColor: getCategoryColor(cat) }} className="h-full rounded-full" title={`${cat} - ${formatRupiah(amt)}`} />
+              {totalExpense > 0 && data?.by_category?.length ? (
+                data.by_category.slice(0, 3).map((cat) => (
+                  <div key={cat.kategori} style={{ width: `${(cat.total / totalExpense) * 100}%`, backgroundColor: getCategoryColor(cat.kategori) }} className="h-full rounded-full" title={`${cat.kategori} - ${formatRupiah(cat.total)}`} />
                 ))
               ) : (
                 <div className="w-full bg-slate-200" />
@@ -220,21 +223,22 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {txs.length === 0 ? (
+                {!data?.transactions || data.transactions.length === 0 ? (
                   <tr><td colSpan={4} className="text-center py-10 text-slate-400 text-sm">Tidak ada transaksi bulan ini.</td></tr>
                 ) : (
-                  txs.slice(0, 5).map((tx, idx) => {
-                    const isIncome = tx.isIncome;
-                    const Initial = tx.desc.charAt(0).toUpperCase();
+                  data.transactions.slice(0, 5).map((tx, idx) => {
+                    const isIncome = tx.tipe === 'income';
+                    const amount = Math.max(tx.kredit, tx.debit);
+                    const Initial = tx.deskripsi.charAt(0).toUpperCase();
                     return (
-                      <tr key={tx.id || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                      <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
                         <td className="py-4 pl-2">
                            <div className="flex items-center gap-3">
                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm`}
                                   style={{ backgroundColor: isIncome ? '#10b981' : '#0f172a' }}>
                                {Initial}
                              </div>
-                             <span className="font-semibold text-slate-900 text-sm truncate max-w-[150px]">{tx.desc}</span>
+                             <span className="font-semibold text-slate-900 text-sm truncate max-w-[150px]">{tx.deskripsi}</span>
                            </div>
                         </td>
                         <td className="py-4">
@@ -243,10 +247,10 @@ export default function Dashboard() {
                            </span>
                         </td>
                         <td className="py-4 text-xs font-medium text-slate-500">
-                          {new Date(tx.date || '').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year:'numeric'})}
+                          {new Date(tx.tanggal || '').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year:'numeric'})}
                         </td>
                         <td className={`py-4 text-right pr-4 text-sm font-bold ${isIncome ? 'text-[#10b981]' : 'text-slate-900'}`}>
-                          {isIncome ? '+' : '-'}{formatRupiah(tx.amount)}
+                          {isIncome ? '+' : '-'}{formatRupiah(amount)}
                         </td>
                       </tr>
                     )
@@ -274,26 +278,22 @@ export default function Dashboard() {
            <p className="text-slate-400 text-xs mb-6">Track Your Payments, Stay on Schedule</p>
            
            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white"><Sparkles className="w-5 h-5"/></div>
-                   <div>
-                     <p className="text-sm font-semibold text-slate-900">Langganan AI</p>
-                     <p className="text-[11px] text-slate-400">10 Mei 2026</p>
-                   </div>
-                 </div>
-                 <p className="text-sm font-bold text-[#df6b52]">{formatRupiah(150000)}</p>
-              </div>
-              <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white font-black">N</div>
-                   <div>
-                     <p className="text-sm font-semibold text-slate-900">Netflix</p>
-                     <p className="text-[11px] text-slate-400">22 Mei 2026</p>
-                   </div>
-                 </div>
-                 <p className="text-sm font-bold text-[#df6b52]">{formatRupiah(85000)}</p>
-              </div>
+              {!data?.subscriptions || data.subscriptions.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4">Tidak ada tagihan terdeteksi bulan ini.</p>
+              ) : (
+                data.subscriptions.slice(0, 3).map((sub, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold">{sub.merchant.charAt(0).toUpperCase()}</div>
+                       <div>
+                         <p className="text-sm font-semibold text-slate-900">{sub.merchant}</p>
+                         <p className="text-[11px] text-slate-400 capitalize">{sub.frekuensi}</p>
+                       </div>
+                     </div>
+                     <p className="text-sm font-bold text-[#df6b52]">{formatRupiah(sub.estimated_monthly)}</p>
+                  </div>
+                ))
+              )}
            </div>
         </div>
 
