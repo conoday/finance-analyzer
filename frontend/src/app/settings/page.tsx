@@ -273,12 +273,13 @@ function SettingsContent() {
                         await supabase.auth.updateUser({ data: { avatar_url: seedUrl } });
                         router.refresh();
                         setMessage({ type: "success", text: "Avatar berhasil diperbarui!" });
-                      } catch (e) {
+                      } catch {
                          setMessage({ type: "error", text: "Gagal memperbarui avatar." });
                       }
                     }}
                     className={`relative w-12 h-12 rounded-xl border-2 transition-all overflow-hidden ${isSelected ? "border-teal-500 scale-110 shadow-md" : "border-slate-100 hover:border-teal-300"}`}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={seedUrl} alt={`Avatar ${i}`} className="w-full h-full object-cover bg-slate-50" />
                     {isSelected && (
                       <div className="absolute inset-0 bg-teal-500/20 flex items-center justify-center">

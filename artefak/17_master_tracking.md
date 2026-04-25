@@ -1,7 +1,7 @@
 # Master Tracking Board — OprexDuit
 
 > Last updated: 2026-04-20 (rev 11)
-> Agent baru: baca file ini PERTAMA sebelum melakukan apapun.
+> Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
 

@@ -4,14 +4,13 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAnalysis } from "@/hooks/useAnalysis";
-import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Loader2, Sparkles, Filter, Target, Receipt, Search, BarChart3 } from "lucide-react";
-import Image from "next/image";
+import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Filter, Target, Receipt, Search, BarChart3 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 
 // Montra-style component structure
 export default function Dashboard() {
   const { user } = useAuth();
-  const { txs, loading: txLoading, isCloud } = useTransactions();
+  const { loading: txLoading } = useTransactions();
   const { data, status, analyzeMe } = useAnalysis();
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [monthFilter, setMonthFilter] = useState<string>(currentMonthStr);
@@ -20,13 +19,9 @@ export default function Dashboard() {
     if (user && status === "idle" && !data) {
       analyzeMe(monthFilter);
     }
-  }, [user, status, analyzeMe, monthFilter]);
-
-  const fullName = (user?.user_metadata?.full_name as string) ?? user?.email ?? "Guest";
-  const firstName = fullName.split(" ")[0];
+  }, [user, status, data, analyzeMe, monthFilter]);
 
   // Derive simple metrics from data.summary for the overview
-  const totalIncome = data?.summary?.total_income ?? 0;
   const totalExpense = data?.summary?.total_expense ?? 0;
   const netBalance = data?.summary?.net_cashflow ?? 0;
 
@@ -338,17 +333,7 @@ export default function Dashboard() {
     </div>
   );
 }
-
-// Inline pure SVG icons for precise styling
-const SettingsIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-);
-const WalletIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-);
+// Inline pure SVG icon for precise styling
 const PieChartIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-);
-const ArrowRightIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
 );

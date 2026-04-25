@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Target, TrendingUp, AlertTriangle, CheckCircle2,
+  Sparkles, Target, AlertTriangle, CheckCircle2,
   Loader2, ChevronDown, ChevronUp, RefreshCw, DollarSign,
   Calendar, Lightbulb,
 } from "lucide-react";
@@ -17,14 +17,6 @@ import { formatRupiah } from "@/lib/utils";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://oprexduit.onrender.com";
 
 // ── Types ─────────────────────────────────────────────────────────────────
-
-interface PlannerInput {
-  monthlyIncome: number;
-  monthlyExpense: number;
-  goals: string;
-  horizon: number; // months
-  currentSavings: number;
-}
 
 interface PlannerResult {
   headline: string;

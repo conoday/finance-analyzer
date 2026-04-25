@@ -165,7 +165,7 @@ export function SimulatorPanel({ data }: SimulatorPanelProps) {
             </div>
             <div>
               <p className="text-slate-700 font-medium">Simulasikan masa depan keuangan Anda</p>
-              <p className="text-slate-800 text-sm mt-1">Atur slider penghematan lalu klik "Jalankan Simulasi"</p>
+              <p className="text-slate-800 text-sm mt-1">Atur slider penghematan lalu klik &quot;Jalankan Simulasi&quot;</p>
             </div>
           </div>
         )}

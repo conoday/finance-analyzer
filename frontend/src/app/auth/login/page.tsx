@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
-import { Eye, EyeOff, Loader2, Wallet } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function LoginPage() {
       {/* Logo */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 mb-1">
-          <img src="/logo.png" alt="OprexDuit Logo" className="w-10 h-10 object-contain rounded-xl" />
+          <Image src="/logo.png" alt="OprexDuit Logo" width={40} height={40} className="w-10 h-10 object-contain rounded-xl" priority />
           <span className="text-2xl font-bold tracking-tight text-slate-900">
             Oprex<span className="text-orange-500">Duit.</span>
           </span>

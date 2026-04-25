@@ -10,7 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Wallet, TrendingUp, TrendingDown, Plus, Pencil, Trash2,
-  Check, X, Bell, AlertCircle, ChevronDown, ChevronUp,
+  Check, X, Bell, AlertCircle,
   Building2, Car, PiggyBank, BarChart3, Package,
   CreditCard, Home, Landmark, ShoppingBag,
 } from "lucide-react";

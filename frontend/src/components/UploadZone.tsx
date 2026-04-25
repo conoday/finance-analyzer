@@ -34,12 +34,16 @@ export function UploadZone({ onFile }: UploadZoneProps) {
   // The drop zone still works via onDrop/onDragEnter/onDragLeave/onDragOver
   // which do NOT conflict with framer-motion.
   const {
-    onAnimationStart: _a,
-    onDragStart: _ds,
-    onDragEnd: _de,
-    onDrag: _dg,
+    onAnimationStart: animationStart,
+    onDragStart: dragStart,
+    onDragEnd: dragEnd,
+    onDrag: drag,
     ...safeRootProps
   } = getRootProps();
+  void animationStart;
+  void dragStart;
+  void dragEnd;
+  void drag;
 
   return (
     <div className="w-full max-w-xl space-y-4">

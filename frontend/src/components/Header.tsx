@@ -8,8 +8,6 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
-  hasData?: boolean;
-  onReset?: () => void;
   onDonasi?: () => void;
 }
 
@@ -51,6 +49,7 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
 }
 
 export function Header({ onDonasi }: HeaderProps) {
+  void onDonasi;
   const [showMenu, setShowMenu] = useState(false);
   const { user, loading, signOut } = useAuth();
 

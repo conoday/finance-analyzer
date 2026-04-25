@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Bot, User, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Bot, Sparkles } from "lucide-react";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -36,7 +36,7 @@ export function FloatingAIChat() {
 
     try {
       // Try to get auth token for personalized AI responses
-      let authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
       try {
         const { createClient } = await import("@/utils/supabase/client");
         const supabase = createClient();
@@ -59,8 +59,8 @@ export function FloatingAIChat() {
       if (!res.ok) throw new Error(data.detail || "Error");
       
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
-    } catch (err: any) {
-      const msg = err?.message ?? "";
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
       let reply: string;
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
         reply = "⚠️ Tidak bisa terhubung ke server. Periksa koneksi internet atau coba lagi nanti.";

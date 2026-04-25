@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import type { SubscriptionRow } from "@/types";
 

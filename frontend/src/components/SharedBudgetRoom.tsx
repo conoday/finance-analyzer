@@ -13,12 +13,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Link2, Copy, Check, Plus, LogIn, RefreshCw,
+  Users, Copy, Check, Plus, LogIn, RefreshCw,
   Crown, ChevronDown, ChevronUp, AlertTriangle, TrendingUp,
   TrendingDown, Wallet, Share2, X, UserPlus, Sparkles,
 } from "lucide-react";
 import {
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
+  ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell,
   PieChart, Pie,
 } from "recharts";
@@ -353,7 +353,7 @@ function SharedBudgetTable({ room, isCreator, memberId }: {
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [val, setVal] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [, setSaving] = useState(false);
 
   // Aggregate actual spending across all members per category
   const aggregated: Record<string, number> = {};
@@ -612,7 +612,6 @@ export function SharedBudgetRoom({ byCategory = [], summary = null }: SharedBudg
     setStep("idle");
   }
 
-  const me          = room?.members.find(m => m.member_id === memberId);
   // Use creator_member_id from server (explicit, not index-based)
   const isCreator   = !!room && (room as any).creator_member_id
     ? (room as any).creator_member_id === memberId

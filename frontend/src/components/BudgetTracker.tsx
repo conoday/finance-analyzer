@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Target, PencilLine, Check, X, AlertTriangle, TrendingDown, Plus, BarChart2, PieChartIcon } from "lucide-react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend, LabelList,
+  ResponsiveContainer, Legend,
 } from "recharts";
 import { formatRupiah } from "@/lib/utils";
 import type { CategoryRow } from "@/types";
@@ -47,13 +47,6 @@ interface BudgetMap {
 interface BudgetTrackerProps {
   byCategory: CategoryRow[]; // actual spending from analysis
 }
-
-// Default category list jika belum ada data analisis
-const DEFAULT_CATEGORIES = [
-  "Kuliner", "Transportasi", "Fast Food", "Food Delivery",
-  "Minimarket", "Supermarket", "Streaming", "Gaming",
-  "Pulsa & Data", "Listrik", "Internet", "Lainnya",
-];
 
 function loadBudgets(): BudgetMap {
   if (typeof window === "undefined") return {};

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { UploadZone } from "@/components/UploadZone";
 import { BalanceCard } from "@/components/BalanceCard";

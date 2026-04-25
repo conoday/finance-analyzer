@@ -116,10 +116,6 @@ function loadLocal(): QuickTransaction[] {
   } catch { return []; }
 }
 
-function saveLocal(txs: QuickTransaction[]) {
-  localStorage.setItem(LS_KEY, JSON.stringify(txs.slice(0, 200)));
-}
-
 /* ─── Payment methods — text badges (Simple Icons has no Indonesian brands) ─── */
 const METHODS: { label: string; abbr: string; color: string; bg: string }[] = [
   { label: "Cash",    abbr: "💵",  color: "#4ade80", bg: "#052e16" },
@@ -171,7 +167,7 @@ export function SmartInput({ onClose, onSaved }: SmartInputProps) {
     } else {
       setParsed({});
     }
-  }, [raw]);
+  }, [raw, manualCategory]);
 
   const effectiveCategory = manualCategory || parsed.category || "Lainnya";
   const meta = getCategoryMeta(effectiveCategory);

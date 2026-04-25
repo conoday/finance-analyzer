@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import {
-  LayoutDashboard, Receipt, BarChart3, Wallet, TrendingUp,
-  Upload, PiggyBank, Settings, Heart
+  LayoutDashboard, Receipt, BarChart3, Wallet,
+  PiggyBank, Settings
 } from "lucide-react";
 
 interface NavItem {
@@ -24,32 +23,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/settings",     label: "Menu",         icon: Settings,        mobileShow: true },
 ];
 
-function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
-  const pathname = usePathname();
-  const isActive = pathname === item.href;
-  const Icon = item.icon;
-
-  return (
-    <Link href={item.href} className="block">
-      <motion.div
-        whileHover={{ x: 2 }}
-        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium ${
-          isActive
-            ? "bg-teal-600 text-white shadow-sm shadow-teal-200"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-        }`}
-        title={collapsed ? item.label : undefined}
-      >
-        <Icon className="w-4.5 h-4.5 shrink-0" style={{ width: "18px", height: "18px" }} />
-        {!collapsed && (
-          <span className="truncate leading-none">{item.label}</span>
-        )}
-      </motion.div>
-    </Link>
-  );
-}
 
 export function SideNav({ onDonasi, hideOnDesktop }: { onDonasi?: () => void; hideOnDesktop?: boolean }) {
+  void onDonasi;
   return (
     <>
       {/* ── Mobile Bottom Nav ── */}

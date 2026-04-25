@@ -73,7 +73,7 @@ export function SpendingWheel({ data }: SpendingWheelProps) {
 
       {/* Top 3 list */}
       <div className="space-y-2 mt-2">
-        {top.slice(0, 3).map((row, i) => (
+        {top.slice(0, 3).map((row) => (
           <div key={row.kategori} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <span

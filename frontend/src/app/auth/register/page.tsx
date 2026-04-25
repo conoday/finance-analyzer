@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
-import { Eye, EyeOff, Loader2, Wallet, ChevronDown, Shield, Lock, UserCheck, Trash2, FileText, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, ChevronDown, Shield, Lock, Trash2, FileText, X } from "lucide-react";
 
 const TNC_SECTIONS = [
   {
@@ -148,7 +149,7 @@ export default function RegisterPage() {
       {/* Logo */}
       <div className="text-center space-y-1">
         <div className="inline-flex items-center gap-2 mb-1">
-          <img src="/logo.png" alt="OprexDuit Logo" className="w-10 h-10 object-contain rounded-xl" />
+          <Image src="/logo.png" alt="OprexDuit Logo" width={40} height={40} className="w-10 h-10 object-contain rounded-xl" priority />
           <span className="text-2xl font-bold tracking-tight text-slate-800">
             Oprex<span className="text-orange-500">Duit.</span>
           </span>

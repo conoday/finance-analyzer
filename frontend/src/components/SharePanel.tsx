@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Download, Heart, X, Copy, Check, Cloud } from "lucide-react";
+import { MessageCircle, Download, Heart, X, Check, Cloud } from "lucide-react";
 import type { AnalysisResult } from "@/types";
 import { formatRupiah } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";

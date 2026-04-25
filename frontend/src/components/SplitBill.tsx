@@ -5,10 +5,10 @@
  * Split tagihan/struk: input item → tambah peserta → assign item ke orang → hitung pajak → ringkasan.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Receipt, Users, Calculator, Share2, Plus, Trash2, X,
+  Receipt, Users, Calculator, Plus, Trash2, X,
   Check, ChevronRight, ChevronLeft, Upload, Loader2,
   Copy, RotateCcw, Camera,
 } from "lucide-react";
