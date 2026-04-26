@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-26 (rev 15)
+> Last updated: 2026-04-26 (rev 16)
 > Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Session | ✅ Oprex redesign rollout phase-2 (2026-04-26) | Ekspansi redesign ke halaman Transaksi/Laporan/Budget + hero/kontrol konsisten |
+| Last Session | ✅ Oprex redesign mobile parity polish (2026-04-26) | Header mobile dapat mode switch visual + SideNav nested-route active state fix |
 
 ---
 
@@ -115,6 +115,10 @@
 - [x] Halaman `budget` dirombak: tab switcher, KPI ringkas, dan panel content mengikuti visual language redesign
 - [x] `PageHero` dijadikan komponen showtime-native sehingga semua halaman turunan otomatis konsisten
 - [x] Ditambahkan CSS `showtime-surface` untuk harmonisasi komponen legacy (glass cards/charts/tooltips) di mode showtime
+
+### Oprex Redesign Mobile Parity Polish (2026-04-26)
+- [x] Header mobile ditambah mode switch `Ringkas/Showtime` dengan dropdown, reduced-motion guard, dan auto-close saat route berubah / klik di luar menu
+- [x] SideNav mobile active-state di-fix untuk nested route (`startsWith`) agar highlight menu tetap akurat pada subhalaman
 
 ### Dokumentasi Artefak (rev 10)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking

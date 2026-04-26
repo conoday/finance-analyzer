@@ -52,12 +52,12 @@ export function SideNav({ onDonasi, hideOnDesktop }: { onDonasi?: () => void; hi
 
 function MobileNavItem({ item, isShowtime }: { item: NavItem; isShowtime: boolean }) {
   const pathname = usePathname();
-  const isActive = pathname === item.href;
+  const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
   const Icon = item.icon;
 
   return (
     <motion.div whileTap={{ scale: 0.94 }} whileHover={{ y: -1 }} transition={{ duration: 0.18 }}>
-      <Link href={item.href} className="relative flex min-w-[44px] flex-col items-center gap-0.5 rounded-xl px-3 py-1">
+      <Link href={item.href} aria-label={item.label} className="relative flex min-w-[44px] flex-col items-center gap-0.5 rounded-xl px-3 py-1">
         {isActive && (
           <motion.span
             layoutId="mobile-active-pill"
