@@ -1,5 +1,7 @@
 ﻿# Database Alternatives — Saat Skala Besar
 
+> Last updated: 2026-04-26 (rev 1)
+
 Masalah utama ketika ramai adalah **storage** (data transaksi + file gambar OCR).
 Berikut perbandingan dari yang paling murah:
 

@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-20 (rev 11)
+> Last updated: 2026-04-26 (rev 12)
 > Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Commit | ✅ c03d050 (2026-04-20) | fix: OCR vision pipeline, debiased prompt, JSON repair, light theme |
+| Last Commit | ✅ 1a3214b (2026-04-26) | feat: improve categorization, avatar system, nav actions, and motion polish |
 
 ---
 
@@ -85,6 +85,15 @@
   - 13/13 test cases pass
 - [x] `infer_datetime_format` removed (pandas 2+ compat)
 - [x] `parseIDR`: rebu/miliar/triliun + brand auto-kategorisasi
+
+### Bugfix + Polish Batch (2026-04-26 — commit 1a3214b)
+- [x] Kategorisasi transaksi di-backup dengan AI fallback terukur (mengurangi dominasi kategori `Lainnya`)
+- [x] Sinkronisasi kategori canonical backend ↔ frontend + alias mapping yang lebih kuat
+- [x] `analyze_me` expose `transaction.id` dan persist recategorization ke `category_raw`
+- [x] Delete transaksi dipertegas di daftar transaksi dan dashboard
+- [x] Avatar diganti ke sistem avatar hewan (tokenized), konsisten di register/settings/header/topnav
+- [x] Top navigation jadi fungsional (Mode selector, Search modal, Bell panel, shortcut Cmd/Ctrl+K)
+- [x] Motion system dipoles (scroll reveal reusable + parallax ambient + route/section transitions)
 
 ### Dokumentasi Artefak (rev 10)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking
@@ -314,7 +323,7 @@ Target: user yang mau insight cerdas, bukan cuma pencatatan.
 | Financial persona: saver/spender/impulsive | 🔲 Phase AI |
 | Prediksi cashflow akhir bulan | 🔲 Phase AI |
 | Smart kategorisasi AI (lebih akurat) | 🔲 Phase AI |
-| Financial Coach Chat | 🔲 Phase AI |
+| Financial Coach Chat | ✅ Done |
 
 ### Tier Business — Rp 149.000/bulan (Future)
 

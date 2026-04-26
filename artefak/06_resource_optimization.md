@@ -1,5 +1,8 @@
 ﻿# Resource Optimization
 
+> Last updated: 2026-04-26 (rev 1)
+> Catatan: dokumen ini masih butuh update besar, tapi metadata dan rekomendasi inti sudah dirapikan.
+
 ## Free Tier Limits
 
 | Service | Batasan Kritis |
@@ -17,8 +20,9 @@
 
 ### 2. Backend Efficiency
 - Selalu gunakan async def di endpoint FastAPI
-- Connection pooling SQLAlchemy (pool_size=5)
+- Hindari N+1 network calls ke database/API (batch query saat memungkinkan)
 - GZipMiddleware untuk kompresi response
+- Timeout + retry terukur untuk call eksternal (AI/OCR)
 
 ```python
 from fastapi.middleware.gzip import GZipMiddleware

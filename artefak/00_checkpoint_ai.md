@@ -1,6 +1,6 @@
 # Artefak Checkpoint for AI
 
-> Last updated: 2026-04-25 (rev 1)
+> Last updated: 2026-04-26 (rev 2)
 > Tujuan: jadi gerbang kualitas dokumentasi sebelum lanjut implementasi fitur.
 
 ## Mandatory Reading Order
@@ -35,6 +35,7 @@
 - Frontend stack: Next.js 16 + Tailwind
 - Auth: Supabase Auth + JWT guard FastAPI
 - Implemented: Telegram bot, Affiliate, Admin Console, AI Chat, OCR pipeline
+- Latest implementation batch: kategorisasi AI fallback + avatar hewan + aksi topnav + motion polish (commit `1a3214b`)
 
 ## Status Matrix (01-17)
 
@@ -86,4 +87,5 @@
 
 ## Update Log
 
+- 2026-04-26 (rev 2): sinkron checkpoint setelah rilis commit `1a3214b`, update metadata artefak, dan align source of truth di `17_master_tracking.md`.
 - 2026-04-25 (rev 1): checkpoint dibuat, baseline status 17 dokumen dicatat.
