@@ -316,6 +316,69 @@ button:active { transform: scale(0.97); }
   color: rgba(241, 245, 249, 0.92);
 }
 
+.ui-showtime .showtime-surface .glass {
+  background: rgba(10, 15, 25, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+}
+
+.ui-showtime .showtime-surface .glass-strong,
+.ui-showtime .showtime-surface .recharts-default-tooltip {
+  background: rgba(6, 10, 18, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #e2e8f0 !important;
+}
+
+.ui-showtime .showtime-surface .tx-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ui-showtime .showtime-surface .tx-card:hover {
+  background: rgba(0, 255, 148, 0.08);
+  border-color: rgba(0, 255, 148, 0.22);
+}
+
+.ui-showtime .showtime-surface .text-slate-900,
+.ui-showtime .showtime-surface .text-slate-800 {
+  color: rgba(241, 245, 249, 0.94) !important;
+}
+
+.ui-showtime .showtime-surface .text-slate-700,
+.ui-showtime .showtime-surface .text-slate-600 {
+  color: rgba(226, 232, 240, 0.82) !important;
+}
+
+.ui-showtime .showtime-surface .text-slate-500,
+.ui-showtime .showtime-surface .text-slate-400 {
+  color: rgba(203, 213, 225, 0.76) !important;
+}
+
+.ui-showtime .showtime-surface .text-red-400 {
+  color: rgba(253, 164, 175, 0.95) !important;
+}
+
+.ui-showtime .showtime-surface .text-emerald-400,
+.ui-showtime .showtime-surface .text-green-400 {
+  color: rgba(110, 231, 183, 0.95) !important;
+}
+
+.ui-showtime .showtime-surface .recharts-cartesian-axis-tick text,
+.ui-showtime .showtime-surface .recharts-legend-item-text {
+  fill: #cbd5e1 !important;
+  color: #cbd5e1 !important;
+}
+
+.ui-showtime .showtime-surface .badge-amber,
+.ui-showtime .showtime-surface .badge-teal,
+.ui-showtime .showtime-surface .badge-violet,
+.ui-showtime .showtime-surface .badge-green,
+.ui-showtime .showtime-surface .badge-blue,
+.ui-showtime .showtime-surface .badge-rose,
+.ui-showtime .showtime-surface .badge-orange {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .oprex-blob {
   opacity: 0.62;
   animation: oprexBlobMove 24s infinite alternate ease-in-out;

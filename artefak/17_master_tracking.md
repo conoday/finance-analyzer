@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-26 (rev 14)
+> Last updated: 2026-04-26 (rev 15)
 > Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Session | ✅ Oprex redesign embed batch (2026-04-26) | UI refactor berbasis `oprex-redesign`: shell/nav/dashboard/mobile + UI primitives |
+| Last Session | ✅ Oprex redesign rollout phase-2 (2026-04-26) | Ekspansi redesign ke halaman Transaksi/Laporan/Budget + hero/kontrol konsisten |
 
 ---
 
@@ -108,6 +108,13 @@
 - [x] TopNav desktop diubah ke dark-glass visual language saat showtime (menu, mode switcher, alerts, quick search)
 - [x] Header + SideNav mobile diselaraskan agar style redesign konsisten lintas device
 - [x] Dashboard utama dipoles dengan card tilt, sparkline mini, angka animasi ticker, serta tone warna showtime yang lebih kontras
+
+### Oprex Redesign Rollout Phase-2 (2026-04-26)
+- [x] Halaman `transaksi` dirombak: filter/actions bar showtime-aware, KPI strip transaksi, panel daftar transaksi bergaya baru
+- [x] Halaman `laporan` dirombak: controls + KPI strip + visual hierarchy konsisten mode ringkas/showtime
+- [x] Halaman `budget` dirombak: tab switcher, KPI ringkas, dan panel content mengikuti visual language redesign
+- [x] `PageHero` dijadikan komponen showtime-native sehingga semua halaman turunan otomatis konsisten
+- [x] Ditambahkan CSS `showtime-surface` untuk harmonisasi komponen legacy (glass cards/charts/tooltips) di mode showtime
 
 ### Dokumentasi Artefak (rev 10)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking

@@ -1,6 +1,6 @@
 # Artefak Checkpoint for AI
 
-> Last updated: 2026-04-26 (rev 4)
+> Last updated: 2026-04-26 (rev 5)
 > Tujuan: jadi gerbang kualitas dokumentasi sebelum lanjut implementasi fitur.
 
 ## Mandatory Reading Order
@@ -35,7 +35,7 @@
 - Frontend stack: Next.js 16 + Tailwind
 - Auth: Supabase Auth + JWT guard FastAPI
 - Implemented: Telegram bot, Affiliate, Admin Console, AI Chat, OCR pipeline
-- Latest implementation batch: embed style Oprex Redesign ke UI utama (dashboard/nav/shell/mobile) + komponen UI primitives (TiltCard, NumberTicker, Sparkline, CustomCursor)
+- Latest implementation batch: rollout lanjutan Oprex Redesign ke halaman Transaksi, Laporan, dan Budget (kontrol/filter, KPI strip, hero visual, showtime surface consistency)
 
 ## Status Matrix (01-17)
 
@@ -87,6 +87,7 @@
 
 ## Update Log
 
+- 2026-04-26 (rev 5): implementasi opsi 1 selesai: redesign dilanjutkan ke page `transaksi`, `laporan`, `budget` + upgrade `PageHero` agar mendukung mode Showtime secara native + CSS `showtime-surface` untuk konsistensi komponen lintas halaman.
 - 2026-04-26 (rev 4): sinkron checkpoint setelah embed referensi `oprex-redesign` ke web utama: global showtime shell mesh aura, nav desktop/mobile dark-glass, dashboard card tilt + sparkline + ticker, dan custom cursor khusus showtime.
 - 2026-04-26 (rev 3): update checkpoint setelah implementasi Prototype V1 visual mode (Ringkas/Showtime), reduced-motion global guard, serta polish motion dashboard + belanja.
 - 2026-04-26 (rev 2): sinkron checkpoint setelah rilis commit `1a3214b`, update metadata artefak, dan align source of truth di `17_master_tracking.md`.
