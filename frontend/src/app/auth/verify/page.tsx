@@ -96,32 +96,35 @@ function VerifyForm() {
   }
 
   return (
-    <div className="w-full max-w-sm space-y-6">
+    <div className="w-full space-y-6">
       {/* Logo */}
-      <div className="text-center space-y-1">
+      <div className="space-y-1 text-center">
+        <p className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+          Email Verification
+        </p>
         <div className="inline-flex items-center gap-2">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
+            style={{ background: "linear-gradient(135deg, #0f766e, #06b6d4)" }}
           >
             <Wallet className="w-5 h-5 text-white" />
           </div>
-          <span className="text-2xl font-bold tracking-tight">
-            Oprex<span className="text-teal-400">Duit</span>
+          <span className="text-2xl font-black tracking-tight text-slate-900">
+            Oprex<span className="text-orange-500">Duit.</span>
           </span>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-sm p-6 space-y-5">
+      <div className="space-y-5 rounded-[24px] border border-slate-200/80 bg-white/95 p-6 shadow-[0_20px_44px_rgba(15,23,42,0.09)]">
         {/* Icon + heading */}
         <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-2xl items-center justify-center bg-teal-500/10 border border-teal-500/20">
-            <Mail className="w-6 h-6 text-teal-400" />
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50">
+            <Mail className="h-6 w-6 text-teal-600" />
           </div>
-          <h2 className="text-lg font-semibold text-slate-100">Cek email kamu</h2>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h2 className="text-lg font-bold text-slate-900">Cek email kamu</h2>
+          <p className="text-xs leading-relaxed text-slate-600">
             Kode aktivasi 6 digit telah dikirim ke{" "}
-            <span className="text-slate-800 font-medium">{email || "email kamu"}</span>.
+            <span className="font-semibold text-slate-900">{email || "email kamu"}</span>.
             <br />
             Berlaku selama 10 menit.
           </p>
@@ -141,11 +144,11 @@ function VerifyForm() {
               onKeyDown={(e) => handleKeyDown(i, e)}
               onFocus={(e) => e.target.select()}
               className={[
-                "w-11 h-13 text-center text-xl font-bold rounded-xl border bg-white/5 transition-all focus:outline-none",
+                "h-13 w-11 rounded-xl border bg-white text-center text-xl font-bold transition-all focus:outline-none",
                 d
-                  ? "border-teal-500/60 text-teal-300"
-                  : "border-white/15 text-slate-100",
-                "focus:border-teal-500/80 focus:ring-1 focus:ring-teal-500/30",
+                  ? "border-teal-500 text-teal-700"
+                  : "border-slate-300 text-slate-700",
+                "focus:border-teal-500 focus:ring-2 focus:ring-teal-100",
               ].join(" ")}
               style={{ height: "52px" }}
             />
@@ -153,13 +156,13 @@ function VerifyForm() {
         </div>
 
         {error && (
-          <p className="text-xs text-red-400 bg-red-950/40 border border-red-800/40 rounded-lg px-3 py-2 text-center">
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
             {error}
           </p>
         )}
 
         {success && (
-          <p className="text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 rounded-lg px-3 py-2 text-center">
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs text-emerald-700">
             ✓ Email terverifikasi! Mengalihkan...
           </p>
         )}
@@ -167,29 +170,29 @@ function VerifyForm() {
         <button
           onClick={handleVerify}
           disabled={loading || success || digits.join("").length < CODE_LENGTH}
-          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50"
-          style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
+          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(20,184,166,0.32)] transition-all disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg, #0f766e, #06b6d4)" }}
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Aktivasi Akun"}
         </button>
 
         {/* Resend */}
-        <div className="text-center text-xs text-slate-700">
+        <div className="text-center text-xs text-slate-600">
           Tidak dapat email?{" "}
           <button
             type="button"
             onClick={handleResend}
             disabled={cooldown > 0}
-            className="text-teal-400 hover:text-teal-300 font-medium disabled:text-slate-800 disabled:cursor-not-allowed transition-colors"
+            className="font-semibold text-teal-600 transition-colors hover:text-teal-500 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             {cooldown > 0 ? `Kirim ulang (${cooldown}s)` : "Kirim ulang kode"}
           </button>
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-800">
+      <p className="text-center text-xs text-slate-600">
         Salah email?{" "}
-        <Link href="/auth/register" className="text-teal-400 hover:text-teal-300">
+        <Link href="/auth/register" className="font-semibold text-teal-600 hover:text-teal-500">
           Daftar ulang
         </Link>
       </p>
@@ -202,7 +205,7 @@ export default function VerifyPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center h-24">
-          <Loader2 className="w-6 h-6 animate-spin text-teal-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
         </div>
       }
     >

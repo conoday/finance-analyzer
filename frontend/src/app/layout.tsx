@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { FloatingAIChat } from "@/components/FloatingAIChat";
 import { AppShell } from "@/components/AppShell";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "OprexDuit — Ngatur Duit, Beres.",
@@ -16,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
-      <body className={`${inter.variable} font-sans antialiased bg-[#f8fafc] text-slate-800 min-h-screen`}>
+      <body className="min-h-screen bg-[#f4f8fb] font-sans text-slate-800 antialiased">
         <AppShell>
           {children}
         </AppShell>

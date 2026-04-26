@@ -59,25 +59,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm space-y-6">
+    <div className="w-full space-y-6">
       {/* Logo */}
       <div className="text-center space-y-2">
+        <p className="inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-teal-700">
+          Secure Login
+        </p>
         <div className="inline-flex items-center gap-2 mb-1">
           <Image src="/logo.png" alt="OprexDuit Logo" width={40} height={40} className="w-10 h-10 object-contain rounded-xl" priority />
-          <span className="text-2xl font-bold tracking-tight text-slate-900">
+          <span className="text-2xl font-black tracking-tight text-slate-900">
             Oprex<span className="text-orange-500">Duit.</span>
           </span>
         </div>
-        <p className="text-slate-700 text-sm">Masuk ke akun kamu</p>
+        <p className="text-sm text-slate-600">Masuk ke command center keuangan kamu</p>
       </div>
 
       {/* Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
+      <div className="space-y-4 rounded-[24px] border border-slate-200/80 bg-white/95 p-6 shadow-[0_20px_44px_rgba(15,23,42,0.09)]">
         {/* Google */}
         <button
           onClick={handleGoogle}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium py-2.5 transition-all disabled:opacity-60 text-slate-700"
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-100 disabled:opacity-60"
         >
           {googleLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -92,10 +95,10 @@ export default function LoginPage() {
           Masuk dengan Google
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <div className="flex-1 h-px bg-slate-200" />
+        <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+          <div className="h-px flex-1 bg-slate-200" />
           atau
-          <div className="flex-1 h-px bg-slate-200" />
+          <div className="h-px flex-1 bg-slate-200" />
         </div>
 
         {/* Email form */}
@@ -108,7 +111,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="kamu@email.com"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-all"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition-all focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
             />
           </div>
 
@@ -121,7 +124,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-10 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-800 placeholder-slate-400 transition-all focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
               />
               <button
                 type="button"
@@ -134,7 +137,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {error}
             </p>
           )}
@@ -142,17 +145,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }}
+            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(20,184,166,0.32)] transition-all disabled:opacity-60"
+            style={{ background: "linear-gradient(135deg, #0f766e, #06b6d4)" }}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Masuk"}
           </button>
         </form>
       </div>
 
-      <p className="text-center text-xs text-slate-700">
+      <p className="text-center text-xs text-slate-600">
         Belum punya akun?{" "}
-        <Link href="/auth/register" className="text-teal-600 hover:text-teal-500 font-medium">
+        <Link href="/auth/register" className="font-semibold text-teal-600 hover:text-teal-500">
           Daftar gratis
         </Link>
       </p>

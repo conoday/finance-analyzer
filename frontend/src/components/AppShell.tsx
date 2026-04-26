@@ -11,17 +11,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [showDonasi, setShowDonasi] = useState(false);
 
   return (
-    <div className="relative flex flex-col min-h-screen bg-slate-50 overflow-x-hidden">
-      
-      <div className="relative z-10 flex flex-col flex-1">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f4f8fb]">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-120px] top-[-120px] h-80 w-80 rounded-full bg-teal-200/30 blur-3xl" />
+        <div className="absolute right-[-120px] top-10 h-80 w-80 rounded-full bg-sky-200/25 blur-3xl" />
+        <div className="absolute bottom-[-140px] left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-orange-200/20 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 flex min-h-screen flex-col">
         {/* Desktop Top Navigation */}
         <TopNav />
         {/* Mobile Top Header (Keeps the logo and auth) */}
         <Header onDonasi={() => setShowDonasi(true)} />
 
         {/* Main content */}
-        <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
-          <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 mx-auto w-full max-w-[1440px]">
+        <div className="min-w-0 flex-1 pb-20 md:pb-0">
+          <main className="mx-auto w-full max-w-[1540px] flex-1 px-4 py-5 sm:px-6 md:py-6 lg:px-10 lg:py-8">
             {children}
           </main>
         </div>

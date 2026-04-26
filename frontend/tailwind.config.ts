@@ -42,7 +42,7 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-body)", "Segoe UI", "system-ui", "sans-serif"],
         mono: ["DM Mono", "JetBrains Mono", "monospace"],
       },
       backgroundImage: {

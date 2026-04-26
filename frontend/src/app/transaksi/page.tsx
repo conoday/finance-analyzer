@@ -8,6 +8,7 @@ import { TransactionList } from "@/components/TransactionList";
 import { TopMerchants } from "@/components/TopMerchants";
 import { SubscriptionList } from "@/components/SubscriptionList";
 import { SmartInput } from "@/components/SmartInput";
+import { PageHero } from "@/components/PageHero";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Plus, Receipt } from "lucide-react";
 
@@ -24,40 +25,48 @@ export default function TransaksiPage() {
   }, [user, status, analyzeMe, monthFilter]);
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(20,184,166,0.12)" }}>
-            <Receipt className="w-5 h-5 text-teal-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Transaksi</h1>
-            <p className="text-xs text-slate-500">Semua riwayat pemasukan & pengeluaran</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">Bulan:</span>
-            <input
-              type="month" value={monthFilter}
-              onChange={(e) => { setMonthFilter(e.target.value); analyzeMe(e.target.value || undefined); }}
-              className="bg-white border focus:ring-2 focus:outline-none focus:ring-teal-500 p-1.5 text-sm rounded-lg shadow-sm font-medium text-slate-800"
-            />
+    <div className="space-y-6">
+      <PageHero
+        icon={Receipt}
+        tone="teal"
+        badge="Transactions"
+        title="Pusat Transaksi Harian"
+        subtitle="Lacak arus pemasukan dan pengeluaran dengan timeline yang lebih jelas."
+        actions={
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-sm">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Periode</span>
+              <input
+                type="month"
+                value={monthFilter}
+                onChange={(e) => {
+                  setMonthFilter(e.target.value);
+                  analyzeMe(e.target.value || undefined);
+                }}
+                className="bg-transparent text-sm font-semibold text-slate-700 outline-none"
+              />
+            </div>
             {monthFilter && (
-              <button onClick={() => { setMonthFilter(""); analyzeMe(); }}
-                className="text-xs text-slate-500 hover:text-slate-800 underline">Semua</button>
+              <button
+                onClick={() => {
+                  setMonthFilter("");
+                  analyzeMe();
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-teal-200 hover:text-teal-700"
+              >
+                Semua
+              </button>
             )}
+            <button
+              onClick={() => setShowSmartInput(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-teal-500"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Catat Cepat
+            </button>
           </div>
-          <button
-            onClick={() => setShowSmartInput(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:scale-105"
-            style={{ background: "#0f766e" }}
-          >
-            <Plus className="w-3.5 h-3.5" /> Catat
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {status === "loading" && (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-teal-500" /></div>
@@ -80,7 +89,7 @@ export default function TransaksiPage() {
       )}
 
       {!user && (
-        <div className="text-center py-16 text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white/85 py-16 text-center text-slate-500">
           <Receipt className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <p className="text-sm">Masuk untuk melihat riwayat transaksi lengkap.</p>
         </div>

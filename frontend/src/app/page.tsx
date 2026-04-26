@@ -1,17 +1,69 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAnalysis } from "@/hooks/useAnalysis";
-import { ArrowUpRight, ArrowDownRight, MoreHorizontal, Calendar, Filter, Target, Receipt, Search, BarChart3 } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Calendar,
+  ChevronRight,
+  CircleDollarSign,
+  PiggyBank,
+  Receipt,
+  Sparkles,
+  Target,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 
-// Montra-style component structure
+const CATEGORY_COLORS = ["#14b8a6", "#0ea5e9", "#f97316", "#8b5cf6", "#e11d48"];
+
+const QUICK_ACTIONS: Array<{
+  href: string;
+  label: string;
+  caption: string;
+  icon: LucideIcon;
+  tone: string;
+}> = [
+  {
+    href: "/transaksi",
+    label: "Catat Pemasukan",
+    caption: "Tambah income",
+    icon: ArrowDownRight,
+    tone: "from-emerald-500 to-teal-500",
+  },
+  {
+    href: "/transaksi",
+    label: "Catat Pengeluaran",
+    caption: "Kontrol belanja",
+    icon: ArrowUpRight,
+    tone: "from-rose-500 to-orange-500",
+  },
+  {
+    href: "/laporan",
+    label: "Lihat Laporan",
+    caption: "Baca insight",
+    icon: BarChart3,
+    tone: "from-sky-500 to-indigo-500",
+  },
+  {
+    href: "/budget",
+    label: "Atur Budget",
+    caption: "Set limit baru",
+    icon: Target,
+    tone: "from-violet-500 to-indigo-500",
+  },
+];
+
 export default function Dashboard() {
   const { user } = useAuth();
   const { loading: txLoading } = useTransactions();
-  const { data, status, analyzeMe } = useAnalysis();
+  const { data, status, error, analyzeMe } = useAnalysis();
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [monthFilter, setMonthFilter] = useState<string>(currentMonthStr);
 
@@ -21,319 +73,356 @@ export default function Dashboard() {
     }
   }, [user, status, data, analyzeMe, monthFilter]);
 
-  // Derive simple metrics from data.summary for the overview
+  const totalIncome = data?.summary.total_income ?? 0;
   const totalExpense = data?.summary?.total_expense ?? 0;
   const netBalance = data?.summary?.net_cashflow ?? 0;
+  const txCount = data?.summary.tx_count ?? 0;
+  const savingsRate = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0;
+  const recurringMonthly = data?.sub_total_monthly ?? 0;
 
-  const getCategoryColor = (cat: string) => {
-    const lower = cat.toLowerCase();
-    if (lower.includes("makan")) return "#df6b52"; // Coral
-    if (lower.includes("transport")) return "#4ca2f6"; // Blue
-    if (lower.includes("belanja")) return "#835ae6"; // Purple
-    return "#bac5d4"; // Light gray fallback
-  };
+  const topCategories = (data?.by_category ?? []).slice(0, 4);
+  const recurring = (data?.subscriptions ?? []).slice(0, 4);
+  const recentTx = (data?.transactions ?? []).slice(0, 6);
 
   const isLoading = status === "loading" || txLoading;
+  const isPositiveBalance = netBalance >= 0;
 
   return (
-    <div className={`space-y-8 animate-fade-in pb-10 transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-      
-      {/* ── 1. Hero Balance Section ── */}
-      <div className="flex flex-col items-center justify-center text-center mt-2 mb-10 relative">
-        <p className="text-slate-500 text-sm font-medium mb-2">Total Arus Kas (Bulan Ini)</p>
-        <div className="flex items-center gap-3">
-          {isLoading ? (
-             <div className="h-12 w-48 bg-slate-200 animate-pulse rounded-2xl my-2" />
+    <div
+      className={`space-y-6 pb-10 transition-opacity duration-300 ${
+        isLoading ? "pointer-events-none opacity-60" : "opacity-100"
+      }`}
+    >
+      <section className="relative overflow-hidden rounded-[30px] border border-teal-100/70 bg-gradient-to-br from-white via-teal-50/70 to-sky-50 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-20 left-8 h-44 w-44 rounded-full bg-teal-300/25 blur-3xl" />
+          <div className="absolute right-[-20px] top-6 h-40 w-40 rounded-full bg-sky-300/25 blur-3xl" />
+          <div className="absolute bottom-[-24px] left-1/2 h-32 w-40 -translate-x-1/2 rounded-full bg-orange-200/30 blur-3xl" />
+        </div>
+
+        <div className="relative z-10 flex flex-col gap-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-[11px] font-semibold tracking-wide text-teal-700">
+                <Sparkles className="h-3.5 w-3.5" />
+                Dashboard Keuangan
+              </span>
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
+                  Ringkas, nyaman, dan fokus ke keputusan.
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm text-slate-600 md:text-base">
+                  Pantau arus kas, kategori belanja, dan transaksi penting dalam satu tampilan yang lebih rapi.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-end gap-3">
+                <p
+                  className={`text-4xl font-black tracking-tight md:text-5xl ${
+                    isPositiveBalance ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {formatRupiah(netBalance)}
+                </p>
+                <span
+                  className={`mb-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    isPositiveBalance
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-rose-100 text-rose-700"
+                  }`}
+                >
+                  {isPositiveBalance ? "Cashflow positif" : "Perlu optimasi cashflow"}
+                </span>
+              </div>
+
+              <p className="text-xs font-medium text-slate-500 md:text-sm">
+                Pemasukan {formatRupiah(totalIncome)} dan pengeluaran {formatRupiah(totalExpense)} pada periode aktif.
+              </p>
+            </div>
+
+            <div className="w-full rounded-2xl border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur md:max-w-[320px]">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Periode Analisis
+              </label>
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <Calendar className="h-4 w-4 text-slate-400" />
+                <input
+                  type="month"
+                  value={monthFilter}
+                  onChange={(e) => {
+                    setMonthFilter(e.target.value);
+                    analyzeMe(e.target.value || undefined);
+                  }}
+                  className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-teal-50 px-2.5 py-2 text-center">
+                  <p className="text-[10px] uppercase tracking-wide text-teal-700">Savings</p>
+                  <p className="mt-1 text-xs font-bold text-teal-900">{savingsRate.toFixed(1)}%</p>
+                </div>
+                <div className="rounded-xl bg-sky-50 px-2.5 py-2 text-center">
+                  <p className="text-[10px] uppercase tracking-wide text-sky-700">Transaksi</p>
+                  <p className="mt-1 text-xs font-bold text-sky-900">{txCount}</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 px-2.5 py-2 text-center">
+                  <p className="text-[10px] uppercase tracking-wide text-amber-700">Tagihan</p>
+                  <p className="mt-1 text-xs font-bold text-amber-900">{recurring.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {QUICK_ACTIONS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="group rounded-2xl border border-white/80 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
+                >
+                  <span
+                    className={`inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone} text-white shadow-sm`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <p className="mt-3 text-sm font-bold text-slate-900">{item.label}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{item.caption}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Pemasukan Bulan Ini"
+          value={formatRupiah(totalIncome)}
+          hint="Total dana yang masuk"
+          icon={CircleDollarSign}
+          tone="teal"
+        />
+        <MetricCard
+          label="Pengeluaran Bulan Ini"
+          value={formatRupiah(totalExpense)}
+          hint="Semua biaya tercatat"
+          icon={Wallet}
+          tone="rose"
+        />
+        <MetricCard
+          label="Total Cashflow"
+          value={formatRupiah(netBalance)}
+          hint={isPositiveBalance ? "Kondisi kas sehat" : "Perlu evaluasi belanja"}
+          icon={PiggyBank}
+          tone={isPositiveBalance ? "emerald" : "slate"}
+        />
+        <MetricCard
+          label="Tagihan Bulanan"
+          value={formatRupiah(recurringMonthly)}
+          hint={`${recurring.length} langganan terdeteksi`}
+          icon={Receipt}
+          tone="amber"
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur md:p-6">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-bold text-slate-900">Transaksi Terbaru</p>
+              <p className="text-xs text-slate-500">
+                Aktivitas terbaru yang paling berpengaruh pada arus kas.
+              </p>
+            </div>
+            <Link
+              href="/transaksi"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-teal-300 hover:text-teal-700"
+            >
+              Lihat semua
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          {recentTx.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-10 text-center">
+              <Receipt className="mx-auto h-8 w-8 text-slate-300" />
+              <p className="mt-2 text-sm font-semibold text-slate-700">Belum ada transaksi</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Catat transaksi pertama kamu untuk mulai melihat insight otomatis.
+              </p>
+            </div>
           ) : (
-             <h1 className="text-5xl sm:text-6xl font-extrabold text-slate-900 tracking-tighter leading-tight drop-shadow-sm">
-               {formatRupiah(netBalance)}
-             </h1>
+            <div className="divide-y divide-slate-100">
+              {recentTx.map((tx, idx) => {
+                const isIncome = tx.tipe === "income";
+                const fallbackAmount = Math.max(tx.kredit, tx.debit);
+                const amount = isIncome ? (tx.kredit || fallbackAmount) : (tx.debit || fallbackAmount);
+                const label = tx.deskripsi || "Transaksi";
+                const initial = label.charAt(0).toUpperCase();
+
+                return (
+                  <div key={`${label}-${idx}`} className="flex items-center justify-between gap-3 py-3.5">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${
+                          isIncome ? "bg-emerald-500" : "bg-slate-800"
+                        }`}
+                      >
+                        {initial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{label}</p>
+                        <p className="text-xs text-slate-500">
+                          {new Date(tx.tanggal || "").toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          isIncome ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {isIncome ? "Income" : "Expense"}
+                      </span>
+                      <p className={`text-sm font-bold ${isIncome ? "text-emerald-600" : "text-slate-900"}`}>
+                        {isIncome ? "+" : "-"}
+                        {formatRupiah(amount)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-        
-        {/* Month Picker Badge */}
-        <div className="mt-5 flex items-center justify-center gap-1.5 bg-white border border-slate-200 rounded-full py-1.5 px-3 shadow-sm hover:shadow-md transition-shadow">
-          <Calendar className="w-4 h-4 text-slate-400" />
-          <input
-            type="month"
-            value={monthFilter}
-            onChange={(e) => {
-              setMonthFilter(e.target.value);
-              analyzeMe(e.target.value || undefined);
-            }}
-            className="bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-700 w-auto px-1 outline-none"
-          />
-        </div>
 
-        {/* Quick Actions */}
-        <div className="flex items-center justify-center gap-8 sm:gap-12 mt-10">
-           <a href="/transaksi" className="group flex flex-col items-center gap-2.5">
-              <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center group-hover:bg-emerald-100 group-active:scale-95 transition-all shadow-sm">
-                 <ArrowDownRight className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-semibold text-slate-600">Pemasukan</span>
-           </a>
-           <a href="/transaksi" className="group flex flex-col items-center gap-2.5">
-              <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center group-hover:bg-rose-100 group-active:scale-95 transition-all shadow-sm">
-                 <ArrowUpRight className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-semibold text-slate-600">Pengeluaran</span>
-           </a>
-           <a href="/laporan" className="group flex flex-col items-center gap-2.5">
-              <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center group-hover:bg-indigo-100 group-active:scale-95 transition-all shadow-sm">
-                 <BarChart3 className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-semibold text-slate-600">Analisa</span>
-           </a>
-           <a href="/budget" className="group flex flex-col items-center gap-2.5">
-              <div className="w-14 h-14 bg-sky-50 text-sky-600 rounded-full flex items-center justify-center group-hover:bg-sky-100 group-active:scale-95 transition-all shadow-sm">
-                 <Target className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-semibold text-slate-600">Budget</span>
-           </a>
-        </div>
-      </div>
-
-      {/* ── 2. Top Grid Section ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xlg:grid-cols-2 gap-6">
-
-        {/* Card B: Spending Overview */}
-        <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex flex-col justify-between" style={{ minHeight: '260px' }}>
-          <div>
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
-                 <PieChartIcon />
-              </div>
-              <button className="text-slate-400 hover:text-slate-600"><MoreHorizontal className="w-5 h-5"/></button>
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-base font-bold text-slate-900">Top Kategori Belanja</p>
+              <Link href="/laporan" className="text-xs font-semibold text-teal-700 hover:text-teal-600">
+                Detail
+              </Link>
             </div>
-            <h2 className="text-slate-800 font-semibold mb-1">Kategori Pengeluaran</h2>
-            <p className="text-slate-400 text-xs mb-6">Track Your Spending, Control Your Finance</p>
-            
-            {/* Vertical Category List replacing Segmented Bar */}
-            <div className="space-y-4">
-              {totalExpense > 0 && data?.by_category?.length ? (
-                data.by_category.slice(0, 3).map((cat) => {
-                  const percent = Math.round((cat.total / totalExpense) * 100);
-                  const color = getCategoryColor(cat.kategori);
+
+            {topCategories.length === 0 ? (
+              <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+                Belum ada kategori pengeluaran untuk periode ini.
+              </p>
+            ) : (
+              <div className="space-y-3.5">
+                {topCategories.map((row, idx) => {
+                  const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+                  const width = Math.min(100, Math.max(8, row.pct));
                   return (
-                    <div key={cat.kategori} className="flex items-center gap-4">
-                       {/* Icon box */}
-                       <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm" style={{ backgroundColor: color }}>
-                          {cat.kategori.charAt(0).toUpperCase()}
-                       </div>
-                       {/* Text and bar */}
-                       <div className="flex-1">
-                          <div className="flex justify-between items-end mb-1.5">
-                             <span className="text-sm font-semibold text-slate-800">{cat.kategori}</span>
-                             <span className="text-xs font-bold text-slate-900">{formatRupiah(cat.total)}</span>
-                          </div>
-                          {/* Mini progress track */}
-                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                             <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: color }} />
-                          </div>
-                       </div>
+                    <div key={row.kategori}>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                          <p className="truncate text-sm font-semibold text-slate-800">{row.kategori}</p>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-500">{row.pct.toFixed(1)}%</p>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">{formatRupiah(row.total)}</p>
                     </div>
-                  )
-                })
-              ) : (
-                <div className="py-4 text-center">
-                   <p className="text-xs text-slate-400">Belum ada pengeluaran.</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="mt-4 flex items-end justify-between">
-            <div>
-              <p className="text-slate-400 text-xs mb-1">Total Pengeluaran Bulan Ini</p>
-              <div className="flex items-center gap-3">
-                 <h3 className="text-2xl font-bold text-slate-900">{formatRupiah(totalExpense)}</h3>
-                 <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">+12%</span>
+                  );
+                })}
               </div>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-base font-bold text-slate-900">Tagihan Rutin</p>
+              <Link href="/laporan" className="text-xs font-semibold text-teal-700 hover:text-teal-600">
+                Lihat
+              </Link>
             </div>
-            <a href="/budget" className="text-sm font-semibold text-[#df6b52] hover:underline">See details</a>
-          </div>
-        </div>
 
-        {/* Card C: Side Panel Cards (Stacked) */}
-        <div className="flex flex-col gap-6">
-           <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 flex-1">
-             <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 flex items-center justify-center border border-slate-100 bg-slate-50 rounded-lg"><Target className="w-4 h-4 text-slate-600"/></div>
-                  <h3 className="font-semibold text-slate-900 text-sm">Aset & Tabungan</h3>
-                </div>
-                <MoreHorizontal className="w-4 h-4 text-slate-400" />
-             </div>
-             <p className="text-xs text-slate-400 mb-4">Aset & tabungan Anda saat ini</p>
-             <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
-                   <div className="flex items-center gap-3 w-full">
-                     <span className="text-2xl">🏦</span>
-                     <div className="flex-1">
-                       <p className="text-sm font-semibold text-slate-800 flex justify-between">
-                          Rekening Utama <span>Rp5.000.000</span>
-                       </p>
-                       <div className="w-full bg-slate-100 rounded-full h-1 mt-2">
-                          <div className="bg-[#df6b52] h-1 rounded-full" style={{ width: '50%' }} />
-                       </div>
-                     </div>
-                   </div>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-slate-100 hover:border-slate-200 shadow-sm rounded-2xl bg-white hover:bg-slate-50 transition-all cursor-pointer">
-                   <div className="flex items-center gap-3 w-full">
-                     <span className="text-2xl">✈️</span>
-                     <div className="flex-1">
-                       <p className="text-sm font-semibold text-slate-800 flex justify-between">
-                          Dana Liburan <span className="text-[#df6b52]">Rp1.000.000</span>
-                       </p>
-                       <div className="w-full bg-slate-100 rounded-full h-1 mt-2">
-                          <div className="bg-sky-400 h-1 rounded-full" style={{ width: '20%' }} />
-                       </div>
-                     </div>
-                   </div>
-                </div>
-             </div>
-             <a href="/aset" className="block w-full text-center mt-4 bg-[#df6b52] hover:bg-[#c95b45] text-white py-3 rounded-2xl text-sm font-bold transition-all shadow-sm shadow-orange-100">
-               Lihat Semua Aset
-             </a>
-           </div>
-        </div>
-
-      </div>
-
-      {/* ── 3. Bottom Grid Section ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Recent Transactions Table (Spans 2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                 <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
-                    <Receipt className="w-4 h-4 text-slate-600" />
-                 </div>
-                 <button className="text-slate-400 hover:text-slate-600 sm:hidden"><MoreHorizontal className="w-5 h-5"/></button>
-              </div>
-              <h2 className="text-slate-800 font-semibold">Transaksi Terbaru</h2>
-              <p className="text-slate-400 text-xs">Track Your Spending, Stay in Control</p>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <div className="flex items-center border border-slate-200 rounded-full px-3 py-1.5 bg-slate-50">
-                <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
-                <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none text-xs w-24 text-slate-700" />
-              </div>
-              <button className="p-2 border border-slate-200 rounded-full hover:bg-slate-50 text-slate-500">
-                <Filter className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Table proper */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs text-slate-400">
-                  <th className="font-medium pb-3 pl-2">Name</th>
-                  <th className="font-medium pb-3">Type Transaction</th>
-                  <th className="font-medium pb-3">Date & Time</th>
-                  <th className="font-medium pb-3 text-right pr-4">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {!data?.transactions || data.transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-16">
-                       <div className="flex flex-col items-center justify-center gap-3">
-                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100">
-                             <Receipt className="w-8 h-8 text-slate-300" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-700">Belum Ada Transaksi</p>
-                            <p className="text-xs text-slate-400 mt-0.5">Catat pemasukan atau pengeluaran pertamamu bulan ini!</p>
-                          </div>
-                       </div>
-                    </td>
-                  </tr>
-                ) : (
-                  data.transactions.slice(0, 5).map((tx, idx) => {
-                    const isIncome = tx.tipe === 'income';
-                    const amount = Math.max(tx.kredit, tx.debit);
-                    const Initial = tx.deskripsi.charAt(0).toUpperCase();
-                    return (
-                      <tr key={idx} className="border-b border-slate-100/50 hover:bg-white/50 transition-colors group">
-                        <td className="py-4 pl-2">
-                           <div className="flex items-center gap-3">
-                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm`}
-                                  style={{ backgroundColor: isIncome ? '#10b981' : '#0f172a' }}>
-                               {Initial}
-                             </div>
-                             <span className="font-semibold text-slate-900 text-sm truncate max-w-[150px]">{tx.deskripsi}</span>
-                           </div>
-                        </td>
-                        <td className="py-4">
-                           <span className={`px-3 py-1 text-[10px] font-extrabold tracking-wider rounded-full ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
-                             {isIncome ? 'INCOME' : 'SPENDING'}
-                           </span>
-                        </td>
-                        <td className="py-4 text-xs font-medium text-slate-500">
-                          {new Date(tx.tanggal || '').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year:'numeric'})}
-                        </td>
-                        <td className={`py-4 text-right pr-4 text-sm font-bold ${isIncome ? 'text-[#10b981]' : 'text-slate-900'}`}>
-                          {isIncome ? '+' : '-'}{formatRupiah(amount)}
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 flex justify-center">
-            <a href="/transaksi" className="text-xs font-semibold text-slate-400 hover:text-slate-600">View All Transactions</a>
-          </div>
-        </div>
-
-        {/* Payment Schedule Card (Col 3) */}
-        <div className="bg-white rounded-3xl p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60">
-           <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
-                   <Calendar className="w-4 h-4 text-slate-600" />
-                </div>
-              </div>
-              <button className="text-slate-400 hover:text-slate-600"><MoreHorizontal className="w-5 h-5"/></button>
-           </div>
-           <h2 className="text-slate-800 font-semibold mb-1">Tagihan & Cicilan</h2>
-           <p className="text-slate-400 text-xs mb-6">Track Your Payments, Stay on Schedule</p>
-           
-           <div className="space-y-4">
-              {!data?.subscriptions || data.subscriptions.length === 0 ? (
-                <p className="text-xs text-slate-400 py-4">Tidak ada tagihan terdeteksi bulan ini.</p>
-              ) : (
-                data.subscriptions.slice(0, 3).map((sub, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold">{sub.merchant.charAt(0).toUpperCase()}</div>
-                       <div>
-                         <p className="text-sm font-semibold text-slate-900">{sub.merchant}</p>
-                         <p className="text-[11px] text-slate-400 capitalize">{sub.frekuensi}</p>
-                       </div>
-                     </div>
-                     <p className="text-sm font-bold text-[#df6b52]">{formatRupiah(sub.estimated_monthly)}</p>
+            {recurring.length === 0 ? (
+              <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+                Tidak ada langganan terdeteksi.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {recurring.map((sub, idx) => (
+                  <div
+                    key={`${sub.merchant}-${idx}`}
+                    className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{sub.merchant}</p>
+                      <p className="text-[11px] capitalize text-slate-500">{sub.frekuensi}</p>
+                    </div>
+                    <p className="text-sm font-bold text-slate-800">{formatRupiah(sub.estimated_monthly)}</p>
                   </div>
-                ))
-              )}
-           </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+      </section>
 
-      </div>
+      {status === "error" && error && (
+        <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Gagal memuat analisis: {error}
+        </section>
+      )}
 
+      {!user && (
+        <section className="rounded-2xl border border-slate-200 bg-white/85 px-4 py-4 text-center text-sm text-slate-600">
+          Masuk ke akun kamu untuk melihat data transaksi cloud dan insight personal.
+        </section>
+      )}
     </div>
   );
 }
-// Inline pure SVG icon for precise styling
-const PieChartIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-);
+
+type MetricTone = "teal" | "rose" | "emerald" | "amber" | "slate";
+
+function MetricCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  icon: LucideIcon;
+  tone: MetricTone;
+}) {
+  const toneMap: Record<MetricTone, string> = {
+    teal: "bg-teal-50 text-teal-700",
+    rose: "bg-rose-50 text-rose-700",
+    emerald: "bg-emerald-50 text-emerald-700",
+    amber: "bg-amber-50 text-amber-700",
+    slate: "bg-slate-100 text-slate-700",
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur">
+      <div className="mb-3 flex items-center justify-between">
+        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${toneMap[tone]}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-extrabold text-slate-900">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{hint}</p>
+    </div>
+  );
+}

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { PiggyBank, Loader2 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 
 // Both components use localStorage — must be loaded client-side only
 const AssetDebtTracker = dynamic(
@@ -17,15 +18,13 @@ const SplitBill = dynamic(
 export default function AsetPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(220,38,38,0.10)" }}>
-          <PiggyBank className="w-5 h-5 text-red-500" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Aset & Hutang</h1>
-          <p className="text-xs text-slate-500">Catat aset, hutang, tagihan, dan split bill bareng teman</p>
-        </div>
-      </div>
+      <PageHero
+        icon={PiggyBank}
+        tone="rose"
+        badge="Assets"
+        title="Aset, Hutang, dan Split Bill"
+        subtitle="Kelola kekayaan dan kewajiban dalam satu workspace dengan ringkasan yang mudah dibaca."
+      />
       <AssetDebtTracker />
       <SplitBill />
     </div>

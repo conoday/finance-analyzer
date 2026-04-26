@@ -7,6 +7,7 @@ import { MonthlyChart } from "@/components/MonthlyChart";
 import { SpendingWheel } from "@/components/SpendingWheel";
 import { SpendingHeatmap } from "@/components/SpendingHeatmap";
 import { StoryCards } from "@/components/StoryCards";
+import { PageHero } from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Loader2, BarChart3 } from "lucide-react";
 
@@ -21,30 +22,40 @@ export default function LaporanPage() {
   }, [user, status, analyzeMe, monthFilter]);
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-50 border border-violet-100">
-              <BarChart3 className="w-5 h-5 text-violet-600" />
+    <div className="space-y-6">
+      <PageHero
+        icon={BarChart3}
+        tone="violet"
+        badge="Analytics"
+        title="Laporan dan Tren Keuangan"
+        subtitle="Baca pola pengeluaran, momentum pemasukan, dan cerita bulanan secara visual."
+        actions={
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-sm">
+              <input
+                type="month"
+                value={monthFilter}
+                onChange={(e) => {
+                  setMonthFilter(e.target.value);
+                  analyzeMe(e.target.value || undefined);
+                }}
+                className="bg-transparent text-sm font-semibold text-slate-700 outline-none"
+              />
             </div>
+            {monthFilter && (
+              <button
+                onClick={() => {
+                  setMonthFilter("");
+                  analyzeMe();
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700"
+              >
+                Semua
+              </button>
+            )}
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Laporan & Analitik</h1>
-          <p className="text-slate-500 text-sm mt-1">Visualisasi pengeluaran & tren keuangan</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="month" value={monthFilter}
-            onChange={(e) => { setMonthFilter(e.target.value); analyzeMe(e.target.value || undefined); }}
-            className="bg-white border focus:ring-2 focus:outline-none focus:ring-violet-500 px-3 py-2 text-sm rounded-full shadow-sm font-medium text-slate-800"
-          />
-          {monthFilter && (
-            <button onClick={() => { setMonthFilter(""); analyzeMe(); }}
-              className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">Semua</button>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {status === "loading" && (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-teal-500" /></div>
@@ -64,7 +75,7 @@ export default function LaporanPage() {
       )}
 
       {!user && (
-        <div className="text-center py-16 text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white/85 py-16 text-center text-slate-500">
           <BarChart3 className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <p className="text-sm">Masuk untuk melihat laporan keuangan.</p>
         </div>

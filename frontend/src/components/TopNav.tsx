@@ -1,31 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Settings, Bell, Search, LayoutDashboard, Receipt, BarChart3, PiggyBank, Target } from "lucide-react";
+import {
+  Bell,
+  BarChart3,
+  Command,
+  Compass,
+  LayoutDashboard,
+  LogOut,
+  PiggyBank,
+  Receipt,
+  Settings,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 
-function UserMenu({ onSignOut }: { onSignOut: () => void }) {
+function UserMenu({ onSignOut, email }: { onSignOut: () => void; email?: string | null }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -6, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -4, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="absolute top-full right-0 mt-3 z-50 w-48 shadow-lg rounded-2xl"
-      style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}
+      className="absolute right-0 top-full z-50 mt-3 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
     >
+      <div className="border-b border-slate-100 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Signed in</p>
+        <p className="mt-1 truncate text-sm font-semibold text-slate-900">{email ?? "Pengguna"}</p>
+      </div>
       <div className="py-2 text-sm font-medium">
-        <Link href="/settings" className="w-full flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
-          <Settings className="w-4 h-4 text-slate-400" />
+        <Link
+          href="/settings"
+          className="flex w-full items-center gap-3 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          <Settings className="h-4 w-4 text-slate-400" />
           Settings
         </Link>
-        <div style={{ height: "1px", background: "#f1f5f9", margin: "4px 0" }} />
-        <button onClick={onSignOut} className="w-full flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 transition-colors">
-          <LogOut className="w-4 h-4 text-red-400" />
+        <div className="my-1 h-px bg-slate-100" />
+        <button
+          onClick={onSignOut}
+          className="flex w-full items-center gap-3 px-4 py-2 text-rose-600 transition-colors hover:bg-rose-50"
+        >
+          <LogOut className="h-4 w-4 text-rose-500" />
           Sign Out
         </button>
       </div>
@@ -41,82 +62,130 @@ export function TopNav() {
   const avatar = user?.user_metadata?.avatar_url as string | undefined;
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "User";
   const firstName = fullName.split(" ")[0];
+  const email = user?.email;
 
-  const menuItems = [
-    { name: "Overview", path: "/", icon: LayoutDashboard },
+  const menuItems: Array<{ name: string; path: string; icon: LucideIcon }> = [
+    { name: "Dashboard", path: "/", icon: LayoutDashboard },
     { name: "Transaksi", path: "/transaksi", icon: Receipt },
     { name: "Laporan", path: "/laporan", icon: BarChart3 },
-    { name: "Aset", path: "/aset", icon: PiggyBank },
     { name: "Budget", path: "/budget", icon: Target },
+    { name: "Aset", path: "/aset", icon: PiggyBank },
+    { name: "Perencanaan", path: "/perencanaan", icon: Compass },
   ];
 
+  useEffect(() => {
+    setShowMenu(false);
+  }, [pathname]);
+
+  const activeMenu =
+    menuItems.find((item) => (item.path === "/" ? pathname === "/" : pathname.startsWith(item.path)))?.name ??
+    "Dashboard";
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm hidden md:block">
-      <div className="px-6 lg:px-10 h-[72px] mx-auto flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 w-[200px] hover:opacity-80 transition-opacity">
-          <Image src="/logo.png" alt="OprexDuit Logo" width={32} height={32} className="w-8 h-8 rounded-xl object-contain" />
-          <span className="text-lg font-extrabold text-slate-900 tracking-tight">
-            Oprex<span className="text-orange-500">Duit.</span>
-          </span>
+    <header className="sticky top-0 z-40 hidden w-full border-b border-white/70 bg-white/75 backdrop-blur-xl md:block">
+      <div className="mx-auto flex h-[78px] max-w-[1540px] items-center justify-between px-6 lg:px-10">
+        <Link href="/" className="group flex w-[230px] items-center gap-3 transition-opacity hover:opacity-90">
+          <Image
+            src="/logo.png"
+            alt="OprexDuit Logo"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-xl object-contain"
+          />
+          <div>
+            <span className="text-lg font-extrabold tracking-tight text-slate-900">
+              Oprex<span className="text-teal-500">Duit.</span>
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Financial Command Center
+            </p>
+          </div>
         </Link>
 
-        {/* Center Menu */}
-        <nav className="flex items-center gap-2">
+        <nav className="hidden items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/85 p-1.5 shadow-sm lg:flex">
           {menuItems.map((item) => {
+            const Icon = item.icon;
             const isActive = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+
             return (
               <Link
                 key={item.name}
                 href={item.path}
-                className={`relative px-4 py-2 text-[13px] font-semibold transition-all rounded-full ${
-                  isActive ? "text-slate-900 bg-orange-50" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                className={`relative flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                  isActive ? "text-teal-700" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                {item.name}
                 {isActive && (
-                  <motion.div
-                    layoutId="topnav-indicator"
-                    className="absolute -bottom-[20px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-orange-500"
+                  <motion.span
+                    layoutId="topnav-active-pill"
+                    className="absolute inset-0 -z-10 rounded-xl border border-teal-200 bg-teal-50"
+                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
                   />
                 )}
+                <Icon className="h-3.5 w-3.5" />
+                {item.name}
               </Link>
             );
           })}
         </nav>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-4 w-[200px] justify-end">
-          <button className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm">
-            <Search className="w-4 h-4" />
+        <div className="flex w-[340px] items-center justify-end gap-2">
+          <div className="hidden rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-slate-500 xl:flex">
+            Mode: <span className="ml-1 text-slate-800">{activeMenu}</span>
+          </div>
+
+          <button className="hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-teal-200 hover:text-teal-700 lg:flex">
+            <Command className="h-3.5 w-3.5" />
+            Search
           </button>
-          <button className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm relative">
-            <Bell className="w-4 h-4" />
-            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-orange-500 border border-white" />
+
+          <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:border-slate-300 hover:text-slate-900">
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border border-white bg-teal-500" />
           </button>
-          
-          <div className="h-6 w-px bg-slate-200 mx-1" />
+
+          <div className="mx-1 h-6 w-px bg-slate-200" />
 
           {!loading && user && (
             <div className="relative">
               <button
-                onClick={() => setShowMenu((p) => !p)}
-                className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm overflow-hidden p-0.5"
+                onClick={() => setShowMenu((prev) => !prev)}
+                className="group flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-2 py-1.5 shadow-sm transition hover:border-teal-200"
               >
-                {avatar ? (
-                  <Image src={avatar} alt={firstName} width={34} height={34} className="rounded-full w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
-                    {firstName.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-teal-50 p-0.5">
+                  {avatar ? (
+                    <Image src={avatar} alt={firstName} width={30} height={30} className="h-full w-full rounded-lg object-cover" />
+                  ) : (
+                    <span className="text-sm font-bold text-teal-700">{firstName.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="hidden text-left lg:block">
+                  <p className="text-xs font-bold text-slate-800">{firstName}</p>
+                  <p className="text-[10px] text-slate-500">Akun aktif</p>
+                </div>
               </button>
+
               <AnimatePresence>
                 {showMenu && (
-                  <UserMenu onSignOut={async () => { await signOut(); setShowMenu(false); }} />
+                  <UserMenu
+                    email={email}
+                    onSignOut={async () => {
+                      await signOut();
+                      setShowMenu(false);
+                    }}
+                  />
                 )}
               </AnimatePresence>
             </div>
+          )}
+
+          {!loading && !user && (
+            <Link
+              href="/auth/login"
+              className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 transition hover:border-teal-300 hover:bg-teal-100"
+            >
+              Masuk
+            </Link>
           )}
         </div>
       </div>
