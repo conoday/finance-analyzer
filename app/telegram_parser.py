@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from app.categorizer import normalize_transaction_category
+
 
 # ---------------------------------------------------------------------------
 # Data class
@@ -183,7 +185,8 @@ def parse_transaction(text: str) -> Optional[ParsedTx]:
         dl = description.lower()
         tx_type = "income" if any(h in dl for h in _INCOME_HINTS) else "expense"
 
-    category_hint = _guess_category(description)
+    raw_hint = _guess_category(description) or ""
+    category_hint = normalize_transaction_category(raw_hint, description)
 
     return ParsedTx(
         amount=amount,

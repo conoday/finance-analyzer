@@ -133,6 +133,17 @@ def _progress_bar(pct: float, width: int = 10) -> str:
     filled = min(int(pct / 100 * width), width)
     return "\u2588" * filled + "\u2591" * (width - filled)
 
+
+def _normalize_category_name(category: str, description: str = "") -> str:
+    """Normalize category text to canonical categories used across web + Telegram."""
+    try:
+        from app.categorizer import normalize_transaction_category
+
+        return normalize_transaction_category(category, description)
+    except Exception:
+        value = (category or "").strip()
+        return value or "Lainnya"
+
 _DONATE_TEXT = (
     "💝 <b>Dukung OprexDuit!</b>\n\n"
     "OprexDuit adalah platform gratis untuk semua orang. "
@@ -290,7 +301,7 @@ def _handle_photo_ocr(chat_id: int, file_id: str, caption: str, username: str, s
             
             tx_type = tx.get("type", "expense")
             desc = tx.get("description", "Transaksi")
-            category = tx.get("category", "Lainnya")
+            category = _normalize_category_name(str(tx.get("category", "Lainnya")), desc)
             date = tx.get("date", _today_wib().isoformat())
 
             if user_id and sb_client:
@@ -379,19 +390,48 @@ def _handle_photo_ocr(chat_id: int, file_id: str, caption: str, username: str, s
 # ---------------------------------------------------------------------------
 
 def _get_user_id(chat_id: int | str, sb_client: Any) -> Optional[str]:
-    """Return user_id from profiles where telegram_chat_id matches."""
+    """Resolve profile owner for a Telegram chat.
+
+    Preference order:
+    1) profile with non-null `telegram_linked_at` (explicitly linked from web)
+    2) most recent fallback profile with the same `telegram_chat_id`
+    """
     if not sb_client:
         return None
     try:
         res = (
             sb_client.table("profiles")
-            .select("id")
+            .select("id,telegram_linked_at,created_at")
             .eq("telegram_chat_id", str(chat_id))
-            .limit(1)
             .execute()
         )
         rows = res.data or []
-        return rows[0]["id"] if rows else None
+        if not rows:
+            return None
+
+        linked_rows = [row for row in rows if row.get("telegram_linked_at")]
+        if linked_rows:
+            linked_rows.sort(key=lambda row: str(row.get("telegram_linked_at") or ""), reverse=True)
+            primary_id = linked_rows[0].get("id")
+
+            # One-time self-heal: if duplicate chat mappings exist, move old
+            # Telegram transactions to the linked web profile and clear stale chat bindings.
+            legacy_ids = [
+                row.get("id")
+                for row in rows
+                if row.get("id") and row.get("id") != primary_id
+            ]
+            for legacy_id in legacy_ids:
+                try:
+                    sb_client.table("transactions").update({"user_id": primary_id}).eq("user_id", legacy_id).execute()
+                    sb_client.table("profiles").update({"telegram_chat_id": None, "telegram_linked_at": None}).eq("id", legacy_id).execute()
+                except Exception as exc:
+                    print(f"[telegram] duplicate chat mapping repair warning ({legacy_id} -> {primary_id}): {exc}")
+
+            return primary_id
+
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[0].get("id")
     except Exception:
         return None
 
@@ -403,17 +443,12 @@ def _is_linked_to_web(chat_id: int | str, sb_client: Any) -> bool:
     try:
         res = (
             sb_client.table("profiles")
-            .select("id,telegram_linked_at")
+            .select("telegram_linked_at")
             .eq("telegram_chat_id", str(chat_id))
-            .limit(1)
             .execute()
         )
         rows = res.data or []
-        if not rows:
-            return False
-        
-        # If telegram_linked_at is set, it means the user manually linked their web account
-        return bool(rows[0].get("telegram_linked_at"))
+        return any(bool(row.get("telegram_linked_at")) for row in rows)
     except Exception:
         return False
 
@@ -552,8 +587,6 @@ def _handle_command(
         _cmd_lapor_start(chat_id)
     elif command == "/room":
         _cmd_room(chat_id, args, username, user_id, sb_client)
-    elif command in ("/hapus", "/delete"):
-        _cmd_hapus(chat_id, user_id, sb_client)
     elif command == "/donasi":
         _send_donate_with_qris(chat_id)
     else:
@@ -884,13 +917,14 @@ def _save_and_confirm(
 
     try:
         today = _today_wib()
+        normalized_category = _normalize_category_name(parsed.category_hint or "", parsed.description)
         tx_data = {
             "user_id": user_id,
             "date": today.isoformat(),
             "description": parsed.description,
             "amount": parsed.amount,
             "type": parsed.type,
-            "category_raw": parsed.category_hint or "Lainnya",
+            "category_raw": normalized_category,
             "source": "telegram",
             "scope": "private"
         }
@@ -906,7 +940,7 @@ def _save_and_confirm(
             f"Jenis     : {type_label}\n"
             f"Jumlah    : <b>{_fmt(parsed.amount)}</b>\n"
             f"Keterangan: {parsed.description}\n"
-            f"Kategori  : {parsed.category_hint or 'Lainnya'}\n"
+            f"Kategori  : {normalized_category}\n"
             f"Tanggal   : {today.strftime('%d %b %Y')}"
         )
         
@@ -923,7 +957,7 @@ def _save_and_confirm(
 
         # Budget alert: check if spending exceeded threshold
         if parsed.type == "expense":
-            _check_budget_alert(chat_id, user_id, parsed.category_hint or "Lainnya", sb_client)
+            _check_budget_alert(chat_id, user_id, normalized_category, sb_client)
             
     except Exception as exc:
         send_message(chat_id, f"\u26a0\ufe0f Gagal menyimpan: {exc}")

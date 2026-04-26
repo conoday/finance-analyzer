@@ -126,14 +126,25 @@ COMPILED_RULES: list[tuple[re.Pattern, str, str]] = [
 
 CATEGORY_ALIASES: dict[str, str] = {
     "gaji": "Pendapatan",
+    "gaji bonus": "Pendapatan",
     "gaji & bonus": "Pendapatan",
+    "bonus": "Pendapatan",
+    "freelance": "Pendapatan",
+    "honor": "Pendapatan",
+    "honorarium": "Pendapatan",
     "refund": "Pendapatan",
     "refund & cashback": "Pendapatan",
     "bunga / bagi hasil": "Pendapatan",
+    "transfer": "Transfer",
     "transfer masuk": "Transfer",
     "transfer keluar": "Transfer",
     "transfer & biaya": "Transfer",
     "e-wallet": "Transfer",
+    "e-wallet top up": "Transfer",
+    "ewallet top up": "Transfer",
+    "top up e-wallet": "Transfer",
+    "topup e-wallet": "Transfer",
+    "top up": "Transfer",
     "transportasi": "Transport",
     "transportasi umum": "Transport",
     "bbm": "Transport",
@@ -151,6 +162,7 @@ CATEGORY_ALIASES: dict[str, str] = {
     "streaming": "Hiburan",
     "gaming": "Hiburan",
     "pulsa & data": "Tagihan",
+    "pulsa dan data": "Tagihan",
     "listrik": "Tagihan",
     "air": "Tagihan",
     "internet": "Tagihan",
@@ -159,6 +171,9 @@ CATEGORY_ALIASES: dict[str, str] = {
     "kesehatan digital": "Kesehatan",
     "pendidikan": "Belanja",
     "buku": "Belanja",
+    "amal": "Lainnya",
+    "donasi": "Lainnya",
+    "amal & donasi": "Lainnya",
     "tabungan": "Investasi",
 }
 
@@ -238,6 +253,11 @@ def categorize_transactions(
 def get_category_list() -> list[str]:
     """Kembalikan daftar kategori canonical yang dipakai UI."""
     return CANONICAL_CATEGORIES.copy()
+
+
+def normalize_transaction_category(category: str, description: str = "") -> str:
+    """Normalize category text from any input source into canonical categories."""
+    return _normalize_category(str(category or ""), description)
 
 
 # ---------------------------------------------------------------------------

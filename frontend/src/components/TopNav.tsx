@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
@@ -14,6 +14,7 @@ import {
   Receipt,
   Search,
   Settings,
+  ShoppingBag,
   Target,
   X,
   type LucideIcon,
@@ -23,6 +24,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { parseAnimalAvatarToken } from "@/lib/avatar";
+
+type MenuItem = {
+  name: string;
+  path: string;
+  icon: LucideIcon;
+  keywords: string[];
+};
 
 function UserMenu({ onSignOut, email }: { onSignOut: () => void; email?: string | null }) {
   return (
@@ -65,23 +73,29 @@ export function TopNav() {
   const [showAlerts, setShowAlerts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { user, loading, signOut } = useAuth();
+  const modeMenuRef = useRef<HTMLDivElement | null>(null);
+  const alertsRef = useRef<HTMLDivElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const { user, profile, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  const avatar = user?.user_metadata?.avatar_url as string | undefined;
-  const animalAvatar = parseAnimalAvatarToken(avatar);
-  const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "User";
+  const avatarToken = String(profile?.avatar_url ?? user?.user_metadata?.avatar_url ?? "");
+  const animalAvatar = parseAnimalAvatarToken(avatarToken);
+  const avatarImage = animalAvatar ? "" : avatarToken;
+  const fullName = profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "User";
   const firstName = fullName.split(" ")[0];
   const email = user?.email;
 
-  const menuItems: Array<{ name: string; path: string; icon: LucideIcon }> = [
-    { name: "Dashboard", path: "/", icon: LayoutDashboard },
-    { name: "Transaksi", path: "/transaksi", icon: Receipt },
-    { name: "Laporan", path: "/laporan", icon: BarChart3 },
-    { name: "Budget", path: "/budget", icon: Target },
-    { name: "Aset", path: "/aset", icon: PiggyBank },
-    { name: "Perencanaan", path: "/perencanaan", icon: Compass },
+  const menuItems: MenuItem[] = [
+    { name: "Dashboard", path: "/", icon: LayoutDashboard, keywords: ["home", "ringkasan", "overview"] },
+    { name: "Transaksi", path: "/transaksi", icon: Receipt, keywords: ["catat", "riwayat", "hapus", "delete"] },
+    { name: "Laporan", path: "/laporan", icon: BarChart3, keywords: ["report", "analisis", "chart", "grafik"] },
+    { name: "Budget", path: "/budget", icon: Target, keywords: ["anggaran", "limit", "target"] },
+    { name: "Belanja AI", path: "/belanja", icon: ShoppingBag, keywords: ["shop", "shopping", "produk", "affiliate"] },
+    { name: "Aset", path: "/aset", icon: PiggyBank, keywords: ["asset", "utang", "networth"] },
+    { name: "Perencanaan", path: "/perencanaan", icon: Compass, keywords: ["planner", "rencana", "goal"] },
   ];
 
   useEffect(() => {
@@ -114,33 +128,66 @@ export function TopNav() {
     return () => window.removeEventListener("keydown", onShortcut);
   }, []);
 
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (showModeMenu && modeMenuRef.current && !modeMenuRef.current.contains(target)) {
+        setShowModeMenu(false);
+      }
+      if (showAlerts && alertsRef.current && !alertsRef.current.contains(target)) {
+        setShowAlerts(false);
+      }
+      if (showMenu && userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setShowMenu(false);
+      }
+    };
+
+    window.addEventListener("mousedown", onPointerDown);
+    return () => window.removeEventListener("mousedown", onPointerDown);
+  }, [showAlerts, showMenu, showModeMenu]);
+
   const activeMenu =
     menuItems.find((item) => (item.path === "/" ? pathname === "/" : pathname.startsWith(item.path)))?.name ??
     "Dashboard";
 
-  const quickActions = [...menuItems, { name: "Pengaturan", path: "/settings", icon: Settings }];
-
-  const filteredQuickActions = quickActions.filter((item) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
-  );
-
-  const alertItems = [
-    {
-      title: "Review kategori Lainnya",
-      body: "Periksa transaksi terbaru dan rapikan kategori agar insight makin akurat.",
-      path: "/transaksi",
-    },
-    {
-      title: "Pantau arus kas bulan ini",
-      body: "Buka laporan untuk melihat tren pemasukan vs pengeluaran.",
-      path: "/laporan",
-    },
-    {
-      title: "Update profil keamanan",
-      body: "Atur avatar dan koneksi Telegram di Pengaturan.",
-      path: "/settings",
-    },
+  const quickActions: MenuItem[] = [
+    ...menuItems,
+    { name: "Pengaturan", path: "/settings", icon: Settings, keywords: ["settings", "akun", "telegram", "avatar", "notifikasi"] },
   ];
+
+  const normalizedQuery = searchQuery.toLowerCase().trim();
+
+  const filteredQuickActions = quickActions.filter((item) => {
+    if (!normalizedQuery) return true;
+    const haystack = `${item.name} ${item.keywords.join(" ")}`.toLowerCase();
+    return haystack.includes(normalizedQuery);
+  });
+
+  const alertItems = useMemo(() => {
+    return [
+      {
+        title: `Mode ${activeMenu} aktif`,
+        body: `Fokus navigasi sedang berada di ${activeMenu}. Gunakan Search untuk pindah cepat antar menu.`,
+        path: pathname,
+      },
+      {
+        title: "Review kategori Lainnya",
+        body: "Periksa transaksi terbaru dan rapikan kategori agar insight makin akurat.",
+        path: "/transaksi",
+      },
+      {
+        title: "Pantau arus kas bulan ini",
+        body: "Buka laporan untuk melihat tren pemasukan vs pengeluaran.",
+        path: "/laporan",
+      },
+      {
+        title: "Update profil keamanan",
+        body: "Atur avatar dan koneksi Telegram di Pengaturan.",
+        path: "/settings",
+      },
+    ];
+  }, [activeMenu, pathname]);
 
   return (
     <>
@@ -159,7 +206,7 @@ export function TopNav() {
                 Oprex<span className="text-teal-500">Duit.</span>
               </span>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Financial Command Center
+                Platform Analitik Keuangan
               </p>
             </div>
           </Link>
@@ -192,7 +239,7 @@ export function TopNav() {
           </nav>
 
           <div className="flex w-[400px] items-center justify-end gap-2">
-            <div className="relative hidden xl:block">
+            <div ref={modeMenuRef} className="relative hidden xl:block">
               <button
                 onClick={() => setShowModeMenu((v) => !v)}
                 className="inline-flex items-center rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-teal-200 hover:text-teal-700"
@@ -239,13 +286,17 @@ export function TopNav() {
               Search
             </button>
 
-            <div className="relative">
+            <div ref={alertsRef} className="relative">
               <button
                 onClick={() => setShowAlerts((v) => !v)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:border-slate-300 hover:text-slate-900"
               >
                 <Bell className="h-4 w-4" />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border border-white bg-teal-500" />
+                <motion.span
+                  className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border border-white bg-teal-500"
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                />
               </button>
 
               <AnimatePresence>
@@ -264,6 +315,7 @@ export function TopNav() {
                         <Link
                           key={item.title}
                           href={item.path}
+                          onClick={() => setShowAlerts(false)}
                           className="block rounded-xl border border-slate-100 px-3 py-2 transition hover:border-teal-100 hover:bg-teal-50/50"
                         >
                           <p className="text-xs font-semibold text-slate-900">{item.title}</p>
@@ -279,7 +331,7 @@ export function TopNav() {
             <div className="mx-1 h-6 w-px bg-slate-200" />
 
             {!loading && user && (
-              <div className="relative">
+              <div ref={userMenuRef} className="relative">
                 <button
                   onClick={() => setShowMenu((prev) => !prev)}
                   className="group flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-2 py-1.5 shadow-sm transition hover:border-teal-200"
@@ -287,8 +339,8 @@ export function TopNav() {
                   <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-teal-50 p-0.5">
                     {animalAvatar ? (
                       <span className="text-lg" title={animalAvatar.label}>{animalAvatar.emoji}</span>
-                    ) : avatar ? (
-                      <Image src={avatar} alt={firstName} width={30} height={30} className="h-full w-full rounded-lg object-cover" />
+                    ) : avatarImage ? (
+                      <Image src={avatarImage} alt={firstName} width={30} height={30} className="h-full w-full rounded-lg object-cover" />
                     ) : (
                       <span className="text-sm font-bold text-teal-700">{firstName.charAt(0).toUpperCase()}</span>
                     )}
@@ -351,16 +403,25 @@ export function TopNav() {
                 </button>
               </div>
 
-              <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const first = filteredQuickActions[0];
+                  if (!first) return;
+                  setShowSearch(false);
+                  router.push(first.path);
+                }}
+                className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+              >
                 <Search className="h-4 w-4 text-slate-400" />
                 <input
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari menu: transaksi, laporan, budget..."
+                  placeholder="Cari menu: transaksi, belanja, laporan..."
                   className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
                 />
-              </div>
+              </form>
 
               <div className="max-h-[280px] space-y-1 overflow-y-auto pr-1">
                 {filteredQuickActions.length > 0 ? (

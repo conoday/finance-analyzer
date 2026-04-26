@@ -76,7 +76,7 @@ function CopyButton({ text }: { text: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function SettingsContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -94,14 +94,13 @@ function SettingsContent() {
   const [submitting, setSubmitting] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
   const [savingAvatarId, setSavingAvatarId] = useState<string | null>(null);
-  const [selectedAvatarToken, setSelectedAvatarToken] = useState<string>(
-    String(user?.user_metadata?.avatar_url ?? "")
-  );
+  const [selectedAvatarToken, setSelectedAvatarToken] = useState<string>("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    setSelectedAvatarToken(String(user?.user_metadata?.avatar_url ?? ""));
-  }, [user?.user_metadata?.avatar_url]);
+    const token = String(profile?.avatar_url ?? user?.user_metadata?.avatar_url ?? "");
+    setSelectedAvatarToken(token);
+  }, [profile?.avatar_url, user?.user_metadata?.avatar_url]);
 
   // Redirect to login (preserving current URL with code) if not authenticated
   useEffect(() => {
@@ -177,7 +176,11 @@ function SettingsContent() {
 
       setStatus({ linked: true, chat_id: json.chat_id, linked_at: new Date().toISOString() });
       setLinkCode("");
-      setMessage({ type: "success", text: "🎉 Telegram berhasil dihubungkan! Cek bot kamu." });
+      const movedTx = Number(json?.migration?.transactions_moved ?? 0);
+      const mergeInfo = movedTx > 0
+        ? ` ${movedTx} transaksi Telegram lama juga disinkronkan otomatis.`
+        : "";
+      setMessage({ type: "success", text: `🎉 Telegram berhasil dihubungkan! Cek bot kamu.${mergeInfo}` });
     } catch (err: unknown) {
       setMessage({
         type: "error",
@@ -299,6 +302,13 @@ function SettingsContent() {
                           .update({ avatar_url: token })
                           .eq("id", user.id);
 
+                        try {
+                          localStorage.setItem("oprex_avatar_token", token);
+                        } catch {
+                          // Ignore localStorage failures.
+                        }
+
+                        await refreshProfile();
                         await supabase.auth.refreshSession();
                         router.refresh();
                         setMessage({ type: "success", text: "Avatar berhasil diperbarui!" });

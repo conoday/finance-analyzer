@@ -110,14 +110,14 @@ export default function Dashboard() {
             <div className="space-y-4">
               <span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-[11px] font-semibold tracking-wide text-teal-700">
                 <Sparkles className="h-3.5 w-3.5" />
-                Dashboard Keuangan
+                Insight Keuangan Terpadu
               </span>
               <div>
                 <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
-                  Ringkas, nyaman, dan fokus ke keputusan.
+                  Kendalikan performa keuangan dari satu dashboard eksekutif.
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-600 md:text-base">
-                  Pantau arus kas, kategori belanja, dan transaksi penting dalam satu tampilan yang lebih rapi.
+                  Pantau arus kas, pola pengeluaran, dan transaksi prioritas secara real-time untuk pengambilan keputusan yang lebih presisi.
                 </p>
               </div>
 
@@ -461,15 +461,26 @@ function MetricCard({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.35 }}
+      whileHover={{ y: -2, scale: 1.01 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+      className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+    >
       <div className="mb-3 flex items-center justify-between">
-        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${toneMap[tone]}`}>
+        <motion.span
+          whileHover={{ rotate: -6, scale: 1.06 }}
+          transition={{ type: "spring", stiffness: 320, damping: 22 }}
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${toneMap[tone]}`}
+        >
           <Icon className="h-4 w-4" />
-        </span>
+        </motion.span>
       </div>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-lg font-extrabold text-slate-900">{value}</p>
       <p className="mt-1 text-xs text-slate-500">{hint}</p>
-    </div>
+    </motion.div>
   );
 }

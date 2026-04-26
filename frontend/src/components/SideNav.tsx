@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard, Receipt, BarChart3, Wallet,
-  PiggyBank, Settings
+  PiggyBank, Settings, ShoppingBag
 } from "lucide-react";
 
 interface NavItem {
@@ -19,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/transaksi",    label: "Transaksi",    icon: Receipt,         mobileShow: true },
   { href: "/laporan",      label: "Laporan",      icon: BarChart3,       mobileShow: false },
   { href: "/budget",       label: "Budget",       icon: Wallet,          mobileShow: true },
+  { href: "/belanja",      label: "Belanja AI",   icon: ShoppingBag,     mobileShow: true },
   { href: "/aset",         label: "Aset",         icon: PiggyBank,       mobileShow: true },
   { href: "/settings",     label: "Menu",         icon: Settings,        mobileShow: true },
 ];
@@ -45,17 +47,26 @@ function MobileNavItem({ item }: { item: NavItem }) {
   const Icon = item.icon;
 
   return (
-    <Link href={item.href} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl min-w-[44px]">
-      <Icon
-        className="w-5 h-5 transition-colors"
-        style={{ color: isActive ? "#0f766e" : "#94a3b8" }}
-      />
-      <span
-        className="text-[9px] font-medium leading-none transition-colors"
-        style={{ color: isActive ? "#0f766e" : "#94a3b8" }}
-      >
-        {item.label.split(" ")[0]}
-      </span>
-    </Link>
+    <motion.div whileTap={{ scale: 0.94 }} whileHover={{ y: -1 }} transition={{ duration: 0.18 }}>
+      <Link href={item.href} className="relative flex min-w-[44px] flex-col items-center gap-0.5 rounded-xl px-3 py-1">
+        {isActive && (
+          <motion.span
+            layoutId="mobile-active-pill"
+            className="absolute inset-0 rounded-xl border border-teal-200 bg-teal-50/90"
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+          />
+        )}
+        <Icon
+          className="relative z-10 h-5 w-5 transition-colors"
+          style={{ color: isActive ? "#0f766e" : "#94a3b8" }}
+        />
+        <span
+          className="relative z-10 text-[9px] font-medium leading-none transition-colors"
+          style={{ color: isActive ? "#0f766e" : "#94a3b8" }}
+        >
+          {item.label.split(" ")[0]}
+        </span>
+      </Link>
+    </motion.div>
   );
 }

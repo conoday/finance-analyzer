@@ -115,6 +115,36 @@ def health() -> dict:
     return {"status": "ok", "service": "oprexduit"}
 
 
+def _empty_analysis_payload(message: str) -> dict[str, Any]:
+    """Consistent empty payload for `/analyze/me` and other analysis endpoints."""
+    return {
+        "summary": {
+            "total_income": 0,
+            "total_expense": 0,
+            "net_cashflow": 0,
+            "avg_daily_expense": 0,
+            "transaction_count": 0,
+        },
+        "by_category": [],
+        "monthly": [],
+        "top_merchants": [],
+        "income_src": [],
+        "timeseries": [],
+        "forecast": [],
+        "subscriptions": [],
+        "sub_total_monthly": 0,
+        "health_report": None,
+        "monthly_stories": [],
+        "overall_story": {"headline": "", "paragraphs": [], "highlights": []},
+        "category_baseline": {},
+        "transactions": [],
+        "errors": [],
+        "daily_trend": [],
+        "raw_data": [],
+        "message": message,
+    }
+
+
 @app.get("/me")
 def me(user: dict = Depends(require_auth)) -> dict:
     """Protected endpoint — returns decoded Supabase JWT payload.
@@ -176,7 +206,12 @@ def analyze_me(
 
     user_id = user.get("sub")
     
-    query = sb.table("transactions").select("*").eq("user_id", user_id).order("date")
+    query = (
+        sb.table("transactions")
+        .select("id,date,description,amount,type,category_raw")
+        .eq("user_id", user_id)
+        .order("date")
+    )
     if month:
         import calendar as _cal
         try:
@@ -191,19 +226,7 @@ def analyze_me(
     
     rows = res.data or []
     if not rows:
-        # Return empty analysis instead of 404 so dashboards don't break
-        return {
-            "summary": {
-                "total_income": 0, "total_expense": 0, "net_cashflow": 0,
-                "avg_daily_expense": 0, "transaction_count": 0,
-            },
-            "by_category": [],
-            "monthly": [],
-            "forecast": [],
-            "daily_trend": [],
-            "raw_data": [],
-            "message": "Belum ada transaksi. Mulai catat pengeluaranmu!",
-        }
+        return _empty_analysis_payload("Belum ada transaksi. Mulai catat pengeluaranmu!")
     
     df = pd.DataFrame(rows)
     
@@ -232,15 +255,7 @@ def analyze_me(
     df = df.dropna(subset=['tanggal']).sort_values('tanggal').reset_index(drop=True)
     
     if df.empty:
-        return {
-            "summary": {
-                "total_income": 0, "total_expense": 0, "net_cashflow": 0,
-                "avg_daily_expense": 0, "transaction_count": 0,
-            },
-            "by_category": [], "monthly": [], "forecast": [],
-            "daily_trend": [], "raw_data": [],
-            "message": "Belum ada transaksi valid.",
-        }
+        return _empty_analysis_payload("Belum ada transaksi valid.")
 
     # Skip normalize_columns and parse_amount_columns since we already set them up
     # Go directly to categorize + insights
@@ -947,6 +962,90 @@ class TelegramLinkRequest(BaseModel):
     link_code: str
 
 
+def _merge_legacy_telegram_account(sb: Any, legacy_user_id: str, target_user_id: str) -> dict[str, int]:
+    """Merge data from a legacy Telegram-only account into target web account.
+
+    This prevents split data where Telegram writes to one `user_id` while web
+    reads another after account linking.
+    """
+    summary = {
+        "transactions_moved": 0,
+        "budgets_moved": 0,
+        "budgets_merged": 0,
+        "import_batches_moved": 0,
+    }
+
+    if not legacy_user_id or legacy_user_id == target_user_id:
+        return summary
+
+    # Move transactions
+    try:
+        tx_res = sb.table("transactions").select("id").eq("user_id", legacy_user_id).execute()
+        tx_count = len(tx_res.data or [])
+        if tx_count:
+            sb.table("transactions").update({"user_id": target_user_id}).eq("user_id", legacy_user_id).execute()
+            summary["transactions_moved"] = tx_count
+    except Exception as exc:
+        print(f"[telegram-link] transaction merge warning ({legacy_user_id} -> {target_user_id}): {exc}")
+
+    # Move/merge budgets (unique by user_id + category)
+    try:
+        budgets_res = (
+            sb.table("budgets")
+            .select("id,category,monthly_limit")
+            .eq("user_id", legacy_user_id)
+            .execute()
+        )
+        for budget in (budgets_res.data or []):
+            budget_id = budget.get("id")
+            category = budget.get("category")
+            old_limit = float(budget.get("monthly_limit") or 0)
+            if not budget_id or not category:
+                continue
+
+            existing_res = (
+                sb.table("budgets")
+                .select("id,monthly_limit")
+                .eq("user_id", target_user_id)
+                .eq("category", category)
+                .limit(1)
+                .execute()
+            )
+            existing = (existing_res.data or [None])[0]
+
+            if existing:
+                existing_id = existing.get("id")
+                existing_limit = float(existing.get("monthly_limit") or 0)
+                merged_limit = max(existing_limit, old_limit)
+                if existing_id and merged_limit != existing_limit:
+                    sb.table("budgets").update({"monthly_limit": merged_limit}).eq("id", existing_id).execute()
+                sb.table("budgets").delete().eq("id", budget_id).execute()
+                summary["budgets_merged"] += 1
+            else:
+                sb.table("budgets").update({"user_id": target_user_id}).eq("id", budget_id).execute()
+                summary["budgets_moved"] += 1
+    except Exception as exc:
+        print(f"[telegram-link] budget merge warning ({legacy_user_id} -> {target_user_id}): {exc}")
+
+    # Move import batches if present
+    try:
+        batch_res = sb.table("import_batches").select("id").eq("user_id", legacy_user_id).execute()
+        batch_count = len(batch_res.data or [])
+        if batch_count:
+            sb.table("import_batches").update({"user_id": target_user_id}).eq("user_id", legacy_user_id).execute()
+            summary["import_batches_moved"] = batch_count
+    except Exception as exc:
+        print(f"[telegram-link] import batch merge warning ({legacy_user_id} -> {target_user_id}): {exc}")
+
+    # Ensure legacy profile no longer owns this chat_id
+    try:
+        sb.table("profiles").update({"telegram_chat_id": None, "telegram_linked_at": None}).eq("id", legacy_user_id).execute()
+    except Exception as exc:
+        print(f"[telegram-link] profile cleanup warning ({legacy_user_id}): {exc}")
+
+    return summary
+
+
 @app.post("/telegram/link")
 def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
     """Link a Telegram chat to the authenticated user's Supabase account.
@@ -962,6 +1061,8 @@ def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
         raise HTTPException(status_code=503, detail="Database tidak tersedia")
 
     user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token user tidak valid")
 
     try:
         # Look up pending link — use limit(1) to avoid maybe_single() returning None
@@ -980,6 +1081,34 @@ def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
 
         chat_id = row["chat_id"]
 
+        # Find other accounts already bound to this chat_id and merge their data.
+        legacy_profiles = (
+            sb.table("profiles")
+            .select("id")
+            .eq("telegram_chat_id", chat_id)
+            .neq("id", user_id)
+            .execute()
+        )
+
+        migration_summary = {
+            "legacy_accounts": 0,
+            "transactions_moved": 0,
+            "budgets_moved": 0,
+            "budgets_merged": 0,
+            "import_batches_moved": 0,
+        }
+
+        for profile in (legacy_profiles.data or []):
+            legacy_user_id = profile.get("id")
+            if not legacy_user_id:
+                continue
+            migrated = _merge_legacy_telegram_account(sb, legacy_user_id, user_id)
+            migration_summary["legacy_accounts"] += 1
+            migration_summary["transactions_moved"] += migrated["transactions_moved"]
+            migration_summary["budgets_moved"] += migrated["budgets_moved"]
+            migration_summary["budgets_merged"] += migrated["budgets_merged"]
+            migration_summary["import_batches_moved"] += migrated["import_batches_moved"]
+
         # Save telegram_chat_id to user profile
         sb.table("profiles").update({
             "telegram_chat_id": chat_id,
@@ -991,6 +1120,11 @@ def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
 
         # Send confirmation message to Telegram
         from app.telegram_bot import send_message
+        migration_note = ""
+        if migration_summary["transactions_moved"] > 0:
+            migration_note = (
+                f"\n\n🔄 {migration_summary['transactions_moved']} transaksi lama berhasil disinkronkan ke akun web kamu."
+            )
         send_message(
             chat_id,
             "✅ <b>Akun OprexDuit berhasil terhubung!</b>\n\n"
@@ -998,10 +1132,10 @@ def telegram_link(req: TelegramLinkRequest, user: dict = Depends(require_auth)):
             "📝 Catat transaksi langsung di sini\n"
             "📊 Terima laporan harian otomatis\n"
             "⏰ Notif budget saat hampir melebihi limit\n\n"
-            "Coba sekarang: ketik <code>50rb makan siang</code> 🚀",
+            f"Coba sekarang: ketik <code>50rb makan siang</code> 🚀{migration_note}",
         )
 
-        return {"ok": True, "chat_id": chat_id}
+        return {"ok": True, "chat_id": chat_id, "migration": migration_summary}
 
     except HTTPException:
         raise
@@ -1329,23 +1463,51 @@ class LinkReportCreate(BaseModel):
 @app.get("/affiliate/products", tags=["affiliate"])
 async def list_affiliate_products(
     platform: Optional[str] = None,
+    q: Optional[str] = Query(None, max_length=120),
     active_only: bool = True,
+    fallback_any: bool = False,
     limit: int = 50,
 ):
-    """List affiliate products, optionally filtered by platform."""
+    """List affiliate products with optional platform + query filtering.
+
+    If `q` is provided and no product name matches, set `fallback_any=true`
+    to return active products from the selected platform as a fallback.
+    """
     sb = _supabase()
     if not sb:
         raise HTTPException(status_code=503, detail="Database tidak tersambung.")
-    try:
-        q = sb.table("affiliate_products").select(
+
+    q_clean = (q or "").strip()
+
+    def _base_query():
+        query = sb.table("affiliate_products").select(
             "id,name,price,platform,affiliate_url,image_url,description,is_active,created_at"
         )
         if active_only:
-            q = q.eq("is_active", True)
+            query = query.eq("is_active", True)
         if platform:
-            q = q.eq("platform", platform)
-        res = q.order("created_at", desc=True).limit(limit).execute()
-        return {"products": res.data or []}
+            query = query.eq("platform", platform)
+        return query
+
+    try:
+        products: list[dict[str, Any]] = []
+
+        if q_clean:
+            match_res = _base_query().ilike("name", f"%{q_clean}%").order("price", desc=False).limit(limit).execute()
+            products = match_res.data or []
+
+            if not products and fallback_any:
+                fallback_res = _base_query().order("price", desc=False).limit(limit).execute()
+                products = fallback_res.data or []
+        else:
+            res = _base_query().order("created_at", desc=True).limit(limit).execute()
+            products = res.data or []
+
+        return {
+            "products": products,
+            "query": q_clean or None,
+            "platform": platform,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

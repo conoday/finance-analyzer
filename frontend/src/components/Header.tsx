@@ -52,11 +52,12 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
 export function Header({ onDonasi }: HeaderProps) {
   void onDonasi;
   const [showMenu, setShowMenu] = useState(false);
-  const { user, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
-  const avatar   = user?.user_metadata?.avatar_url as string | undefined;
-  const animalAvatar = parseAnimalAvatarToken(avatar);
-  const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "";
+  const avatarToken = String(profile?.avatar_url ?? user?.user_metadata?.avatar_url ?? "");
+  const animalAvatar = parseAnimalAvatarToken(avatarToken);
+  const imageAvatar = animalAvatar ? "" : avatarToken;
+  const fullName = profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "";
   const firstName = fullName.split(" ")[0];
 
   return (
@@ -85,8 +86,8 @@ export function Header({ onDonasi }: HeaderProps) {
                   <span className="inline-flex h-5 w-5 items-center justify-center text-base" title={animalAvatar.label}>
                     {animalAvatar.emoji}
                   </span>
-                ) : avatar ? (
-                  <Image src={avatar} alt={firstName} width={22} height={22} className="rounded-full" />
+                ) : imageAvatar ? (
+                  <Image src={imageAvatar} alt={firstName} width={22} height={22} className="rounded-full" />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-teal-600 flex items-center justify-center text-[9px] font-bold text-white">
                     {firstName.charAt(0).toUpperCase()}
