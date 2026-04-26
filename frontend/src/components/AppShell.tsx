@@ -8,6 +8,7 @@ import { TopNav } from "@/components/TopNav";
 import { AnimatePresence, motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { DonasiModal } from "@/components/SharePanel";
 import { useDisplayMode } from "@/hooks/useDisplayMode";
+import { CustomCursor } from "@/components/ui/CustomCursor";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [showDonasi, setShowDonasi] = useState(false);
@@ -20,25 +21,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const orbBottomY = useTransform(scrollYProgress, [0, 1], [0, isShowtime ? -26 : -8]);
 
   return (
-    <div className={`relative min-h-screen overflow-x-hidden bg-[#f4f8fb] ${isShowtime ? "ui-showtime" : "ui-ringkas"}`}>
+    <div className={`relative min-h-screen overflow-x-hidden ${isShowtime ? "bg-[#050508] ui-showtime" : "bg-[#f4f8fb] ui-ringkas"}`}>
+      <CustomCursor enabled={isShowtime && !prefersReducedMotion} />
       <div className="motion-ambient pointer-events-none absolute inset-0">
         <motion.div
           style={{ y: orbLeftY }}
-          className="absolute left-[-120px] top-[-120px] h-80 w-80 rounded-full bg-teal-200/30 blur-3xl"
+          className={`absolute left-[-120px] top-[-120px] h-80 w-80 rounded-full blur-3xl ${
+            isShowtime ? "oprex-blob oprex-blob-1" : "bg-teal-200/30"
+          }`}
         />
         <motion.div
           style={{ y: orbRightY }}
-          className="absolute right-[-120px] top-10 h-80 w-80 rounded-full bg-sky-200/25 blur-3xl"
+          className={`absolute right-[-120px] top-10 h-80 w-80 rounded-full blur-3xl ${
+            isShowtime ? "oprex-blob oprex-blob-2" : "bg-sky-200/25"
+          }`}
         />
         <motion.div
           style={{ y: orbBottomY }}
-          className="absolute bottom-[-140px] left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-orange-200/20 blur-3xl"
+          className={`absolute bottom-[-140px] left-1/2 h-96 w-96 -translate-x-1/2 rounded-full blur-3xl ${
+            isShowtime ? "oprex-blob oprex-blob-3" : "bg-orange-200/20"
+          }`}
         />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <motion.div
-          className="fixed left-0 right-0 top-0 z-[60] h-[3px] origin-left bg-gradient-to-r from-teal-500 via-sky-500 to-amber-400"
+          className={`fixed left-0 right-0 top-0 z-[60] h-[3px] origin-left ${
+            isShowtime
+              ? "bg-gradient-to-r from-emerald-400 via-cyan-400 to-red-400"
+              : "bg-gradient-to-r from-teal-500 via-sky-500 to-amber-400"
+          }`}
           style={{ scaleX: prefersReducedMotion ? 1 : progress }}
         />
 

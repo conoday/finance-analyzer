@@ -278,6 +278,122 @@ button:active { transform: scale(0.97); }
   border: 1px solid rgba(20,184,166,0.20);
 }
 
+/* ─── Oprex redesign layer (Showtime) ─── */
+.ui-showtime {
+  color: #e5edf7;
+}
+
+.ui-showtime .oprex-panel {
+  background: rgba(9, 13, 21, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.ui-showtime .oprex-panel-soft {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ui-showtime .oprex-muted {
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.ui-showtime .oprex-heading {
+  color: #f8fbff;
+}
+
+.ui-showtime .oprex-card-highlight {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 148, 0.14),
+    0 14px 36px rgba(0, 255, 148, 0.08);
+}
+
+.ui-showtime .oprex-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+.oprex-blob {
+  opacity: 0.62;
+  animation: oprexBlobMove 24s infinite alternate ease-in-out;
+}
+
+.oprex-blob-1 {
+  background: radial-gradient(circle, rgba(0, 255, 148, 0.2) 0%, rgba(5, 5, 8, 0) 70%);
+  animation-duration: 26s;
+}
+
+.oprex-blob-2 {
+  background: radial-gradient(circle, rgba(255, 59, 59, 0.16) 0%, rgba(5, 5, 8, 0) 70%);
+  animation-duration: 22s;
+  animation-delay: -5s;
+}
+
+.oprex-blob-3 {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, rgba(5, 5, 8, 0) 70%);
+  animation-duration: 28s;
+  animation-delay: -8s;
+}
+
+@keyframes oprexBlobMove {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  35% {
+    transform: translate(6%, 8%) scale(1.08);
+  }
+  68% {
+    transform: translate(-5%, 4%) scale(0.94);
+  }
+  100% {
+    transform: translate(0, -6%) scale(1.02);
+  }
+}
+
+#oprex-custom-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  background: #f8fafc;
+  mix-blend-mode: difference;
+  transition:
+    width 180ms ease,
+    height 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    opacity 120ms ease;
+}
+
+#oprex-custom-cursor[data-hovering="true"] {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.2);
+  mix-blend-mode: normal;
+  backdrop-filter: blur(2px);
+}
+
+@media (pointer: fine) {
+  body.oprex-cursor-enabled,
+  body.oprex-cursor-enabled a,
+  body.oprex-cursor-enabled button,
+  body.oprex-cursor-enabled [role="button"],
+  body.oprex-cursor-enabled input,
+  body.oprex-cursor-enabled textarea,
+  body.oprex-cursor-enabled select {
+    cursor: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

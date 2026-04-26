@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-26 (rev 13)
+> Last updated: 2026-04-26 (rev 14)
 > Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Session | ✅ Prototype V1 visual mode (2026-04-26) | Ringkas/Showtime + reduced-motion + motion polish dashboard/belanja |
+| Last Session | ✅ Oprex redesign embed batch (2026-04-26) | UI refactor berbasis `oprex-redesign`: shell/nav/dashboard/mobile + UI primitives |
 
 ---
 
@@ -101,6 +101,13 @@
 - [x] Reduced-motion guard diterapkan lintas app (JS + CSS fallback)
 - [x] Dashboard: kinetic hero typography + KPI cluster pulse untuk signature moment
 - [x] Belanja AI: depth tilt card, parallax ambient, dan success micro-animation setelah "Sudah Beli"
+
+### Oprex Redesign Embed Batch (2026-04-26)
+- [x] Port komponen UI reusable dari referensi: `TiltCard`, `NumberTicker`, `Sparkline`, `CustomCursor`
+- [x] AppShell showtime diupgrade ke dark-aurora ambience dengan blob motion + progress neon
+- [x] TopNav desktop diubah ke dark-glass visual language saat showtime (menu, mode switcher, alerts, quick search)
+- [x] Header + SideNav mobile diselaraskan agar style redesign konsisten lintas device
+- [x] Dashboard utama dipoles dengan card tilt, sparkline mini, angka animasi ticker, serta tone warna showtime yang lebih kontras
 
 ### Dokumentasi Artefak (rev 10)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking

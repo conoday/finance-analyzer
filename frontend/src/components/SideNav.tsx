@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import type { ElementType } from "react";
+import { useDisplayMode } from "@/hooks/useDisplayMode";
 import {
   LayoutDashboard, Receipt, BarChart3, Wallet,
   PiggyBank, Settings, ShoppingBag
@@ -11,7 +13,7 @@ import {
 interface NavItem {
   href: string;
   label: string;
-  icon: React.ElementType;
+  icon: ElementType;
   mobileShow?: boolean;
 }
 
@@ -28,20 +30,27 @@ const NAV_ITEMS: NavItem[] = [
 
 export function SideNav({ onDonasi, hideOnDesktop }: { onDonasi?: () => void; hideOnDesktop?: boolean }) {
   void onDonasi;
+  const { isShowtime } = useDisplayMode();
+
   return (
     <>
       {/* ── Mobile Bottom Nav ── */}
-      <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 shadow-[0_-4px_24px_rgba(0,0,0,0.02)] flex items-center justify-around px-2 py-2 safe-pb ${hideOnDesktop ? 'md:hidden' : ''}`}
+      <nav
+        className={`fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 safe-pb backdrop-blur-2xl ${
+          isShowtime
+            ? "border-t border-white/10 bg-[#080c16]/80 shadow-[0_-8px_28px_rgba(0,0,0,0.35)]"
+            : "border-t border-slate-200/50 bg-white/80 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]"
+        } ${hideOnDesktop ? "md:hidden" : ""}`}
       >
         {NAV_ITEMS.filter((i) => i.mobileShow).map((item) => (
-          <MobileNavItem key={item.href} item={item} />
+          <MobileNavItem key={item.href} item={item} isShowtime={isShowtime} />
         ))}
       </nav>
     </>
   );
 }
 
-function MobileNavItem({ item }: { item: NavItem }) {
+function MobileNavItem({ item, isShowtime }: { item: NavItem; isShowtime: boolean }) {
   const pathname = usePathname();
   const isActive = pathname === item.href;
   const Icon = item.icon;
@@ -52,17 +61,35 @@ function MobileNavItem({ item }: { item: NavItem }) {
         {isActive && (
           <motion.span
             layoutId="mobile-active-pill"
-            className="absolute inset-0 rounded-xl border border-teal-200 bg-teal-50/90"
+            className={`absolute inset-0 rounded-xl border ${
+              isShowtime ? "border-emerald-300/35 bg-emerald-400/10" : "border-teal-200 bg-teal-50/90"
+            }`}
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
           />
         )}
         <Icon
           className="relative z-10 h-5 w-5 transition-colors"
-          style={{ color: isActive ? "#0f766e" : "#94a3b8" }}
+          style={{
+            color: isActive
+              ? isShowtime
+                ? "#86efac"
+                : "#0f766e"
+              : isShowtime
+                ? "#94a3b8"
+                : "#94a3b8",
+          }}
         />
         <span
           className="relative z-10 text-[9px] font-medium leading-none transition-colors"
-          style={{ color: isActive ? "#0f766e" : "#94a3b8" }}
+          style={{
+            color: isActive
+              ? isShowtime
+                ? "#bbf7d0"
+                : "#0f766e"
+              : isShowtime
+                ? "#cbd5e1"
+                : "#94a3b8",
+          }}
         >
           {item.label.split(" ")[0]}
         </span>
