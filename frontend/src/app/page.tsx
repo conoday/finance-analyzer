@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { useDisplayMode } from "@/hooks/useDisplayMode";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { MotionSection } from "@/components/MotionSection";
 import { motion } from "framer-motion";
@@ -68,6 +69,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { loading: txLoading, deleteOne } = useTransactions();
   const { data, status, error, analyzeMe } = useAnalysis();
+  const { isShowtime, prefersReducedMotion, motionTier } = useDisplayMode();
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [monthFilter, setMonthFilter] = useState<string>(currentMonthStr);
 
@@ -87,6 +89,15 @@ export default function Dashboard() {
   const topCategories = (data?.by_category ?? []).slice(0, 4);
   const recurring = (data?.subscriptions ?? []).slice(0, 4);
   const recentTx = (data?.transactions ?? []).slice(0, 6);
+  const heroWords = [
+    "Kendalikan",
+    "performa",
+    "keuangan",
+    "dari",
+    "satu",
+    "dashboard",
+    "eksekutif.",
+  ];
 
   const isLoading = status === "loading" || txLoading;
   const isPositiveBalance = netBalance >= 0;
@@ -98,7 +109,7 @@ export default function Dashboard() {
       }`}
     >
       <MotionSection delay={0.02}>
-        <section className="relative overflow-hidden rounded-[30px] border border-teal-100/70 bg-gradient-to-br from-white via-teal-50/70 to-sky-50 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
+        <section className={`relative overflow-hidden rounded-[30px] border border-teal-100/70 bg-gradient-to-br from-white via-teal-50/70 to-sky-50 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8 ${isShowtime ? "dashboard-showtime" : "dashboard-ringkas"}`}>
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-20 left-8 h-44 w-44 rounded-full bg-teal-300/25 blur-3xl" />
           <div className="absolute right-[-20px] top-6 h-40 w-40 rounded-full bg-sky-300/25 blur-3xl" />
@@ -113,9 +124,28 @@ export default function Dashboard() {
                 Insight Keuangan Terpadu
               </span>
               <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
-                  Kendalikan performa keuangan dari satu dashboard eksekutif.
-                </h1>
+                {isShowtime && !prefersReducedMotion ? (
+                  <h1 className="flex flex-wrap gap-x-2 gap-y-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
+                    {heroWords.map((word, index) => (
+                      <motion.span
+                        key={`${word}-${index}`}
+                        initial={{ opacity: 0, y: 12, rotate: index % 2 === 0 ? -1.4 : 1.4 }}
+                        animate={{ opacity: 1, y: 0, rotate: 0 }}
+                        transition={{
+                          duration: motionTier.context,
+                          delay: Math.min(index * 0.05, 0.28),
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                      >
+                        {word}
+                      </motion.span>
+                    ))}
+                  </h1>
+                ) : (
+                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
+                    Kendalikan performa keuangan dari satu dashboard eksekutif.
+                  </h1>
+                )}
                 <p className="mt-2 max-w-2xl text-sm text-slate-600 md:text-base">
                   Pantau arus kas, pola pengeluaran, dan transaksi prioritas secara real-time untuk pengambilan keputusan yang lebih presisi.
                 </p>
@@ -188,7 +218,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.35, delay: 0.08 + index * 0.06 }}
+                  transition={{ duration: motionTier.context, delay: 0.08 + index * 0.06 }}
                 >
                   <Link
                     href={item.href}
@@ -213,32 +243,40 @@ export default function Dashboard() {
       <MotionSection delay={0.04}>
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
+            index={0}
             label="Pemasukan Bulan Ini"
             value={formatRupiah(totalIncome)}
             hint="Total dana yang masuk"
             icon={CircleDollarSign}
             tone="teal"
+            showtime={isShowtime}
           />
           <MetricCard
+            index={1}
             label="Pengeluaran Bulan Ini"
             value={formatRupiah(totalExpense)}
             hint="Semua biaya tercatat"
             icon={Wallet}
             tone="rose"
+            showtime={isShowtime}
           />
           <MetricCard
+            index={2}
             label="Total Cashflow"
             value={formatRupiah(netBalance)}
             hint={isPositiveBalance ? "Kondisi kas sehat" : "Perlu evaluasi belanja"}
             icon={PiggyBank}
             tone={isPositiveBalance ? "emerald" : "slate"}
+            showtime={isShowtime}
           />
           <MetricCard
+            index={3}
             label="Tagihan Bulanan"
             value={formatRupiah(recurringMonthly)}
             hint={`${recurring.length} langganan terdeteksi`}
             icon={Receipt}
             tone="amber"
+            showtime={isShowtime}
           />
         </section>
       </MotionSection>
@@ -440,17 +478,21 @@ export default function Dashboard() {
 type MetricTone = "teal" | "rose" | "emerald" | "amber" | "slate";
 
 function MetricCard({
+  index,
   label,
   value,
   hint,
   icon: Icon,
   tone,
+  showtime,
 }: {
+  index: number;
   label: string;
   value: string;
   hint: string;
   icon: LucideIcon;
   tone: MetricTone;
+  showtime: boolean;
 }) {
   const toneMap: Record<MetricTone, string> = {
     teal: "bg-teal-50 text-teal-700",
@@ -462,13 +504,20 @@ function MetricCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: showtime ? 12 : 8, scale: 0.99 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, amount: 0.35 }}
+      transition={{ duration: showtime ? 0.32 : 0.24, delay: 0.04 + index * 0.04, ease: "easeOut" }}
       whileHover={{ y: -2, scale: 1.01 }}
-      transition={{ duration: 0.24, ease: "easeOut" }}
-      className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+      className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
     >
+      {showtime && tone === "amber" ? (
+        <motion.span
+          className="pointer-events-none absolute inset-0 rounded-2xl"
+          animate={{ boxShadow: ["0 0 0 rgba(251,191,36,0)", "0 0 26px rgba(251,191,36,0.28)", "0 0 0 rgba(251,191,36,0)"] }}
+          transition={{ duration: 2.1, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ) : null}
       <div className="mb-3 flex items-center justify-between">
         <motion.span
           whileHover={{ rotate: -6, scale: 1.06 }}

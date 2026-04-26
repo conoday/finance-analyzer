@@ -24,6 +24,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { parseAnimalAvatarToken } from "@/lib/avatar";
+import { useDisplayMode } from "@/hooks/useDisplayMode";
 
 type MenuItem = {
   name: string;
@@ -78,6 +79,7 @@ export function TopNav() {
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { user, profile, loading, signOut } = useAuth();
+  const { mode, setMode, isShowtime, prefersReducedMotion } = useDisplayMode();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -150,6 +152,7 @@ export function TopNav() {
   const activeMenu =
     menuItems.find((item) => (item.path === "/" ? pathname === "/" : pathname.startsWith(item.path)))?.name ??
     "Dashboard";
+  const visualModeLabel = isShowtime ? "Showtime" : "Ringkas";
 
   const quickActions: MenuItem[] = [
     ...menuItems,
@@ -167,8 +170,8 @@ export function TopNav() {
   const alertItems = useMemo(() => {
     return [
       {
-        title: `Mode ${activeMenu} aktif`,
-        body: `Fokus navigasi sedang berada di ${activeMenu}. Gunakan Search untuk pindah cepat antar menu.`,
+        title: `Mode ${visualModeLabel} aktif`,
+        body: `Halaman ${activeMenu} sedang ditampilkan dalam mode ${visualModeLabel}.`,
         path: pathname,
       },
       {
@@ -187,7 +190,7 @@ export function TopNav() {
         path: "/settings",
       },
     ];
-  }, [activeMenu, pathname]);
+  }, [activeMenu, pathname, visualModeLabel]);
 
   return (
     <>
@@ -238,13 +241,13 @@ export function TopNav() {
             })}
           </nav>
 
-          <div className="flex w-[400px] items-center justify-end gap-2">
+          <div className="flex w-[440px] items-center justify-end gap-2">
             <div ref={modeMenuRef} className="relative hidden xl:block">
               <button
                 onClick={() => setShowModeMenu((v) => !v)}
                 className="inline-flex items-center rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-teal-200 hover:text-teal-700"
               >
-                Mode: <span className="ml-1 text-slate-800">{activeMenu}</span>
+                Mode: <span className="ml-1 text-slate-800">{visualModeLabel}</span>
               </button>
               <AnimatePresence>
                 {showModeMenu && (
@@ -252,8 +255,41 @@ export function TopNav() {
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
-                    className="absolute right-0 top-full z-50 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl"
+                    className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
                   >
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">Tampilan</p>
+                    <div className="mb-2 grid grid-cols-2 gap-1">
+                      <button
+                        onClick={() => setMode("ringkas")}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
+                          mode === "ringkas"
+                            ? "border-teal-200 bg-teal-50 text-teal-700"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        Ringkas
+                      </button>
+                      <button
+                        onClick={() => setMode("showtime")}
+                        disabled={prefersReducedMotion}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
+                          mode === "showtime"
+                            ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        } ${prefersReducedMotion ? "cursor-not-allowed opacity-45" : ""}`}
+                      >
+                        Showtime
+                      </button>
+                    </div>
+
+                    {prefersReducedMotion ? (
+                      <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-700">
+                        Reduced-motion aktif di perangkat, efek Showtime dibatasi.
+                      </p>
+                    ) : null}
+
+                    <div className="mb-2 h-px bg-slate-100" />
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">Pindah Halaman</p>
                     {menuItems.map((item) => {
                       const Icon = item.icon;
                       return (

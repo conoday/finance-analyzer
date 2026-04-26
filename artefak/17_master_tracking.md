@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-26 (rev 12)
+> Last updated: 2026-04-26 (rev 13)
 > Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Commit | ✅ 1a3214b (2026-04-26) | feat: improve categorization, avatar system, nav actions, and motion polish |
+| Last Session | ✅ Prototype V1 visual mode (2026-04-26) | Ringkas/Showtime + reduced-motion + motion polish dashboard/belanja |
 
 ---
 
@@ -94,6 +94,13 @@
 - [x] Avatar diganti ke sistem avatar hewan (tokenized), konsisten di register/settings/header/topnav
 - [x] Top navigation jadi fungsional (Mode selector, Search modal, Bell panel, shortcut Cmd/Ctrl+K)
 - [x] Motion system dipoles (scroll reveal reusable + parallax ambient + route/section transitions)
+
+### Prototype V1 Visual Mode Batch (2026-04-26)
+- [x] Global visual mode `Ringkas` vs `Showtime` (persisted localStorage)
+- [x] TopNav mode dropdown sekarang mengatur intensitas tampilan global, bukan hanya konteks halaman
+- [x] Reduced-motion guard diterapkan lintas app (JS + CSS fallback)
+- [x] Dashboard: kinetic hero typography + KPI cluster pulse untuk signature moment
+- [x] Belanja AI: depth tilt card, parallax ambient, dan success micro-animation setelah "Sudah Beli"
 
 ### Dokumentasi Artefak (rev 10)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking

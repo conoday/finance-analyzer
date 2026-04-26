@@ -26,6 +26,21 @@
     --radius: 1rem;
     --font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
     --font-heading: "Sora", "Plus Jakarta Sans", sans-serif;
+    --motion-micro: 160ms;
+    --motion-context: 280ms;
+    --motion-signature: 860ms;
+  }
+
+  :root[data-visual-mode="ringkas"] {
+    --motion-micro: 120ms;
+    --motion-context: 210ms;
+    --motion-signature: 460ms;
+  }
+
+  :root[data-visual-mode="showtime"] {
+    --motion-micro: 170ms;
+    --motion-context: 320ms;
+    --motion-signature: 1100ms;
   }
 
   html {
@@ -261,4 +276,29 @@ button:active { transform: scale(0.97); }
   background: rgba(20,184,166,0.14);
   color: #0f766e;
   border: 1px solid rgba(20,184,166,0.20);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .motion-ambient,
+  .dot-grid,
+  .btn-wa,
+  .btn-fab {
+    animation: none !important;
+    transform: none !important;
+  }
 }

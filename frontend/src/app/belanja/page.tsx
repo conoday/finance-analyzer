@@ -2,11 +2,12 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { ExternalLink, Loader2, Search, ShoppingBag, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { MotionSection } from "@/components/MotionSection";
 import { PageHero } from "@/components/PageHero";
 import { ReportLinkButton } from "@/components/ReportLinkButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useDisplayMode } from "@/hooks/useDisplayMode";
 import { useTransactions } from "@/hooks/useTransactions";
 import { formatRupiah } from "@/lib/utils";
 import type { QuickTransaction } from "@/components/SmartInput";
@@ -41,11 +42,15 @@ function platformLabel(platform: string): string {
 export default function BelanjaPage() {
   const { user } = useAuth();
   const { save } = useTransactions();
+  const { isShowtime, prefersReducedMotion, motionTier } = useDisplayMode();
+  const { scrollYProgress } = useScroll();
+  const floatingY = useTransform(scrollYProgress, [0, 1], [0, isShowtime ? -36 : -10]);
 
   const [platform, setPlatform] = useState<PlatformKey>("shopee");
   const [query, setQuery] = useState("");
   const [lastSearch, setLastSearch] = useState<string>("belum ada pencarian");
   const [products, setProducts] = useState<AffiliateProduct[]>([]);
+  const [celebrateId, setCelebrateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<{ type: "success" | "info"; text: string } | null>(null);
@@ -116,6 +121,10 @@ export default function BelanjaPage() {
     };
 
     await save(tx);
+    setCelebrateId(product.id);
+    setTimeout(() => {
+      setCelebrateId((current) => (current === product.id ? null : current));
+    }, 1100);
     setStatus({
       type: "success",
       text: `Transaksi belanja untuk "${product.name}" berhasil dicatat.`,
@@ -128,7 +137,14 @@ export default function BelanjaPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {isShowtime && !prefersReducedMotion ? (
+        <motion.div
+          style={{ y: floatingY }}
+          className="motion-ambient pointer-events-none absolute -right-20 top-6 h-44 w-44 rounded-full bg-rose-200/35 blur-3xl"
+        />
+      ) : null}
+
       <MotionSection delay={0.02}>
         <PageHero
           icon={ShoppingBag}
@@ -254,10 +270,31 @@ export default function BelanjaPage() {
                   key={product.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.24, delay: Math.min(idx * 0.04, 0.2) }}
-                  whileHover={{ y: -3, scale: 1.01 }}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  transition={{ duration: motionTier.context, delay: Math.min(idx * 0.04, 0.2) }}
+                  whileHover={
+                    isShowtime && !prefersReducedMotion
+                      ? { y: -6, rotateX: 3.5, rotateY: -3.5, scale: 1.02 }
+                      : { y: -2, scale: 1.01 }
+                  }
+                  className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ transformStyle: "preserve-3d", transformPerspective: 900 }}
                 >
+                  <AnimatePresence>
+                    {celebrateId === product.id ? (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.88 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.94 }}
+                        transition={{ duration: motionTier.micro, ease: "easeOut" }}
+                        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-emerald-500/18 backdrop-blur-[1px]"
+                      >
+                        <span className="rounded-full border border-emerald-200 bg-white/90 px-3 py-1 text-xs font-bold text-emerald-700">
+                          Tercatat ✓
+                        </span>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
                       {platformLabel(product.platform)}
