@@ -120,9 +120,9 @@ export function useTransactions() {
   /* ── Delete one transaction ── */
   const deleteOne = useCallback(async (id: string) => {
     if (user) {
-      // ID bisa integer atau UUID; kirim apa adanya, Supabase handle casting
+      const normalizedId: string | number = /^\d+$/.test(id) ? Number(id) : id;
       await supabase.from("transactions").delete()
-        .eq("id", id)
+        .eq("id", normalizedId)
         .eq("user_id", user.id);
       setTxs((prev) => prev.filter((t) => t.id !== id));
     } else {

@@ -254,8 +254,32 @@ def analyze_me(
     from app.health_score import compute_health_score
     from app.story import generate_monthly_stories, generate_overall_story
 
-    # Categorize (only if 'kategori' not already set or is 'Lainnya')
-    df = categorize_transactions(df)
+    # Keep original category to persist improvements later
+    df["_original_kategori"] = df["kategori"].fillna("").astype(str)
+
+    # Categorize with optional AI fallback to reduce "Lainnya"
+    df = categorize_transactions(df, use_ai_fallback=True, max_ai_calls=24)
+
+    # Persist upgraded categories so next analysis becomes faster and consistent.
+    if "id" in df.columns:
+        try:
+            orig = df["_original_kategori"].str.strip().str.lower()
+            now = df["kategori"].astype(str).str.strip().str.lower()
+            needs_update = (
+                df["id"].notna()
+                & orig.isin(["", "lainnya", "other"])
+                & now.ne("lainnya")
+                & now.ne("")
+            )
+            updates = df.loc[needs_update, ["id", "kategori"]].drop_duplicates(subset=["id"])
+
+            for _, urow in updates.iterrows():
+                sb.table("transactions").update(
+                    {"category_raw": str(urow["kategori"])}
+                ).eq("id", urow["id"]).eq("user_id", user_id).execute()
+        except Exception:
+            # Non-critical: analysis must continue even if persistence update fails.
+            pass
 
     summary = compute_summary(df)
     by_category = spending_by_category(df)
@@ -289,7 +313,9 @@ def analyze_me(
     # Build transaction list for frontend
     transactions = []
     for _, row in df.iterrows():
+        tx_id = row.get("id")
         transactions.append({
+            "id": str(tx_id) if pd.notna(tx_id) and str(tx_id) != "" else None,
             "tanggal": row["tanggal"].strftime("%Y-%m-%d") if pd.notna(row["tanggal"]) else "",
             "deskripsi": str(row.get("deskripsi", "")),
             "debit": float(row.get("debit", 0)),

@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { CategoryBadge } from "@/components/CategoryBadge";
+import { MotionSection } from "@/components/MotionSection";
+import { motion } from "framer-motion";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -16,6 +19,7 @@ import {
   Receipt,
   Sparkles,
   Target,
+  Trash2,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -62,7 +66,7 @@ const QUICK_ACTIONS: Array<{
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { loading: txLoading } = useTransactions();
+  const { loading: txLoading, deleteOne } = useTransactions();
   const { data, status, error, analyzeMe } = useAnalysis();
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [monthFilter, setMonthFilter] = useState<string>(currentMonthStr);
@@ -93,7 +97,8 @@ export default function Dashboard() {
         isLoading ? "pointer-events-none opacity-60" : "opacity-100"
       }`}
     >
-      <section className="relative overflow-hidden rounded-[30px] border border-teal-100/70 bg-gradient-to-br from-white via-teal-50/70 to-sky-50 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
+      <MotionSection delay={0.02}>
+        <section className="relative overflow-hidden rounded-[30px] border border-teal-100/70 bg-gradient-to-br from-white via-teal-50/70 to-sky-50 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-20 left-8 h-44 w-44 rounded-full bg-teal-300/25 blur-3xl" />
           <div className="absolute right-[-20px] top-6 h-40 w-40 rounded-full bg-sky-300/25 blur-3xl" />
@@ -175,60 +180,71 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {QUICK_ACTIONS.map((item) => {
+            {QUICK_ACTIONS.map((item, index) => {
               const Icon = item.icon;
               return (
-                <Link
+                <motion.div
                   key={item.label}
-                  href={item.href}
-                  className="group rounded-2xl border border-white/80 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.35, delay: 0.08 + index * 0.06 }}
                 >
-                  <span
-                    className={`inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone} text-white shadow-sm`}
+                  <Link
+                    href={item.href}
+                    className="group block rounded-2xl border border-white/80 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
                   >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <p className="mt-3 text-sm font-bold text-slate-900">{item.label}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">{item.caption}</p>
-                </Link>
+                    <span
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone} text-white shadow-sm transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <p className="mt-3 text-sm font-bold text-slate-900">{item.label}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">{item.caption}</p>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>
         </div>
-      </section>
+        </section>
+      </MotionSection>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Pemasukan Bulan Ini"
-          value={formatRupiah(totalIncome)}
-          hint="Total dana yang masuk"
-          icon={CircleDollarSign}
-          tone="teal"
-        />
-        <MetricCard
-          label="Pengeluaran Bulan Ini"
-          value={formatRupiah(totalExpense)}
-          hint="Semua biaya tercatat"
-          icon={Wallet}
-          tone="rose"
-        />
-        <MetricCard
-          label="Total Cashflow"
-          value={formatRupiah(netBalance)}
-          hint={isPositiveBalance ? "Kondisi kas sehat" : "Perlu evaluasi belanja"}
-          icon={PiggyBank}
-          tone={isPositiveBalance ? "emerald" : "slate"}
-        />
-        <MetricCard
-          label="Tagihan Bulanan"
-          value={formatRupiah(recurringMonthly)}
-          hint={`${recurring.length} langganan terdeteksi`}
-          icon={Receipt}
-          tone="amber"
-        />
-      </section>
+      <MotionSection delay={0.04}>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Pemasukan Bulan Ini"
+            value={formatRupiah(totalIncome)}
+            hint="Total dana yang masuk"
+            icon={CircleDollarSign}
+            tone="teal"
+          />
+          <MetricCard
+            label="Pengeluaran Bulan Ini"
+            value={formatRupiah(totalExpense)}
+            hint="Semua biaya tercatat"
+            icon={Wallet}
+            tone="rose"
+          />
+          <MetricCard
+            label="Total Cashflow"
+            value={formatRupiah(netBalance)}
+            hint={isPositiveBalance ? "Kondisi kas sehat" : "Perlu evaluasi belanja"}
+            icon={PiggyBank}
+            tone={isPositiveBalance ? "emerald" : "slate"}
+          />
+          <MetricCard
+            label="Tagihan Bulanan"
+            value={formatRupiah(recurringMonthly)}
+            hint={`${recurring.length} langganan terdeteksi`}
+            icon={Receipt}
+            tone="amber"
+          />
+        </section>
+      </MotionSection>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <MotionSection delay={0.06}>
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2 rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur md:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
@@ -261,44 +277,63 @@ export default function Dashboard() {
                 const fallbackAmount = Math.max(tx.kredit, tx.debit);
                 const amount = isIncome ? (tx.kredit || fallbackAmount) : (tx.debit || fallbackAmount);
                 const label = tx.deskripsi || "Transaksi";
-                const initial = label.charAt(0).toUpperCase();
 
                 return (
-                  <div key={`${label}-${idx}`} className="flex items-center justify-between gap-3 py-3.5">
+                  <motion.div
+                    key={`${label}-${idx}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.5 }}
+                    transition={{ duration: 0.26, delay: idx * 0.03 }}
+                    className="flex items-center justify-between gap-3 py-3.5"
+                  >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${
-                          isIncome ? "bg-emerald-500" : "bg-slate-800"
-                        }`}
-                      >
-                        {initial}
-                      </div>
+                      <CategoryBadge category={tx.kategori || "Lainnya"} hint={label} variant="icon" size="md" />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900">{label}</p>
-                        <p className="text-xs text-slate-500">
-                          {new Date(tx.tanggal || "").toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <p className="text-xs text-slate-500">
+                            {new Date(tx.tanggal || "").toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                          <CategoryBadge category={tx.kategori || "Lainnya"} hint={label} variant="pill" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {tx.id ? (
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Hapus transaksi "${label}"?`)) return;
+                            await deleteOne(String(tx.id));
+                            await analyzeMe(monthFilter || undefined);
+                          }}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                          title="Hapus transaksi"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null}
+
+                      <div className="text-right">
+                        <span
+                          className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                            isIncome ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                          }`}
+                        >
+                          {isIncome ? "Income" : "Expense"}
+                        </span>
+                        <p className={`text-sm font-bold ${isIncome ? "text-emerald-600" : "text-slate-900"}`}>
+                          {isIncome ? "+" : "-"}
+                          {formatRupiah(amount)}
                         </p>
                       </div>
                     </div>
-
-                    <div className="text-right">
-                      <span
-                        className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          isIncome ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                        }`}
-                      >
-                        {isIncome ? "Income" : "Expense"}
-                      </span>
-                      <p className={`text-sm font-bold ${isIncome ? "text-emerald-600" : "text-slate-900"}`}>
-                        {isIncome ? "+" : "-"}
-                        {formatRupiah(amount)}
-                      </p>
-                    </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -333,7 +368,14 @@ export default function Dashboard() {
                         <p className="text-xs font-semibold text-slate-500">{row.pct.toFixed(1)}%</p>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: color }}
+                          initial={{ width: 0 }}
+                          whileInView={{ width: `${width}%` }}
+                          viewport={{ once: true, amount: 0.6 }}
+                          transition={{ duration: 0.45, delay: 0.05 + idx * 0.06, ease: "easeOut" }}
+                        />
                       </div>
                       <p className="mt-1 text-xs text-slate-500">{formatRupiah(row.total)}</p>
                     </div>
@@ -373,18 +415,23 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </section>
+        </section>
+      </MotionSection>
 
       {status === "error" && error && (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          Gagal memuat analisis: {error}
-        </section>
+        <MotionSection delay={0.08}>
+          <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Gagal memuat analisis: {error}
+          </section>
+        </MotionSection>
       )}
 
       {!user && (
-        <section className="rounded-2xl border border-slate-200 bg-white/85 px-4 py-4 text-center text-sm text-slate-600">
-          Masuk ke akun kamu untuk melihat data transaksi cloud dan insight personal.
-        </section>
+        <MotionSection delay={0.1}>
+          <section className="rounded-2xl border border-slate-200 bg-white/85 px-4 py-4 text-center text-sm text-slate-600">
+            Masuk ke akun kamu untuk melihat data transaksi cloud dan insight personal.
+          </section>
+        </MotionSection>
       )}
     </div>
   );

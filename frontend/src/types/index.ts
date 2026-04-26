@@ -142,6 +142,7 @@ export interface OverallStory {
 }
 
 export interface TransactionRow {
+  id?: string | null;
   tanggal: string;
   deskripsi: string;
   debit: number;

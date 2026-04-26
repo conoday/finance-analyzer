@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Receipt } from "lucide-react";
+import { ChevronDown, ChevronUp, Receipt, Trash2 } from "lucide-react";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { formatRupiah } from "@/lib/utils";
 import type { TransactionRow } from "@/types";
@@ -23,7 +23,7 @@ function truncate(s: string, n: number) {
 }
 
 interface TransactionListProps {
-  transactions: (TransactionRow & { id?: string })[];
+  transactions: TransactionRow[];
   onDelete?: (id: string, desc: string) => void;
 }
 
@@ -75,14 +75,14 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
 
             return (
               <motion.div
-                key={`${tx.tanggal}-${i}`}
+                key={tx.id ?? `${tx.tanggal}-${tx.deskripsi}-${i}`}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2, delay: Math.min(i * 0.03, 0.3) }}
                 className="tx-card flex items-center gap-3 rounded-xl px-4 py-3"
               >
                 {/* Category icon */}
-                <CategoryBadge category={tx.kategori ?? "Lainnya"} variant="icon" />
+                <CategoryBadge category={tx.kategori ?? "Lainnya"} hint={tx.deskripsi} variant="icon" />
 
                 {/* Description + category */}
                 <div className="flex-1 min-w-0">
@@ -93,7 +93,7 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-slate-800">{formatDate(tx.tanggal)}</span>
-                    <CategoryBadge category={tx.kategori ?? "Lainnya"} variant="pill" />
+                    <CategoryBadge category={tx.kategori ?? "Lainnya"} hint={tx.deskripsi} variant="pill" />
                   </div>
                 </div>
 
@@ -103,19 +103,20 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
                     {isIncome ? "+" : "-"}
                     {formatRupiah(amount, true)}
                   </div>
-                  {onDelete && tx.id && (
-                    <button 
+                  {onDelete && tx.id ? (
+                    <button
                       onClick={() => {
                         if (window.confirm(`Hapus transaksi "${tx.deskripsi}"?`)) {
-                          onDelete(tx.id!, tx.deskripsi);
+                          onDelete(String(tx.id), tx.deskripsi);
                         }
                       }}
-                      className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
                       title="Hapus Transaksi"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="hidden md:inline">Hapus</span>
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </motion.div>
             );

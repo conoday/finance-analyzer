@@ -6,6 +6,7 @@ import { LogIn, LogOut, ChevronDown, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { parseAnimalAvatarToken } from "@/lib/avatar";
 
 interface HeaderProps {
   onDonasi?: () => void;
@@ -54,6 +55,7 @@ export function Header({ onDonasi }: HeaderProps) {
   const { user, loading, signOut } = useAuth();
 
   const avatar   = user?.user_metadata?.avatar_url as string | undefined;
+  const animalAvatar = parseAnimalAvatarToken(avatar);
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "";
   const firstName = fullName.split(" ")[0];
 
@@ -79,7 +81,11 @@ export function Header({ onDonasi }: HeaderProps) {
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all"
                 style={{ color: "#64748b", border: "1px solid #e2e8f0" }}
               >
-                {avatar ? (
+                {animalAvatar ? (
+                  <span className="inline-flex h-5 w-5 items-center justify-center text-base" title={animalAvatar.label}>
+                    {animalAvatar.emoji}
+                  </span>
+                ) : avatar ? (
                   <Image src={avatar} alt={firstName} width={22} height={22} className="rounded-full" />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-teal-600 flex items-center justify-center text-[9px] font-bold text-white">

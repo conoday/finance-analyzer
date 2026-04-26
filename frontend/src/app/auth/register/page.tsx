@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
+import { randomAnimalAvatarToken } from "@/lib/avatar";
 import { Eye, EyeOff, Loader2, ChevronDown, Shield, Lock, Trash2, FileText, X } from "lucide-react";
 
 const TNC_SECTIONS = [
@@ -101,14 +102,14 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const randomSeed = Math.floor(Math.random() * 15);
+    const avatarToken = randomAnimalAvatarToken();
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { 
           full_name: name,
-          avatar_url: `https://api.dicebear.com/8.x/adventurer/svg?seed=Avatar${randomSeed}`,
+          avatar_url: avatarToken,
         },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? location.origin}/auth/callback`,
       },

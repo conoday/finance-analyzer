@@ -64,11 +64,11 @@ function parseInput(raw: string): Partial<QuickTransaction> {
   let category = "Lainnya";
   const rules: [RegExp, string][] = [
     // ── Makan & Minum
-    [/(starbucks|sbux|kopi.?kenangan|kenangan|chatime|gong.?cha|javis|excelso|j\.?co\b|upnormal|gobar|ngopi|kopi\b|makan|nasi|bakso|mie\b|boba|sate\b|burger|geprek|pizza|warung|gofood|grabfood|shopeefood|go.?food|grab.?food|mcd\b|mcdo|mcdonald|kfc\b|dunkin|sarapan|minum\b|minuman|resto\b|restoran|cafe\b|kafe|dinner|lunch|snack|jajan|nongkrong|kopdar|ayam\b|seafood|sushi|ramen|martabak|gorengan|indomie|warteg|kantin|pecel|padang|es\s)/i, "Makan"],
+    [/(starbucks|sbux|kopi.?kenangan|kenangan|chatime|gong.?cha|javis|excelso|j\.?co\b|upnormal|gobar|ngopi|kopi\b|makan|nasi|bakso|mie\b|boba|sate\b|burger|geprek|pizza|warung|gofood|grabfood|shopeefood|go.?food|grab.?food|mcd\b|mcdo|mcdonald|kfc\b|dunkin|sarapan|minum\b|minuman|resto\b|restoran|cafe\b|kafe|dinner|lunch|snack|jajan|nongkrong|kopdar|ayam\b|seafood|sushi|ramen|martabak|gorengan|indomie|warteg|kantin|pecel|padang|es\s|solaria|fore\b|matcha|durian|soto|seblak)/i, "Makan"],
     // ── Transport (specific combo first so "grabfood" doesn't land here)
-    [/(grab.?(car|motor|bike|express|taxi)|kendaraan|gojek\b|ojek\b|ojol|bensin|pertalite|pertamax|dexlite|revvo|ngisi\b|bbm\b|parkir|tol\b|busway|transjakarta|commuter|commuterline|krl\b|mrt\b|lrt\b|kereta|damri|tiket\s|pesawat|blue.?bird|maxim|indriver)/i, "Transport"],
+    [/(grab.?(car|motor|bike|express|taxi)|kendaraan|gojek\b|ojek\b|ojol|bensin|pertalite|pertamax|dexlite|revvo|ngisi\b|bbm\b|parkir|tol\b|busway|transjakarta|commuter|commuterline|krl\b|mrt\b|lrt\b|kereta|damri|tiket\s|pesawat|blue.?bird|maxim|indriver|oli\b|bengkel|servis|service|vario|motor\b|mobil\b)/i, "Transport"],
     // ── Belanja (e-commerce + retail)
-    [/(shopee|tokopedia|lazada|blibli|bukalapak|tiktok.?shop|jd\.id|berrybenka|zalora|sociolla|indomaret|alfamart|alfamidi|lawson|circle.?k|familymart|minimarket|supermarket|hypermart|carrefour|transmart|lottemart|beli\b|baju|celana|sepatu|tas\b|barang|elektronik|laptop|hp\b|gadget|fashion|outfit)/i, "Belanja"],
+    [/(shopee|tokopedia|lazada|blibli|bukalapak|tiktok.?shop|jd\.id|berrybenka|zalora|sociolla|indomaret|alfamart|alfamidi|lawson|circle.?k|familymart|minimarket|supermarket|hypermart|carrefour|transmart|lottemart|beli\b|baju|celana|sepatu|tas\b|barang|elektronik|laptop|hp\b|gadget|fashion|outfit|laundry|korek|aksesoris|peralatan)/i, "Belanja"],
     // ── Tagihan / Utilitas
     [/(listrik|pln\b|tagihan|pdam|air\s|internet|telkom|indihome|myindihome|cicilan|cicil|angsuran|kpr\b|kredit\b|wifi|langganan|paket.?data|pulsa|mytelkomsel|myxl|tri\b|axis\b|by\.u|smartfren)/i, "Tagihan"],
     // ── Hiburan
@@ -76,7 +76,7 @@ function parseInput(raw: string): Partial<QuickTransaction> {
     // ── Kesehatan
     [/(dokter|obat\b|apotek|rs\b|rumah.?sakit|bpjs|vitamin|klinik|halodoc|alodokter|kimia.?farma|guardian|century|check.?up|faskes|medis|laborat)/i, "Kesehatan"],
     // ── Transfer (e-wallet/bank used as verb "kirim/setor/tarik")
-    [/(transfer|kirim\b|setor|tarik\b|flip\b|jenius|jago\b|seabank|gopay|ovo\b|dana\b|qris\b|bca\b|mandiri|bri\b|bni\b)/i, "Transfer"],
+    [/(transfer|kirim\b|setor|tarik\b|flip\b|jenius|jago\b|seabank|gopay|ovo\b|dana\b|qris\b|bca\b|mandiri|bri\b|bni\b|ambil uang cash|funds fee|admin fee|biaya admin)/i, "Transfer"],
     // ── Pendapatan
     [/(gaji|salary|bonus|thr\b|freelance|client|invoice|upah|proyek|dapat\b|masuk\b|terima\b|dibayar|fee\b|komisi|revenue|profit)/i, "Pendapatan"],
     // ── Investasi

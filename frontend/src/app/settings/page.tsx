@@ -19,6 +19,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { PageHero } from "@/components/PageHero";
+import { ANIMAL_AVATARS, parseAnimalAvatarToken, toAnimalAvatarToken } from "@/lib/avatar";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -92,7 +93,15 @@ function SettingsContent() {
   const [linkCode, setLinkCode] = useState(codeFromUrl.toUpperCase());
   const [submitting, setSubmitting] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [savingAvatarId, setSavingAvatarId] = useState<string | null>(null);
+  const [selectedAvatarToken, setSelectedAvatarToken] = useState<string>(
+    String(user?.user_metadata?.avatar_url ?? "")
+  );
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    setSelectedAvatarToken(String(user?.user_metadata?.avatar_url ?? ""));
+  }, [user?.user_metadata?.avatar_url]);
 
   // Redirect to login (preserving current URL with code) if not authenticated
   useEffect(() => {
@@ -257,29 +266,65 @@ function SettingsContent() {
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-5">
-            <p className="text-sm font-medium text-slate-800 mb-3">Avatar Profil</p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-slate-800">Avatar Profil Hewan</p>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                {parseAnimalAvatarToken(selectedAvatarToken)?.label ?? "Belum dipilih"}
+              </span>
+            </div>
             <div className="flex flex-wrap gap-3">
-              {Array.from({ length: 15 }, (_, i) => {
-                const seedUrl = `https://api.dicebear.com/8.x/adventurer/svg?seed=Avatar${i}`;
-                const isSelected = user.user_metadata?.avatar_url === seedUrl;
+              {ANIMAL_AVATARS.map((avatar) => {
+                const token = toAnimalAvatarToken(avatar.id);
+                const isSelected = selectedAvatarToken === token;
+                const isSaving = savingAvatarId === avatar.id;
+
                 return (
                   <button
-                    key={i}
+                    key={avatar.id}
                     onClick={async () => {
+                      setSavingAvatarId(avatar.id);
                       try {
-                        await supabase.auth.updateUser({ data: { avatar_url: seedUrl } });
+                        const { error: authError } = await supabase.auth.updateUser({
+                          data: { avatar_url: token },
+                        });
+                        if (authError) {
+                          throw authError;
+                        }
+
+                        setSelectedAvatarToken(token);
+
+                        // Keep profile table in sync for server-side usage.
+                        await supabase
+                          .from("profiles")
+                          .update({ avatar_url: token })
+                          .eq("id", user.id);
+
+                        await supabase.auth.refreshSession();
                         router.refresh();
                         setMessage({ type: "success", text: "Avatar berhasil diperbarui!" });
-                      } catch {
-                         setMessage({ type: "error", text: "Gagal memperbarui avatar." });
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : "Gagal memperbarui avatar.";
+                        setMessage({ type: "error", text: msg });
+                        if (msg) {
+                          console.warn("Avatar update failed:", msg);
+                        }
+                      } finally {
+                        setSavingAvatarId(null);
                       }
                     }}
-                    className={`relative w-12 h-12 rounded-xl border-2 transition-all overflow-hidden ${isSelected ? "border-teal-500 scale-110 shadow-md" : "border-slate-100 hover:border-teal-300"}`}
+                    disabled={isSaving}
+                    className={[
+                      "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border-2 text-2xl transition-all",
+                      isSelected
+                        ? "scale-110 border-teal-500 bg-teal-50 shadow-md"
+                        : "border-slate-100 bg-white hover:border-teal-300",
+                      isSaving ? "cursor-wait opacity-70" : "",
+                    ].join(" ")}
+                    title={avatar.label}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={seedUrl} alt={`Avatar ${i}`} className="w-full h-full object-cover bg-slate-50" />
+                    <span>{avatar.emoji}</span>
                     {isSelected && (
-                      <div className="absolute inset-0 bg-teal-500/20 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center bg-teal-500/20">
                         <Check className="w-5 h-5 text-teal-700 font-bold drop-shadow-md" />
                       </div>
                     )}
@@ -287,7 +332,7 @@ function SettingsContent() {
                 );
               })}
             </div>
-            <p className="text-[10px] text-slate-400 mt-3">Pilih avatar yang mewakili kamu.</p>
+            <p className="mt-3 text-[10px] text-slate-400">Pilih avatar hewan yang paling cocok sama karakter kamu.</p>
           </div>
         </div>
 

@@ -27,6 +27,11 @@
     --font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
     --font-heading: "Sora", "Plus Jakarta Sans", sans-serif;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   * { border-color: hsl(var(--border)); }
   body {
     min-height: 100vh;
