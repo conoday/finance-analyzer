@@ -1,14 +1,14 @@
 # Roadmap
 
-> Last updated: 2026-04-20 (rev 9)
+> Last updated: 2026-04-27 (rev 10)
 > Lihat tracking detail di `artefak/17_master_tracking.md`
 
 ## Overview
 
 ```
-Phase 0 ─ Phase 1 ─ Phase 1.5 ─ Phase 2 ─ Phase TG ─ Phase Aff ─ Phase 5 ─ Phase Room ─ Phase AI ─ Phase OCR ─ Phase Admin2 ─ Phase 3
-  Docs     Deploy    Sprint 1     Auth     Telegram   Affiliate    Admin     Room+Notif   AI Chat    OCR Photo   Admin v2     DB+Tier
-   ✅        ✅         ✅         ✅         ✅         ✅          ✅          ✅           ✅          ✅          ✅          🔲
+Phase 0 ─ Phase 1 ─ Phase 1.5 ─ Phase 2 ─ Phase TG ─ Phase Aff ─ Phase 5 ─ Phase Room ─ Phase AI ─ Phase OCR ─ Phase Admin2 ─ Phase DocOps ─ Phase 3
+     Docs     Deploy    Sprint 1     Auth     Telegram   Affiliate    Admin     Room+Notif   AI Chat    OCR Photo   Admin v2     Doc+DB Ops      DB+Tier
+      ✅        ✅         ✅         ✅         ✅         ✅          ✅          ✅           ✅          ✅          ✅             ✅            🔲
 ```
 
 ## Phase 0 — Documentation ✅ DONE
@@ -73,6 +73,11 @@ Folder /artefak/ dengan 17 dokumen arsitektur dan tracking.
 - ✅ OCR Metadata: per bank/e-wallet
 - ✅ Sidebar: menu baru (Logs, OCR Metadata)
 
+## Phase DocOps — Documentation + Admin DB Ops ✅ DONE (2026-04-26)
+- ✅ Artefak pending (P0+P1) direfresh sampai status `RAPI`
+- ✅ Ditambahkan migration `20260426_admin_logs_ocr_metadata.sql`
+- ✅ OCR metadata aggregation dipoles agar `sample_count` akumulatif dan field terdeteksi di-merge
+
 ## Phase Donasi — Donation Feature ✅ DONE (2026-04-19)
 - ✅ Web: QRIS modal di SharePanel + Header button
 - ✅ Telegram: `/donasi` command + QRIS photo via `sendPhoto`
@@ -112,6 +117,8 @@ Phase AI (Chat + Guardrails) ← SELESAI
 Phase OCR (Image Extraction) ← SELESAI
      │
 Phase Admin v2 (Overhaul) ← SELESAI
+     │
+Phase DocOps (Docs + DB Ops) ← SELESAI
      │
 Phase 3 (Transactions + Tier) ← NEXT
      ├─→ Phase 6 (Payment)

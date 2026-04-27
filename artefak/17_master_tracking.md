@@ -1,6 +1,6 @@
 # Master Tracking Board — OprexDuit
 
-> Last updated: 2026-04-26 (rev 16)
+> Last updated: 2026-04-27 (rev 18)
 > Agent baru: baca `00_checkpoint_ai.md` dulu, lalu file ini.
 > Ini adalah source of truth untuk status semua pekerjaan.
 > Baca juga: 07_roadmap.md (fase & sprint), 09_prompt_agent_planner.md (cara kerja agent)
@@ -13,7 +13,7 @@
 |---|---|---|
 | Frontend | ✅ Live | https://finance-analyzer-roan.vercel.app |
 | Backend API | ✅ Live | https://oprexduit.onrender.com |
-| Database | ✅ Schema + migrations applied | Supabase — schema.sql + 002_affiliate_tables.sql |
+| Database | ✅ Schema + migrations expanded | Supabase — schema.sql + rooms/budgets/ai_keys/affiliate + admin logs/OCR metadata migration |
 | Auth | ✅ Live | Login/Register/Verify/Callback + hooks + backend JWT |
 | Admin Console | ✅ v2 Done, repo terpisah | github.com/conoday/oprex-admin-console |
 | Telegram Bot | ✅ Live | Webhook + OCR photo handler + inline keyboard |
@@ -23,7 +23,7 @@
 | Affiliate System | ✅ Done | Backend CRUD + ReportLinkButton frontend |
 | Donasi | ✅ Done | QRIS web + Telegram /donasi |
 | Git Repo | ✅ Active | conoday/finance-analyzer, branch main |
-| Last Session | ✅ Oprex redesign mobile parity polish (2026-04-26) | Header mobile dapat mode switch visual + SideNav nested-route active state fix |
+| Last Session | ✅ DocOps closeout + roadmap sync (2026-04-27) | Artefak cleanup batch tetap valid, milestone `Phase DocOps` disinkronkan di roadmap, dan status tracking direfresh |
 
 ---
 
@@ -42,7 +42,7 @@
 ### Auth & Session (Phase 2 — commit 14b121c)
 - [x] Supabase schema.sql: `profiles`, `categories`, `transactions`, `import_batches` + RLS
 - [x] Auth pages: login (light theme), register (T&C UU PDP), verify OTP, callback route
-- [x] `frontend/middleware.ts` — route protection (settings/profile/admin protected, `/` public)
+- [x] `frontend/src/proxy.ts` — route/session protection via Supabase SSR cookie refresh
 - [x] `frontend/src/utils/supabase/{client,server,middleware}.ts`
 - [x] `useAuth.ts` hook — `{ user, loading, signOut }` via `onAuthStateChange`
 - [x] `useTransactions.ts` — localStorage (guest) → Supabase (cloud), auto-migrate on login
@@ -120,9 +120,14 @@
 - [x] Header mobile ditambah mode switch `Ringkas/Showtime` dengan dropdown, reduced-motion guard, dan auto-close saat route berubah / klik di luar menu
 - [x] SideNav mobile active-state di-fix untuk nested route (`startsWith`) agar highlight menu tetap akurat pada subhalaman
 
-### Dokumentasi Artefak (rev 10)
+### Documentation and Admin DB Ops Cleanup (2026-04-26)
+- [x] Artefak pending (P0+P1) direwrite agar sinkron dengan implementation state terkini
+- [x] Ditambahkan migration `supabase/migrations/20260426_admin_logs_ocr_metadata.sql`
+- [x] Endpoint OCR (`/ai/ocr`) diperbaiki agar `bank_ocr_metadata.sample_count` bertambah akumulatif dan field terdeteksi di-merge
+
+### Dokumentasi Artefak (rev 11)
 - [x] 17 file artefak — product, auth, arch, features, DB, optimization, roadmap, admin, agent planner, tier, payment, DB alternatives, feature ideas, redesign, mobile, AI cost, master tracking
-- [x] Artefak semua updated 2026-04-20 dengan status OCR pipeline terbaru
+- [x] Artefak semua berstatus `RAPI` setelah cleanup batch 2026-04-26
 
 ### Telegram Bot (Phase Telegram — DONE)
 - [x] `app/telegram_bot.py` — webhook handler, auto user create, inline keyboard
@@ -217,8 +222,8 @@
 |---|---|---|
 | OCR quality tuning | 🔧 Iterating | AI kadang misread gambar, prompt & model terus ditune |
 | Tier enforcement backend | 🔧 Schema ready | Belum enforce max 3 akun, max 3 bulan history |
-| SQL migration: system_logs | 🔧 Pending | Tabel untuk Log Explorer — harus run manual di Supabase |
-| SQL migration: bank_ocr_metadata | 🔧 Pending | Tabel untuk OCR Metadata — harus run manual di Supabase |
+| SQL migration: system_logs | 🔧 Ready to apply | File migration sudah dibuat lokal, tinggal apply di project Supabase aktif |
+| SQL migration: bank_ocr_metadata | 🔧 Ready to apply | File migration sudah dibuat lokal, tinggal apply di project Supabase aktif |
 
 ---
 

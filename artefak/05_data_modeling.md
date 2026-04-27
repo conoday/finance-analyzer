@@ -1,241 +1,116 @@
 # Data Modeling
 
-> Status: ✅ schema.sql v3 + new tables (rooms, ai_api_keys, system_logs, bank_ocr_metadata)
-> Last updated: 2026-04-19 (rev 4)
-> File SQL: `supabase/schema.sql`
+> Status: RAPI
+> Last updated: 2026-04-26 (rev 5)
 
----
+## Source of Truth
 
-## Entity Relationship
+Skema database saat ini berasal dari gabungan file berikut:
 
-```
-auth.users (Supabase managed)
-  └── profiles (1:1 via trigger)
-        ├──< transactions (user_id FK)
-        │        ├── category_raw TEXT (free text + inferred)
-        │        ├── source TEXT (web/telegram/telegram_ocr/telegram_shopping)
-        │        ├── scope TEXT (private/couple/group)
-        │        └── created_at TIMESTAMPTZ
-        ├──< import_batches (quota tracking)
-        ├──< budgets (monthly cap per category)
-        ├──< transaction_tags (many-to-many)
-        ├──< room_members (user rooms)
-        └── ai_profiles (1:1 per user, AI data)
+- `supabase/schema.sql`
+- `supabase/migrations/001_rooms.sql`
+- `supabase/migrations/002_telegram_budgets.sql`
+- `supabase/migrations/20260418_ai_api_keys.sql`
+- `supabase/migrations/20260426_admin_logs_ocr_metadata.sql`
+- `data/migrations/002_affiliate_tables.sql`
+- `supabase_migrations/003_bug_reports.sql`
+
+## Entity Map (Aktual)
+
+```text
+auth.users
+  -> profiles (1:1)
+      -> transactions (1:N)
+      -> import_batches (1:N)
+      -> budgets (1:N)
+      -> monthly_agg (1:N)
+      -> link_reports.reported_by (optional)
+
+categories
+  -> transactions.category_id (1:N)
 
 rooms
-  ├── room_id, name, invite_code
-  └──< room_members (user_id FK)
+  -> room_members (1:N)
 
-ai_api_keys → provider, key, model, base_url, priority, is_active
-system_logs → timestamp, level, source, message, details
-bank_ocr_metadata → bank_name, detected_fields, sample_count
-affiliate_products → name, url, platform, price
-link_reports → product_id, reported_by, reason
-pending_telegram_links → chat_id, link_code
+affiliate_products
+  -> link_reports.product_id (1:N)
 ```
 
----
+## Canonical Tables
 
-## Table: profiles (extends Supabase auth.users)
+### 1) Core User & Finance
 
-```sql
-CREATE TABLE public.profiles (
-    id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    email       TEXT,
-    full_name   TEXT,
-    avatar_url  TEXT,
-    plan_type   TEXT NOT NULL DEFAULT 'free',  -- 'free' | 'pro' | 'ai' | 'business'
-    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+| Table | Primary Key | Important Columns | Notes |
+|---|---|---|---|
+| `profiles` | `id UUID` | `full_name`, `avatar_url`, `currency`, `plan_type`, `telegram_chat_id` | Extend `auth.users`, auto-created by trigger |
+| `categories` | `id BIGSERIAL` | `user_id`, `name`, `type`, `is_default` | Support default + user-defined categories |
+| `transactions` | `id BIGSERIAL` | `user_id`, `date`, `description`, `amount`, `type`, `category_id`, `category_raw`, `source`, `method`, `tags`, `hour_of_day`, `day_of_week` | Primary ledger |
+| `import_batches` | `id UUID` | `user_id`, `filename`, `row_count`, `status` | Tracks upload sessions |
+| `monthly_agg` | `id BIGSERIAL` | `user_id`, `month`, `total_income`, `total_expense`, `top_category` | Pre-computed monthly summary |
 
--- ALTER (jika schema lama sudah ada):
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
-```
+### 2) Telegram & Budget
 
----
+| Table | Primary Key | Important Columns | Notes |
+|---|---|---|---|
+| `pending_telegram_links` | `chat_id TEXT` | `link_code`, `created_at` | Temporary mapping before account linking |
+| `budgets` | `id BIGSERIAL` | `user_id`, `category`, `monthly_limit` | Per-user budget limits |
 
-## Table: transactions (core)
+### 3) Shared Room
 
-```sql
-CREATE TABLE public.transactions (
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id        UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    type           TEXT NOT NULL CHECK (type IN ('income', 'expense')),
-    amount         NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
-    date           DATE NOT NULL,
-    category       TEXT,
-    sub_category   TEXT,
-    method         TEXT DEFAULT 'cash',  -- 'cash' | 'bca' | 'mandiri' | 'gopay' | 'dana' | 'ovo' | 'qris' | ...
-    note           TEXT,
-    source         TEXT DEFAULT 'manual', -- 'manual' | 'ocr' | 'csv' | 'wa_bot'
-    hour_of_day    SMALLINT,  -- 0-23 (untuk AI weekday/weekend analysis)
-    day_of_week    SMALLINT,  -- 0=Mon, 6=Sun (untuk AI pattern detection)
-    created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+| Table | Primary Key | Important Columns | Notes |
+|---|---|---|---|
+| `rooms` | `room_id UUID` | `invite_code`, `plan_type`, `max_members`, `creator_member_id`, `shared_budgets` | Shared budget room |
+| `room_members` | `id UUID` | `room_id`, `member_id`, `display_name`, `budgets`, `summary`, `by_category` | Room participant state |
 
-CREATE INDEX idx_tx_user_date ON public.transactions(user_id, date DESC);
-CREATE INDEX idx_tx_user_category ON public.transactions(user_id, category);
+### 4) Affiliate & Commerce
 
--- ALTER (jika tabel sudah ada tanpa kolom baru):
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
-```
+| Table | Primary Key | Important Columns | Notes |
+|---|---|---|---|
+| `affiliate_products` | `id UUID` | `name`, `price`, `platform`, `affiliate_url`, `is_active` | Product catalog for belanja AI |
+| `link_reports` | `id UUID` | `product_id`, `reported_by`, `reason`, `created_at` | Broken-link reports |
 
----
+### 5) AI & Admin Operations
 
-## Table: import_batches (quota tracking)
+| Table | Primary Key | Important Columns | Notes |
+|---|---|---|---|
+| `ai_api_keys` | `id UUID` | `provider`, `label`, `api_key`, `priority`, `is_active`, `is_rate_limited` | Key rotation source for AI service |
+| `system_logs` | `id BIGSERIAL` | `timestamp`, `level`, `source`, `message`, `user_id`, `ip`, `details` | Admin Log Explorer backend |
+| `bank_ocr_metadata` | `id BIGSERIAL` | `bank_name`, `detected_fields`, `sample_count`, `last_sample_at`, `notes` | OCR field coverage per bank/e-wallet |
+| `bug_reports` | `id UUID` | `telegram_chat_id`, `username`, `user_id`, `message`, `status` | User bug reports from Telegram flow |
 
-```sql
--- Renamed dari file_imports (lebih akurat)
-CREATE TABLE public.import_batches (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    filename    TEXT,
-    period      TEXT NOT NULL,  -- format: '2025-03' (YYYY-MM)
-    row_count   INTEGER,
-    status      TEXT DEFAULT 'done',  -- 'done' | 'error'
-    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+## RLS Snapshot
 
--- Query quota: SELECT COUNT(*) FROM import_batches WHERE user_id=? AND period='2025-03'
--- Free tier limit: 5 imports per bulan
-```
+### RLS enabled with user policies
+- `profiles`
+- `categories`
+- `transactions`
+- `import_batches`
+- `monthly_agg`
+- `budgets`
+- `bug_reports`
 
----
+### RLS enabled, no public policies (service-role/admin access)
+- `ai_api_keys`
+- `system_logs`
+- `bank_ocr_metadata`
 
-## Table: budgets (Pro tier)
+### No RLS in current migration set
+- `rooms`
+- `room_members`
+- `pending_telegram_links`
+- `affiliate_products`
+- `link_reports`
 
-```sql
-CREATE TABLE public.budgets (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    category    TEXT NOT NULL,
-    month       TEXT NOT NULL,   -- format: '2025-03' (YYYY-MM)
-    amount_cap  NUMERIC(15, 2) NOT NULL,
-    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, category, month)
-);
-```
+## Important Modeling Notes
 
----
+1. `profiles.plan_type` adalah source of truth tier billing (`free|pro|ai|business`).
+2. `transactions.id` menggunakan `BIGSERIAL`, bukan UUID.
+3. `import_batches` belum punya kolom `period`; enforcement kuota bulanan perlu hitung berbasis `created_at`.
+4. `rooms.plan_type` adalah konteks room membership (`solo|couple|family|team`), bukan plan billing user.
+5. `bank_ocr_metadata` dipakai endpoint `/ai/ocr` dan `/admin/ocr-metadata`; agregasi sample dilakukan di backend.
+6. `system_logs` dipakai endpoint `/admin/logs`.
 
-## Table: transaction_tags (Pro tier)
+## Immediate Follow-up
 
-```sql
-CREATE TABLE public.transaction_tags (
-    transaction_id  UUID NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
-    tag             TEXT NOT NULL,
-    PRIMARY KEY (transaction_id, tag)
-);
-
--- Contoh tags: 'ngedate', 'business', 'belanja-bulanan', 'darurat'
-```
-
----
-
-## Table: ai_profiles (AI tier)
-
-```sql
-CREATE TABLE public.ai_profiles (
-    user_id             UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    spending_pattern    JSONB,   -- { avg_daily: 50000, top_category: 'Makan', weekend_ratio: 0.4 }
-    persona_type        TEXT,    -- 'saver' | 'spender' | 'impulsive' | 'balanced'
-    risk_level          TEXT,    -- 'low' | 'medium' | 'high'
-    last_analysis       TIMESTAMP WITH TIME ZONE,
-    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
----
-
-## Table: subscriptions (Payment / Billing)
-
-```sql
-CREATE TABLE public.subscriptions (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    plan_type       TEXT NOT NULL,   -- 'pro' | 'ai' | 'business'
-    status          TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'cancelled' | 'expired'
-    started_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    expires_at      TIMESTAMP WITH TIME ZONE,
-    payment_ref     TEXT,    -- Midtrans order_id
-    amount_paid     NUMERIC(12, 2),
-    gateway         TEXT DEFAULT 'midtrans',
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
----
-
-## Row Level Security (RLS)
-
-```sql
--- Enable RLS di semua table
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.import_batches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transaction_tags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ai_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-
--- Policy: user hanya bisa baca/tulis data sendiri
-CREATE POLICY "Users can manage own data" ON public.transactions
-    FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can view own profile" ON public.profiles
-    FOR ALL USING (auth.uid() = id);
-
--- (Ulangi pola yang sama untuk tabel lain)
-```
-
----
-
-## Auto-create Profile Trigger
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, full_name, avatar_url)
-  VALUES (
-    new.id,
-    new.email,
-    new.raw_user_meta_data->>'full_name',
-    new.raw_user_meta_data->>'avatar_url'
-  );
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE OR REPLACE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-```
-
----
-
-## Quick ALTER Migration (untuk schema lama)
-
-```sql
--- Jalankan ini di Supabase SQL Editor jika tabel sudah ada
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS hour_of_day SMALLINT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS day_of_week SMALLINT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS method TEXT;
-```
-
----
-
-## Notes
-
-- `plan_type` di `profiles` adalah source of truth untuk tier enforcement (bukan tabel users terpisah)
-- `method` di `transactions` adalah free-text lowercase: `'cash'`, `'bca'`, `'gopay'`, dll
-- `source` di `transactions`: `'manual'` (SmartInput/QuickTracker), `'csv'` (upload), `'ocr'` (foto struk), `'wa_bot'` (WhatsApp)
-- `import_batches` tracks upload per user per bulan → Free tier cap 5x/bulan
-- `ai_profiles` hanya di-populate saat Phase AI aktif
-- Semua UUID — tidak ada auto-increment integer ID
-
+- Jika belum diterapkan di project Supabase aktif, jalankan migration `20260426_admin_logs_ocr_metadata.sql`.
+- Saat menambah tabel baru, pastikan keputusan RLS ditulis eksplisit di migration agar tidak ambigu.

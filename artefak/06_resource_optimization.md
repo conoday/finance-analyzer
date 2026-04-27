@@ -1,70 +1,61 @@
-﻿# Resource Optimization
+# Resource Optimization
 
-> Last updated: 2026-04-26 (rev 1)
-> Catatan: dokumen ini masih butuh update besar, tapi metadata dan rekomendasi inti sudah dirapikan.
+> Status: RAPI
+> Last updated: 2026-04-26 (rev 2)
 
-## Free Tier Limits
+## Runtime Constraints (Current)
 
-| Service | Batasan Kritis |
-|---|---|
-| Render (free) | Sleep 15 menit idle, 512 MB RAM |
-| Vercel (free) | 100 GB bandwidth/bulan, function timeout 10s |
-| Supabase (free) | 500 MB DB, paused setelah 1 minggu tidak aktif |
+| Layer | Constraint | Impact |
+|---|---|---|
+| Render free | service sleep saat idle, resource terbatas | first-hit latency dan cold start |
+| Vercel free | bandwidth + function limits | perlu jaga bundle size dan request volume |
+| Supabase free | DB/storage caps | query dan payload harus efisien |
 
-## Strategies
+## Baseline Optimization Yang Sudah Ada
 
-### 1. Minimize API Calls
-- Frontend caching dengan SWR / React Query
-- Debounce input form 300ms sebelum hit API
-- Jangan re-fetch hasil /analyze tiap render
+1. Frontend dibangun dengan Next.js 16 + route split per halaman (`/`, `/transaksi`, `/laporan`, `/budget`, dll).
+2. Backend FastAPI memakai endpoint yang cenderung ringan untuk fetch list (limit/order sudah ada di endpoint admin/affiliate).
+3. AI key rotation + cache 5 menit di `app/ai_service.py` mencegah hit berulang ke tabel `ai_api_keys`.
+4. Analisis utama di `api/main.py` menggunakan pandas in-memory; fallback error handling sudah disiapkan agar response tetap aman.
 
-### 2. Backend Efficiency
-- Selalu gunakan async def di endpoint FastAPI
-- Hindari N+1 network calls ke database/API (batch query saat memungkinkan)
-- GZipMiddleware untuk kompresi response
-- Timeout + retry terukur untuk call eksternal (AI/OCR)
+## High-Impact Actions (Disarankan)
 
-```python
-from fastapi.middleware.gzip import GZipMiddleware
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-```
+### A. Query & Payload Efficiency
 
-### 3. Image Processing
-- Resize gambar sebelum OCR: max 1200px wide
-- Proses sync acceptable untuk free tier kecil
-- Future: background job dengan ARQ
+1. Tambahkan pagination konsisten untuk endpoint list yang berpotensi besar (`/admin/transactions`, `/affiliate/reports`, `/analyze/me` jika transaksi > N).
+2. Hindari select kolom berlebihan; gunakan `select("colA,colB")` spesifik di query Supabase.
+3. Untuk agregasi dashboard berat, dorong perhitungan ke SQL view/materialized table jika pola sudah stabil.
 
-```python
-from PIL import Image
-def preprocess(img):
-    img = img.convert("L")
-    w, h = img.size
-    if w > 1200:
-        img = img.resize((1200, int(h * 1200 / w)))
-    return img
-```
+### B. AI/OCR Cost & Latency Guard
 
-### 4. Cold Start (Render Sleep)
-- UptimeRobot ping /health setiap 10 menit (gratis)
-- Frontend warm-up call saat layout pertama kali load
+1. Pertahankan routing provider by purpose:
+   - low-cost tasks -> `deepseek`/`gemini`
+   - fallback/resilience -> `glm`
+2. Simpan metrik request AI ringkas (provider, token estimate, latency) ke `system_logs.details` bila perlu audit biaya.
+3. Batasi ukuran file OCR (sudah ada limit 10MB) dan pertimbangkan resize server-side untuk gambar besar.
 
-```typescript
-useEffect(() => {
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {});
-}, []);
-```
+### C. Render Cold Start Mitigation
 
-### 5. Bundle Size (Vercel)
-```typescript
-const ForecastChart = dynamic(() => import("@/components/ForecastChart"), { ssr: false });
-```
+1. Health-check terjadwal (`/health`) tetap direkomendasikan untuk mengurangi cold start.
+2. Frontend bisa trigger warm-up ringan setelah app init, dengan timeout dan tanpa blok UI.
 
-### 6. CORS
-- Set ALLOWED_ORIGINS hanya ke domain Vercel (bukan *)
+## Database-Specific Notes (Supabase)
+
+1. Pastikan semua tabel exposed memiliki strategi RLS yang jelas (allow-by-policy atau deny-by-default untuk admin-only table).
+2. Buat index sesuai pola query aktual, terutama kombinasi kolom filter + sort (`level+timestamp`, `source+timestamp`, `user_id+date`).
+3. Audit table growth berkala pada `system_logs` dan `bank_ocr_metadata`; siapkan retention policy jika volume meningkat.
 
 ## Monitoring Checklist
 
-- [ ] UptimeRobot ping /health setiap 10 menit
-- [ ] Monitor RAM Render < 512 MB
-- [ ] Monitor Supabase DB < 500 MB
-- [ ] Set Vercel bandwidth alert di 80 GB
+- [ ] Pantau p95 latency endpoint utama: `/analyze/me`, `/ai/chat`, `/ai/ocr`
+- [ ] Pantau error rate provider AI dari admin AI logs
+- [ ] Pantau growth `system_logs` dan tetapkan retention
+- [ ] Pantau growth transaksi per user untuk antisipasi query lambat
+- [ ] Pantau biaya/budget provider AI bulanan
+
+## Definition of Done (Optimization Cycle)
+
+- [ ] Endpoint paling sering dipakai punya metric latency dasar
+- [ ] Query paling mahal sudah punya index pendukung
+- [ ] Tidak ada endpoint list besar tanpa pagination/limit
+- [ ] Biaya AI bisa dijelaskan per provider dengan data aktual

@@ -1,124 +1,80 @@
-﻿# Payment Gateway — Indonesia
+# Payment Gateway Plan (Indonesia)
 
-> Status: 🔲 Phase 6 (belum diimplementasi)
-> Last updated: 2026-04-12 (rev 2)
-> Dependencies: Phase 3 (DB + Tier) harus selesai dulu
+> Status: RAPI (Planning)
+> Last updated: 2026-04-26 (rev 3)
+> Current implementation: belum live di backend
 
-## Perbandingan Payment Gateway (per April 2026)
+## Goal
 
-| Provider | MDR Kartu | QRIS | VA Transfer | Biaya Setup | Rekomendasi |
-|---|---|---|---|---|---|
-| **Midtrans** | 2% | 0.7% | Rp 4.000/tx | Gratis | ⭐ Terbaik untuk mulai |
-| **Xendit** | 2% | 0.7% | Rp 4.000/tx | Gratis | ⭐ Alternatif Midtrans |
-| **Doku** | 2.5% | 0.7% | Rp 3.500/tx | Gratis | OK |
-| **Ipaymu** | 2.5% | 0.7% | Rp 3.500/tx | Gratis | Kurang populer |
-| **Faspay** | 2.5% | 0.8% | Rp 4.000/tx | Gratis | Enterprise-focused |
+Mengaktifkan upgrade berbayar yang mengubah `profiles.plan_type` secara aman dan auditable.
 
-**Catatan MDR = Merchant Discount Rate (% dari nilai transaksi)**
+## Recommended Provider
 
-## Rekomendasi: Midtrans (by Gojek)
+### Primary: Midtrans
 
-**Kenapa Midtrans:**
-- Paling populer di Indonesia, dokumentasi lengkap
-- Sandbox gratis untuk testing
-- Support: QRIS, VA semua bank, GoPay, OVO, ShopeePay, kartu kredit
-- SDK Python tersedia
-- Integrasi mudah dengan FastAPI
-- Tidak ada biaya bulanan — bayar per transaksi saja
+Alasan:
 
-**Biaya nyata untuk subscription Rp 29.000:**
-- Via QRIS: Rp 29.000 × 0.7% = Rp 203 fee
-- Via VA Bank: Rp 4.000 flat fee
-- Kamu terima: ±Rp 24.800 - Rp 25.000 per subscriber
+1. Maturity tinggi untuk pasar Indonesia.
+2. Metode pembayaran lengkap (QRIS, VA, e-wallet, kartu).
+3. Dokumentasi dan webhook flow jelas untuk backend FastAPI.
+4. Cocok untuk initial recurring-manual model.
 
-## Alternatif #2: Xendit
+### Secondary Option: Xendit
 
-Hampir identik dengan Midtrans dari sisi biaya, tapi:
-- UI dashboard lebih modern
-- API lebih developer-friendly
-- Support multi-currency (berguna jika mau ekspansi)
+Dipertimbangkan jika butuh fallback provider atau negosiasi biaya operasional yang lebih baik.
 
-## Implementasi Midtrans (FastAPI)
+## Integration Scope (Minimal Viable)
 
-```python
-# requirements.txt tambahan:
-# midtransclient
+1. Endpoint create checkout
+   - `POST /billing/checkout`
+2. Endpoint webhook callback
+   - `POST /billing/callback`
+3. Persist subscription history
+   - table `subscriptions` (atau `billing_events` + update `profiles.plan_type`)
+4. Graceful downgrade logic
+   - tier kembali `free` saat langganan expired/cancelled
 
-import midtransclient
+## Security Requirements
 
-snap = midtransclient.Snap(
-    is_production=False,  # ganti True di production
-    server_key=os.environ["MIDTRANS_SERVER_KEY"]
-)
+1. Wajib verifikasi signature callback payment gateway.
+2. Idempotency untuk callback (jangan upgrade plan dua kali untuk event sama).
+3. Jangan pernah mempercayai status pembayaran dari frontend.
+4. Semua perubahan tier harus ditulis dari backend setelah callback tervalidasi.
 
-@app.post("/subscribe")
-async def create_subscription(
-    body: SubscribeRequest,
-    current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    tier_prices = {"pro": 29000, "business": 99000}
-    amount = tier_prices[body.tier]
+## Data Contract (Suggested)
 
-    transaction_details = {
-        "order_id": f"sub-{current_user.id}-{int(time.time())}",
-        "gross_amount": amount
-    }
-    customer_details = {
-        "first_name": current_user.name,
-        "email": current_user.email
-    }
-    transaction = snap.create_transaction({
-        "transaction_details": transaction_details,
-        "customer_details": customer_details
-    })
-    # return Snap payment URL ke frontend
-    return {"payment_url": transaction["redirect_url"]}
+### Checkout request
 
-
-@app.post("/payment/callback")
-async def payment_callback(request: Request, db: AsyncSession = Depends(get_db)):
-    body = await request.json()
-    
-    # Verifikasi signature Midtrans
-    expected = hashlib.sha512(
-        f"{body['order_id']}{body['status_code']}{body['gross_amount']}"
-        f"{os.environ['MIDTRANS_SERVER_KEY']}".encode()
-    ).hexdigest()
-    if body.get("signature_key") != expected:
-        raise HTTPException(status_code=403, detail="Invalid signature")
-    
-    if body["transaction_status"] == "settlement":
-        # Extract user_id dari order_id: "sub-{user_id}-{timestamp}"
-        user_id = body["order_id"].split("-")[1]
-        tier = "pro"  # atau parse dari metadata
-        # Update profiles.plan_type (bukan users.tier)
-        await db.execute(
-            "UPDATE profiles SET plan_type=$1, updated_at=NOW() WHERE id=$2",
-            tier, user_id
-        )
-        await db.commit()
-    
-    return {"status": "ok"}
+```json
+{
+  "target_plan": "pro"
+}
 ```
 
-## Environment Variables (Render)
+### Callback effect
 
-```
-MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxx   (sandbox)
-MIDTRANS_CLIENT_KEY=SB-Mid-client-xxxxx   (sandbox)
-```
+- update `profiles.plan_type`
+- simpan event ke tabel billing
+- audit trail timestamp + order_id + payment_status
 
-## Setup Steps
+## Dependencies Sebelum Implementasi
 
-1. Daftar akun di https://dashboard.midtrans.com
-2. Aktifkan Sandbox mode
-3. Dapatkan Server Key & Client Key
-4. Set env vars di Render
-5. Test dengan kartu sandbox: 4811111111111114
+1. Tier enforcement backend minimal harus siap agar value upgrade jelas.
+2. Struktur tabel billing harus disetujui (`subscriptions`/`billing_events`).
+3. Halaman frontend upgrade + status billing harus disiapkan.
 
-## Notes
+## Rollout Plan
 
-- Subscription di sini adalah **recurring manual** (user bayar lagi setiap bulan)
-- Auto-recurring (charge otomatis) butuh fitur Recurring Midtrans atau Xendit (lebih complex)
-- Untuk fase awal: cukup manual renewal dengan reminder email
+1. Sprint 1
+   - schema billing + create checkout + callback verify
+2. Sprint 2
+   - UI upgrade flow + subscription status page
+3. Sprint 3
+   - reminders, downgrade automation, retry failed webhook
+
+## Done Criteria
+
+- [ ] User bisa checkout dari UI
+- [ ] Callback tervalidasi dan mengubah `profiles.plan_type`
+- [ ] Event billing tercatat dengan idempotency
+- [ ] Upgrade/downgrade dapat diuji end-to-end di sandbox

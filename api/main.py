@@ -1293,13 +1293,38 @@ async def ai_ocr(file: UploadFile = File(...)):
             sb = _supabase()
             if sb:
                 try:
-                    from datetime import datetime
-                    sb.table("bank_ocr_metadata").upsert({
-                        "bank_name": bank_name,
-                        "detected_fields": metadata_fields,
-                        "sample_count": 1,
-                        "last_sample_at": datetime.now().isoformat(),
-                    }, on_conflict="bank_name").execute()
+                    from datetime import datetime, timezone
+
+                    # Keep metadata cumulative per bank/e-wallet so OCR quality can be audited over time.
+                    normalized_fields = sorted({str(v).strip() for v in metadata_fields if str(v).strip()})
+                    now_iso = datetime.now(timezone.utc).isoformat()
+
+                    existing = (
+                        sb.table("bank_ocr_metadata")
+                        .select("bank_name,detected_fields,sample_count")
+                        .eq("bank_name", bank_name)
+                        .limit(1)
+                        .execute()
+                    )
+
+                    if existing.data:
+                        row = existing.data[0]
+                        current_fields = row.get("detected_fields") or []
+                        merged_fields = sorted({str(v).strip() for v in current_fields if str(v).strip()} | set(normalized_fields))
+                        current_count = int(row.get("sample_count") or 0)
+
+                        sb.table("bank_ocr_metadata").update({
+                            "detected_fields": merged_fields,
+                            "sample_count": current_count + 1,
+                            "last_sample_at": now_iso,
+                        }).eq("bank_name", bank_name).execute()
+                    else:
+                        sb.table("bank_ocr_metadata").insert({
+                            "bank_name": bank_name,
+                            "detected_fields": normalized_fields,
+                            "sample_count": 1,
+                            "last_sample_at": now_iso,
+                        }).execute()
                 except Exception:
                     pass
 

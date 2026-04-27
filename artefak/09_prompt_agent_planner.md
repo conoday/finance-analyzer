@@ -1,76 +1,88 @@
-﻿# Prompt for Agent Planner
+# Prompt Agent Planner
 
-> Last updated: 2026-04-17
+> Status: RAPI
+> Last updated: 2026-04-26 (rev 2)
 
-## Konteks Penting untuk Agent
+## Wajib Dibaca Sebelum Planning
 
-1. Stack: Next.js 14 App Router (bukan Pages Router)
-2. Auth: Supabase Auth (JWT), bukan NextAuth
-3. Backend: FastAPI async Python 3.11
-4. Python venv: c:\Users\lenovo\Documents\rafif\.venv
-5. Render auto-deploy dari branch main di repo conoday/finance-analyzer
-6. Model bisnis: Freemium — Free | Pro (Rp 29K/bln) | AI (Rp 59K/bln) | Business (Rp 149K/bln)
-7. Telegram bot ada di `app/telegram_bot.py` — webhook handler, inline keyboard
-8. Admin console di repo terpisah: `conoday/oprex-admin-console`
+1. `artefak/00_checkpoint_ai.md`
+2. `artefak/17_master_tracking.md`
+3. Dokumen domain spesifik yang relevan (auth, data modeling, roadmap, dll)
 
-## Live URLs
+## Baseline Konteks Project (Aktual)
+
+- Product: OprexDuit
+- Frontend: Next.js 16 App Router + React 19 + Tailwind
+- Backend: FastAPI (single service) + Supabase
+- Auth: Supabase Auth + JWT verify di backend
+- AI layer: multi-provider (`glm`, `deepseek`, `gemini`) dengan key rotation dari tabel `ai_api_keys`
+- Telegram bot: aktif (catat, ringkasan, belanja, room, OCR)
+- Admin console: repo terpisah `conoday/oprex-admin-console`
+
+## URL Produksi
 
 - Frontend: https://finance-analyzer-roan.vercel.app
 - Backend: https://oprexduit.onrender.com
-- Admin console: github.com/conoday/oprex-admin-console
 
-## Master Prompt
+## Catatan Arsitektur Penting
 
-```
-You are a senior system architect and product planner.
+1. Source of truth tracking pekerjaan ada di `artefak/17_master_tracking.md`.
+2. `profiles.plan_type` adalah source of truth tier billing user.
+3. `rooms.plan_type` adalah plan room (`solo/couple/family/team`), bukan billing subscription.
+4. Beberapa fitur admin bergantung pada tabel opsional (`system_logs`, `bank_ocr_metadata`).
+5. Jangan ubah scope implementasi tanpa menyatakan dampak ke artefak tracking.
 
-Context:
-I am building a personal finance web app called OprexDuit with:
-- Frontend: Next.js 14 (Vercel) at https://finance-analyzer-roan.vercel.app
-- Backend: FastAPI (Render) at https://oprexduit.onrender.com
-- Database: PostgreSQL on Supabase (free tier)
-- Telegram Bot: webhook handler in app/telegram_bot.py, inline keyboard
-- Admin Console: separate repo conoday/oprex-admin-console (Next.js 14, Tailwind)
-- Business model: Freemium (Free / Pro Rp29K / AI Rp59K / Business Rp149K)
+## Master Prompt (Updated)
 
-Current Features (already implemented):
-- CSV/XLSX upload → financial pipeline (categorizer, forecasting, health score, simulator)
-- Auth: Supabase login/register/OTP/Google OAuth + JWT backend guard (require_auth)
-- Transaction tracking: SmartInput NLP parse + QuickTracker dashboard
-- Telegram Bot: /catat /ringkasan /laporan /budget /belanja + inline keyboard
-- Affiliate system: CRUD products + link_reports table + ReportLinkButton
-- Admin Console: affiliate CRUD + broken link reports + settings page
+```text
+You are a senior system architect and delivery planner.
 
-Supabase Tables: profiles, transactions, budgets, affiliate_products, link_reports, pending_telegram_links, import_batches
+Project context:
+- Product: OprexDuit
+- Frontend: Next.js 16 App Router (Vercel)
+- Backend: FastAPI (Render)
+- Database/Auth: Supabase (JWT auth)
+- Admin console: separate repository (conoday/oprex-admin-console)
+- Business model: freemium (free/pro/ai/business)
 
-Architecture docs in /artefak/ folder (01 to 17). Read 17_master_tracking.md first.
-
-Next phases:
-1. Phase 3: Transaction CRUD + Tier enforcement (max 3 akun, 3 bulan history untuk Free)
-2. Phase AI: LLM insight + financial persona detection
-3. Phase 4: OCR struk (Pro tier)
-4. Phase 6: Payment Gateway (Midtrans)
-5. Phase 7: Mobile (Expo)
+Current implementation highlights:
+- Auth flow complete (login/register/verify/callback)
+- Dashboard + transaksi + laporan + budget pages active
+- AI endpoints active (/ai/chat, /ai/insight, /ai/categorize, /ai/ocr)
+- Telegram bot and shared room flows active
+- Affiliate CRUD and report flows active
 
 Constraints:
-- Free-tier infra (Vercel + Render + Supabase)
-- No overengineering, keep it simple but extensible
-- Auth via Supabase JWT (bukan NextAuth)
+- Keep solution simple and production-safe
+- Prioritize backward compatibility and data safety
+- Respect free-tier infra limits
+- Reflect all major changes into artifacts (especially 00 and 17)
 
-For each phase, provide:
-1. Files to create/modify (full paths)
-2. Complete code per file
-3. Env vars to add (which platform)
-4. SQL migrations to run on Supabase
-5. Test steps / curl examples
-6. Free-tier gotchas
-
-Start with: [Phase X]
+For each requested phase/task, output:
+1. Scope and assumptions
+2. File-level change list
+3. SQL/migration changes (if any)
+4. Verification plan (lint/test/build/manual checks)
+5. Rollback or risk mitigation notes
 ```
 
-## Tips
+## Practical Use
 
-- Ganti kalimat terakhir: `Start with Phase 3 (Transaction CRUD)`
-- Fokus 1 file: tambahkan `Focus only on file: api/main.py`
-- Debug: paste error message + `What is wrong and how do I fix it?`
-- Telegram bot context: tambahkan `Focus on app/telegram_bot.py`
+### Start from a specific phase
+
+```text
+Start with Phase 3 backlog item P3-1 and P3-4.
+```
+
+### Limit planning to one subsystem
+
+```text
+Focus only on backend API and SQL migrations.
+Do not change frontend in this plan.
+```
+
+### Force artifact sync
+
+```text
+After implementation steps, include exact artifact files to update.
+```

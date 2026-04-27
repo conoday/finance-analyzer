@@ -1,151 +1,82 @@
-﻿# Tier System & Feature Gating
+# Tier System and Feature Gating
 
-> Last updated: 2026-04-12 (rev 3)
-> Source of truth untuk tier: `profiles.plan_type` (bukan `users.tier`)
+> Status: RAPI
+> Last updated: 2026-04-26 (rev 4)
 
-## Tier Overview (Updated 2026-04-12)
+## Source of Truth
 
-| Fitur | Free | Pro (Rp 29K/bln) | AI (Rp 59K/bln) | Business (Rp 149K/bln) | Impl Status |
+- Billing/user tier: `profiles.plan_type` (`free|pro|ai|business`)
+- Shared room plan: `rooms.plan_type` (`solo|couple|family|team`) and is separate from billing tier
+
+## Current State Summary
+
+Skema tier sudah siap di database, tetapi enforcement fitur belum merata.
+
+| Area | Kondisi Saat Ini |
+|---|---|
+| `profiles.plan_type` column | Sudah ada dan aktif |
+| Middleware auth | Sudah aktif untuk route protected |
+| Tier-specific dependency backend (`require_pro`, dll) | Belum jadi standar global |
+| Kuota free (upload/history/account) | Belum enforced penuh |
+| Payment gateway untuk upgrade tier | Belum diimplementasi |
+
+## Capability Matrix (Aktual Implementasi)
+
+| Fitur | Free | Pro | AI | Business | Implementasi |
 |---|---|---|---|---|---|
-| Login Google | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| Input manual transaksi (SmartInput) | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| QuickTracker dashboard | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| Kategori otomatis (rule-based) | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| Metode bayar (cash/bank/ewallet) | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| Dashboard KPI + Charts | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| SpendingHeatmap | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| Upload mutasi bank CSV | ✅ Max 5/bln | ✅ Unlimited | ✅ | ✅ | ✅ Done (enforcement 🔲) |
-| History transaksi | ✅ Max 3 bln | ✅ Unlimited | ✅ | ✅ | 🔲 enforcement Phase 3 |
-| Jumlah akun | ✅ Max 3 | ✅ Unlimited | ✅ | ✅ | 🔲 enforcement Phase 3 |
-| Export CSV | ✅ | ✅ | ✅ | ✅ | ✅ Done |
-| Export PDF | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
-| Custom kategori | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
-| Tag transaksi | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
-| Budget per kategori + alert | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
-| Laporan bulanan email | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 3 |
-| OCR foto struk | ❌ | ✅ | ✅ | ✅ | 🔲 Phase 4 |
-| AI Insight ("boros makan +30%") | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
-| Smart suggestion engine | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
-| Financial persona detection | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
-| Prediksi cashflow akhir bulan | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI |
-| Personal AI agent (memory) | ❌ | ❌ | ✅ | ✅ | 🔲 Phase AI+ |
-| Multi-user / team wallet | ❌ | ❌ | ❌ | ✅ | 🔲 Far future |
-| API akses | ❌ | ❌ | ❌ | ✅ | 🔲 Far future |
+| Login/register/auth session | Ya | Ya | Ya | Ya | Done |
+| Input transaksi + dashboard analytics | Ya | Ya | Ya | Ya | Done |
+| Shared room budget | Ya | Ya | Ya | Ya | Done (plan room terpisah) |
+| Affiliate belanja flow | Ya | Ya | Ya | Ya | Done |
+| AI chat/insight/categorize | Ya (currently open) | Ya | Ya | Ya | Done, belum tier-locked |
+| OCR image parsing | Ya (currently open) | Ya | Ya | Ya | Done, belum tier-locked |
+| Budget limits (`/budgets`) | Ya (currently open) | Ya | Ya | Ya | Done, belum tier-locked |
+| PDF report export | Belum | Belum | Belum | Belum | Pending |
+| Subscription billing | Belum | Belum | Belum | Belum | Pending |
 
-## Quota Enforcement (Backend)
+## Enforcement Gap (Yang Masih Pending)
 
-> Source of truth: `profiles.plan_type` (bukan `users.tier`)
+1. Free upload quota bulanan belum ada enforcement endpoint-level yang konsisten.
+2. History cap 3 bulan untuk free tier belum diterapkan.
+3. Max account count untuk free tier belum relevan karena model akun belum finalized.
+4. Endpoint AI/OCR belum dibatasi berdasarkan tier.
+5. UI gating masih minim (belum ada hook tier terpusat di frontend).
 
-### Cek Kuota File Upload
+## Recommended Enforcement Order
 
-```python
-# api/main.py
-from datetime import datetime
+1. Backend centralized plan resolver
+   - helper: `resolve_user_plan(user_id)`
+   - helper: `enforce_plan(min_plan)`
+2. Enforce low-risk first
+   - AI/OCR call quota
+   - history range limit for free
+3. Frontend mirrored gating
+   - banner/lock state konsisten dengan backend response
+4. Payment-driven upgrade
+   - callback update `profiles.plan_type`
 
-async def check_file_quota(user_id: str, plan_type: str, db):
-    if plan_type != "free":
-        return  # Pro/AI/Business tidak terbatas
-    
-    current_period = datetime.now().strftime("%Y-%m")
-    # Query import_batches (bukan file_imports)
-    count = await db.execute(
-        "SELECT COUNT(*) FROM import_batches WHERE user_id=$1 AND period=$2",
-        user_id, current_period
-    )
-    if count >= 5:
-        raise HTTPException(
-            status_code=429,
-            detail="Batas upload file bulanan tercapai (5/bulan). Upgrade ke Pro untuk unlimited."
-        )
-```
-
-### Cek Akses Fitur Pro+
+## Backend Pattern (Target)
 
 ```python
-async def require_pro(current_user = Depends(require_auth)):
-    plan = current_user.get("plan_type", "free")
-    if plan == "free":
-        raise HTTPException(
-            status_code=403,
-            detail="Fitur ini hanya tersedia untuk pengguna Pro. Upgrade sekarang."
-        )
-    return current_user
+PLAN_WEIGHT = {"free": 0, "pro": 1, "ai": 2, "business": 3}
 
-async def require_ai_tier(current_user = Depends(require_auth)):
-    plan = current_user.get("plan_type", "free")
-    if plan not in ("ai", "business"):
-        raise HTTPException(status_code=403, detail="Upgrade ke AI tier untuk fitur ini.")
-    return current_user
+def require_plan(user_plan: str, min_plan: str) -> None:
+    if PLAN_WEIGHT.get(user_plan, 0) < PLAN_WEIGHT[min_plan]:
+        raise HTTPException(status_code=403, detail="Upgrade plan diperlukan")
 ```
 
-## Frontend Feature Gating
+## Frontend Pattern (Target)
 
 ```typescript
-// hooks/useTier.ts
-import { useAuth } from './useAuth';
-import { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
-
-export function useTier() {
-  const { user } = useAuth();
-  const [planType, setPlanType] = useState<string>('free');
-
-  useEffect(() => {
-    if (!user) return;
-    const supabase = createClient();
-    supabase
-      .from('profiles')
-      .select('plan_type')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => setPlanType(data?.plan_type ?? 'free'));
-  }, [user]);
-
-  return {
-    planType,
-    isPro: ['pro', 'ai', 'business'].includes(planType),
-    isAI: ['ai', 'business'].includes(planType),
-    isBusiness: planType === 'business',
-    isFree: planType === 'free',
-  };
+// Hook tunggal untuk baca plan user dari profiles
+// Dipakai untuk menampilkan lock state, bukan sebagai security utama
+export function canUseFeature(planType: string, minPlan: "free" | "pro" | "ai" | "business") {
+  const weight = { free: 0, pro: 1, ai: 2, business: 3 };
+  return weight[planType as keyof typeof weight] >= weight[minPlan];
 }
-
-// Di komponen
-const { isPro, isFree } = useTier();
-
-{isFree && importCount >= 5 && (
-  <Banner>Kuota 5 file/bulan habis. <UpgradeButton /></Banner>
-)}
-
-{!isPro && (
-  <LockedFeature label="OCR Image Extraction" />
-)}
 ```
 
-## Upgrade Flow
+## Operational Rule
 
-```
-User klik "Upgrade ke Pro" (di dashboard atau locked feature)
-        ↓
-Frontend POST /subscribe { tier: "pro" }
-        ↓
-Backend buat invoice Midtrans Snap
-        ↓
-Frontend redirect ke halaman pembayaran Midtrans
-        ↓
-User bayar (QRIS / VA Bank / GoPay / OVO / Kartu)
-        ↓
-Midtrans POST /payment/callback (webhook)
-        ↓
-Backend verifikasi HMAC-SHA512 signature
-        ↓
-Backend: UPDATE profiles SET plan_type='pro', expires_at=NOW()+30d
-        ↓
-✅ User langsung dapat akses fitur Pro
-```
-
-## Downgrade Logic
-
-- `expires_at` lewat → cron job set `plan_type = 'free'`
-- Data tidak dihapus saat downgrade — hanya akses dibatasi
-- User tetap bisa lihat data lama (UI blur/locked)
+- Semua enforcement wajib tetap dilakukan di backend.
+- Gating frontend hanya untuk UX/visibility, bukan otorisasi final.
